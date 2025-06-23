@@ -21,6 +21,9 @@ export enum AppPath {
   TasksPage = '/objects/tasks',
   OpportunitiesPage = '/objects/opportunities',
 
+  // HVAC Service Planner
+  HvacServicePlanner = '/hvac/service-planner',
+
   RecordIndexPage = '/objects/:objectNamePlural',
   RecordShowPage = '/object/:objectNameSingular/:objectRecordId',
 

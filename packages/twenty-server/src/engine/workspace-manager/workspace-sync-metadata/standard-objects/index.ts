@@ -35,6 +35,12 @@ import { WorkflowVersionWorkspaceEntity } from 'src/modules/workflow/common/stan
 import { WorkflowWorkspaceEntity } from 'src/modules/workflow/common/standard-objects/workflow.workspace-entity';
 import { WorkspaceMemberWorkspaceEntity } from 'src/modules/workspace-member/standard-objects/workspace-member.workspace-entity';
 
+// HVAC Objects
+import { HvacEquipmentWorkspaceEntity } from 'src/modules/hvac/standard-objects/hvac-equipment.workspace-entity';
+import { HvacMaintenanceRecordWorkspaceEntity } from 'src/modules/hvac/standard-objects/hvac-maintenance-record.workspace-entity';
+import { HvacServiceTicketWorkspaceEntity } from 'src/modules/hvac/standard-objects/hvac-service-ticket.workspace-entity';
+import { HvacTechnicianWorkspaceEntity } from 'src/modules/hvac/standard-objects/hvac-technician.workspace-entity';
+
 // TODO: Maybe we should automate this with the DiscoverService of Nest.JS
 export const standardObjectMetadataDefinitions = [
   ApiKeyWorkspaceEntity,
@@ -73,4 +79,9 @@ export const standardObjectMetadataDefinitions = [
   PersonWorkspaceEntity,
   TaskWorkspaceEntity,
   TaskTargetWorkspaceEntity,
+  // HVAC Objects
+  HvacEquipmentWorkspaceEntity,
+  HvacMaintenanceRecordWorkspaceEntity,
+  HvacServiceTicketWorkspaceEntity,
+  HvacTechnicianWorkspaceEntity,
 ];

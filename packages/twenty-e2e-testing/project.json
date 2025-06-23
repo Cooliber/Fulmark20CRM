@@ -48,6 +48,69 @@
           "yarn playwright show-report"
         ]
       }
+    },
+    "test:hvac": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "packages/twenty-e2e-testing",
+        "commands": [
+          "./scripts/run-hvac-tests.sh"
+        ]
+      }
+    },
+    "test:hvac:dashboard": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "packages/twenty-e2e-testing",
+        "commands": [
+          "yarn playwright test tests/hvac/hvac-dashboard.spec.ts"
+        ]
+      }
+    },
+    "test:hvac:search": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "packages/twenty-e2e-testing",
+        "commands": [
+          "yarn playwright test tests/hvac/hvac-semantic-search.spec.ts"
+        ]
+      }
+    },
+    "test:hvac:planner": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "packages/twenty-e2e-testing",
+        "commands": [
+          "yarn playwright test tests/hvac/hvac-service-planner.spec.ts"
+        ]
+      }
+    },
+    "test:hvac:dispatch": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "packages/twenty-e2e-testing",
+        "commands": [
+          "yarn playwright test tests/hvac/hvac-dispatch-panel.spec.ts"
+        ]
+      }
+    },
+    "test:hvac:mobile": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "packages/twenty-e2e-testing",
+        "commands": [
+          "yarn playwright test tests/hvac/hvac-mobile-maintenance.spec.ts"
+        ]
+      }
+    },
+    "test:hvac:errors": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "packages/twenty-e2e-testing",
+        "commands": [
+          "yarn playwright test tests/hvac/hvac-error-handling.spec.ts"
+        ]
+      }
     }
   }
 }

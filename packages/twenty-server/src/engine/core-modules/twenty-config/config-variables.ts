@@ -1107,6 +1107,313 @@ export class ConfigVariables {
   @IsOptional()
   IS_ATTACHMENT_PREVIEW_ENABLED = true;
 
+  // ==================== HVAC CONFIGURATION ====================
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'HVAC API base URL',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  HVAC_API_URL = 'http://localhost:8000';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    isSensitive: true,
+    description: 'HVAC API key for authentication',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  HVAC_API_KEY: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'HVAC API version',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  HVAC_API_VERSION = 'v1';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'HVAC API timeout in milliseconds',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  HVAC_API_TIMEOUT = 30000;
+
+  // Weaviate Configuration
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Weaviate host',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  WEAVIATE_HOST = 'localhost';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Weaviate port',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  WEAVIATE_PORT = 8080;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Weaviate gRPC port',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  WEAVIATE_GRPC_PORT = 50051;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Weaviate scheme (http or https)',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  WEAVIATE_SCHEME = 'http';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    isSensitive: true,
+    description: 'Weaviate API key',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  WEAVIATE_API_KEY: string;
+
+  // Bielik LLM Configuration
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LLM,
+    description: 'Bielik LLM host',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  BIELIK_HOST = 'localhost';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LLM,
+    description: 'Bielik LLM port',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  BIELIK_PORT = 8123;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LLM,
+    isSensitive: true,
+    description: 'Bielik API key',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  BIELIK_API_KEY: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LLM,
+    description: 'Bielik model name',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  BIELIK_MODEL_NAME = 'bielik-v3-4.5b';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LLM,
+    description: 'Bielik maximum tokens',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  BIELIK_MAX_TOKENS = 4096;
+
+  // Business Configuration
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Company name',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  COMPANY_NAME = 'Fulmark HVAC';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Company email',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  COMPANY_EMAIL = 'info@fulmark.pl';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Company NIP (Polish tax number)',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  COMPANY_NIP: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Company REGON (Polish business registry number)',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  COMPANY_REGON: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Timezone',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  TIMEZONE = 'Europe/Warsaw';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Locale',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  LOCALE = 'pl_PL.UTF-8';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Localization currency',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  LOCALIZATION_CURRENCY = 'PLN';
+
+  // HVAC Service Endpoints
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'HVAC customer service URL',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  HVAC_CUSTOMER_SERVICE_URL: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'HVAC ticket service URL',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  HVAC_TICKET_SERVICE_URL: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'HVAC equipment service URL',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  HVAC_EQUIPMENT_SERVICE_URL: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'HVAC maintenance service URL',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  HVAC_MAINTENANCE_SERVICE_URL: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'HVAC semantic search service URL',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  HVAC_SEMANTIC_SEARCH_URL: string;
+
+  // CrewAI Configuration
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'CrewAI maximum agents',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  CREWAI_MAX_AGENTS = 5;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'CrewAI timeout in seconds',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  CREWAI_TIMEOUT = 180;
+
+  // GDPR Configuration
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'GDPR data retention days',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  GDPR_DATA_RETENTION_DAYS = 2555;
+
+  // Cache Configuration
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Default cache TTL in seconds',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  CACHE_TTL_DEFAULT = 3600;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Customer profile cache TTL in seconds',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  CACHE_TTL_CUSTOMER_PROFILE = 1800;
+
+  // Performance Configuration
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Database connection pool size',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  DATABASE_POOL_SIZE = 20;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Database maximum overflow connections',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  DATABASE_MAX_OVERFLOW = 30;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Maximum concurrent requests',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  MAX_CONCURRENT_REQUESTS = 100;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.Other,
+    description: 'Request timeout in seconds',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  REQUEST_TIMEOUT = 30;
+
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.ServerConfig,
     description: 'Twenty server version',

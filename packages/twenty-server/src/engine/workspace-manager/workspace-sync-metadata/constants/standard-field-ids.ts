@@ -542,6 +542,98 @@ export const CUSTOM_OBJECT_STANDARD_FIELD_IDS = {
   searchVector: '70e56537-18ef-4811-b1c7-0a444006b815',
 };
 
+// HVAC Service Ticket Standard Field IDs
+export const HVAC_SERVICE_TICKET_STANDARD_FIELD_IDS = {
+  ticketNumber: '20202020-hvac-st-ticket-number-field',
+  title: '20202020-hvac-st-title-field-value',
+  description: '20202020-hvac-st-description-field',
+  status: '20202020-hvac-st-status-field-value',
+  priority: '20202020-hvac-st-priority-field-val',
+  serviceType: '20202020-hvac-st-service-type-field',
+  scheduledDate: '20202020-hvac-st-scheduled-date-fld',
+  completedDate: '20202020-hvac-st-completed-date-fld',
+  estimatedDuration: '20202020-hvac-st-estimated-dur-fld',
+  actualDuration: '20202020-hvac-st-actual-duration-f',
+  serviceAddress: '20202020-hvac-st-service-address-f',
+  estimatedCost: '20202020-hvac-st-estimated-cost-fld',
+  actualCost: '20202020-hvac-st-actual-cost-field',
+  notes: '20202020-hvac-st-notes-field-value',
+  position: '20202020-hvac-st-position-field-val',
+  createdBy: '20202020-hvac-st-created-by-field',
+  customer: '20202020-hvac-st-customer-relation-f',
+  company: '20202020-hvac-st-company-relation-fld',
+  assignedTechnician: '20202020-hvac-st-assigned-tech-fld',
+  equipment: '20202020-hvac-st-equipment-relation-f',
+};
+
+// HVAC Equipment Standard Field IDs
+export const HVAC_EQUIPMENT_STANDARD_FIELD_IDS = {
+  name: '20202020-hvac-eq-name-field-value',
+  equipmentType: '20202020-hvac-eq-equipment-type-fld',
+  manufacturer: '20202020-hvac-eq-manufacturer-field',
+  model: '20202020-hvac-eq-model-field-value',
+  serialNumber: '20202020-hvac-eq-serial-number-fld',
+  installationDate: '20202020-hvac-eq-installation-dt-f',
+  warrantyExpiration: '20202020-hvac-eq-warranty-exp-fld',
+  status: '20202020-hvac-eq-status-field-value',
+  condition: '20202020-hvac-eq-condition-field-val',
+  capacity: '20202020-hvac-eq-capacity-field-val',
+  energyRating: '20202020-hvac-eq-energy-rating-fld',
+  location: '20202020-hvac-eq-location-field-val',
+  purchasePrice: '20202020-hvac-eq-purchase-price-fld',
+  lastMaintenanceDate: '20202020-hvac-eq-last-maint-dt-f',
+  nextMaintenanceDate: '20202020-hvac-eq-next-maint-dt-f',
+  notes: '20202020-hvac-eq-notes-field-value',
+  position: '20202020-hvac-eq-position-field-val',
+  createdBy: '20202020-hvac-eq-created-by-field',
+  owner: '20202020-hvac-eq-owner-relation-fld',
+  company: '20202020-hvac-eq-company-relation-fld',
+  serviceTickets: '20202020-hvac-eq-service-tickets-f',
+  maintenanceRecords: '20202020-hvac-eq-maintenance-rec-f',
+};
+
+// HVAC Technician Standard Field IDs
+export const HVAC_TECHNICIAN_STANDARD_FIELD_IDS = {
+  name: '20202020-hvac-tech-name-field-value',
+  employeeId: '20202020-hvac-tech-employee-id-fld',
+  emails: '20202020-hvac-tech-emails-field-val',
+  phones: '20202020-hvac-tech-phones-field-val',
+  address: '20202020-hvac-tech-address-field-val',
+  status: '20202020-hvac-tech-status-field-val',
+  level: '20202020-hvac-tech-level-field-value',
+  hireDate: '20202020-hvac-tech-hire-date-field',
+  certifications: '20202020-hvac-tech-certifications-f',
+  specialties: '20202020-hvac-tech-specialties-fld',
+  hourlyRate: '20202020-hvac-tech-hourly-rate-fld',
+  emergencyContact: '20202020-hvac-tech-emergency-cont-f',
+  vehicleInfo: '20202020-hvac-tech-vehicle-info-fld',
+  notes: '20202020-hvac-tech-notes-field-val',
+  position: '20202020-hvac-tech-position-field-v',
+  createdBy: '20202020-hvac-tech-created-by-fld',
+  assignedTickets: '20202020-hvac-tech-assigned-tick-f',
+  maintenanceRecords: '20202020-hvac-tech-maintenance-r-f',
+};
+
+// HVAC Maintenance Record Standard Field IDs
+export const HVAC_MAINTENANCE_RECORD_STANDARD_FIELD_IDS = {
+  title: '20202020-hvac-mr-title-field-value',
+  maintenanceType: '20202020-hvac-mr-maintenance-type-f',
+  status: '20202020-hvac-mr-status-field-value',
+  scheduledDate: '20202020-hvac-mr-scheduled-date-fld',
+  completedDate: '20202020-hvac-mr-completed-date-fld',
+  duration: '20202020-hvac-mr-duration-field-val',
+  description: '20202020-hvac-mr-description-field',
+  workPerformed: '20202020-hvac-mr-work-performed-fld',
+  partsUsed: '20202020-hvac-mr-parts-used-field',
+  cost: '20202020-hvac-mr-cost-field-value',
+  nextMaintenanceDate: '20202020-hvac-mr-next-maint-dt-f',
+  recommendations: '20202020-hvac-mr-recommendations-f',
+  position: '20202020-hvac-mr-position-field-v',
+  createdBy: '20202020-hvac-mr-created-by-field',
+  equipment: '20202020-hvac-mr-equipment-relation-f',
+  technician: '20202020-hvac-mr-technician-rel-fld',
+};
+
 export const STANDARD_OBJECT_FIELD_IDS = {
   activityTarget: ACTIVITY_TARGET_STANDARD_FIELD_IDS,
   activity: ACTIVITY_STANDARD_FIELD_IDS,
@@ -583,4 +675,9 @@ export const STANDARD_OBJECT_FIELD_IDS = {
   workflowRun: WORKFLOW_RUN_STANDARD_FIELD_IDS,
   workflowVersion: WORKFLOW_VERSION_STANDARD_FIELD_IDS,
   workspaceMember: WORKSPACE_MEMBER_STANDARD_FIELD_IDS,
+  // HVAC Objects
+  hvacServiceTicket: HVAC_SERVICE_TICKET_STANDARD_FIELD_IDS,
+  hvacEquipment: HVAC_EQUIPMENT_STANDARD_FIELD_IDS,
+  hvacTechnician: HVAC_TECHNICIAN_STANDARD_FIELD_IDS,
+  hvacMaintenanceRecord: HVAC_MAINTENANCE_RECORD_STANDARD_FIELD_IDS,
 };

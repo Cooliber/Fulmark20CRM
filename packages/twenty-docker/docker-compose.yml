@@ -1,4 +1,4 @@
-name: twenty
+version: '3.8'
 
 services:
   server:
@@ -103,6 +103,8 @@ services:
 
   db:
     image: postgres:16
+    ports:
+      - "5435:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
     environment:
@@ -117,6 +119,8 @@ services:
 
   redis:
     image: redis
+    ports:
+      - "6382:6379"
     restart: always
     command: ["--maxmemory-policy", "noeviction"]
 
