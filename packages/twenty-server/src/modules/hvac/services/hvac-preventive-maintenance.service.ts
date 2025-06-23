@@ -1,7 +1,7 @@
 /**
  * HVAC Preventive Maintenance Service
  * "Pasja rodzi profesjonalizm" - Professional HVAC Preventive Maintenance
- * 
+ *
  * Implements comprehensive preventive maintenance system with:
  * - Automated scheduling based on equipment type and usage
  * - Compliance tracking for EPA and safety regulations
@@ -11,12 +11,25 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
+
 import { Repository } from 'typeorm';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { HvacEquipmentWorkspaceEntity, HvacEquipmentType, HvacEquipmentStatus } from '../standard-objects/hvac-equipment.workspace-entity';
-import { HvacMaintenanceRecordWorkspaceEntity, HvacMaintenanceType, HvacMaintenanceStatus } from '../standard-objects/hvac-maintenance-record.workspace-entity';
-import { HvacServiceTicketWorkspaceEntity, HvacServiceTicketPriority, HvacServiceType } from '../standard-objects/hvac-service-ticket.workspace-entity';
+
+import {
+    HvacEquipmentStatus,
+    HvacEquipmentType,
+    HvacEquipmentWorkspaceEntity,
+} from 'src/modules/hvac/standard-objects/hvac-equipment.workspace-entity';
+import {
+    HvacMaintenanceRecordWorkspaceEntity,
+    HvacMaintenanceType,
+} from 'src/modules/hvac/standard-objects/hvac-maintenance-record.workspace-entity';
+import {
+    HvacServiceTicketPriority,
+    HvacServiceTicketWorkspaceEntity,
+} from 'src/modules/hvac/standard-objects/hvac-service-ticket.workspace-entity';
+
 import { HvacSchedulingEngineService } from './hvac-scheduling-engine.service';
 
 // Preventive maintenance interfaces
@@ -50,7 +63,11 @@ export interface MaintenanceChecklistItem {
 }
 
 export interface ComplianceRequirement {
-  regulation: 'EPA_REFRIGERANT' | 'OSHA_SAFETY' | 'LOCAL_BUILDING_CODE' | 'MANUFACTURER_WARRANTY';
+  regulation:
+    | 'EPA_REFRIGERANT'
+    | 'OSHA_SAFETY'
+    | 'LOCAL_BUILDING_CODE'
+    | 'MANUFACTURER_WARRANTY';
   description: string;
   frequency: MaintenanceFrequency;
   documentationRequired: boolean;
@@ -59,7 +76,13 @@ export interface ComplianceRequirement {
 }
 
 export interface MaintenanceFrequency {
-  type: 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL' | 'SEASONAL' | 'USAGE_BASED';
+  type:
+    | 'MONTHLY'
+    | 'QUARTERLY'
+    | 'SEMI_ANNUAL'
+    | 'ANNUAL'
+    | 'SEASONAL'
+    | 'USAGE_BASED';
   interval: number;
   seasonalTiming?: 'SPRING' | 'SUMMER' | 'FALL' | 'WINTER';
   usageThreshold?: number; // hours of operation
@@ -120,13 +143,13 @@ export class HvacPreventiveMaintenanceService {
   constructor(
     @InjectRepository(HvacEquipmentWorkspaceEntity, 'workspace')
     private readonly equipmentRepository: Repository<HvacEquipmentWorkspaceEntity>,
-    
+
     @InjectRepository(HvacMaintenanceRecordWorkspaceEntity, 'workspace')
     private readonly maintenanceRepository: Repository<HvacMaintenanceRecordWorkspaceEntity>,
-    
+
     @InjectRepository(HvacServiceTicketWorkspaceEntity, 'workspace')
     private readonly serviceTicketRepository: Repository<HvacServiceTicketWorkspaceEntity>,
-    
+
     private readonly schedulingEngine: HvacSchedulingEngineService,
   ) {}
 
@@ -135,7 +158,9 @@ export class HvacPreventiveMaintenanceService {
    */
   async generateMaintenancePlan(customerId: string): Promise<MaintenancePlan> {
     try {
-      this.logger.log(`Generating maintenance plan for customer: ${customerId}`);
+      this.logger.log(
+        `Generating maintenance plan for customer: ${customerId}`,
+      );
 
       // Get all customer equipment
       const equipment = await this.equipmentRepository.find({
@@ -153,18 +178,23 @@ export class HvacPreventiveMaintenanceService {
 
       for (const equip of equipment) {
         const schedule = await this.generateEquipmentMaintenanceSchedule(equip);
+
         scheduledMaintenance.push(...schedule);
         totalAnnualCost += this.calculateAnnualMaintenanceCost(schedule);
       }
 
       // Sort by next due date
-      scheduledMaintenance.sort((a, b) => a.nextDueDate.getTime() - b.nextDueDate.getTime());
+      scheduledMaintenance.sort(
+        (a, b) => a.nextDueDate.getTime() - b.nextDueDate.getTime(),
+      );
 
       // Generate seasonal recommendations
-      const seasonalRecommendations = this.generateSeasonalRecommendations(equipment);
+      const seasonalRecommendations =
+        this.generateSeasonalRecommendations(equipment);
 
       // Assess compliance status
-      const complianceStatus = this.assessComplianceStatus(scheduledMaintenance);
+      const complianceStatus =
+        this.assessComplianceStatus(scheduledMaintenance);
 
       const plan: MaintenancePlan = {
         planId: `PLAN-${customerId}-${Date.now()}`,
@@ -177,11 +207,16 @@ export class HvacPreventiveMaintenanceService {
         seasonalRecommendations,
       };
 
-      this.logger.log(`Generated maintenance plan with ${scheduledMaintenance.length} scheduled items`);
-      return plan;
+      this.logger.log(
+        `Generated maintenance plan with ${scheduledMaintenance.length} scheduled items`,
+      );
 
+      return plan;
     } catch (error) {
-      this.logger.error(`Failed to generate maintenance plan: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to generate maintenance plan: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -189,27 +224,53 @@ export class HvacPreventiveMaintenanceService {
   /**
    * Generate maintenance schedule for specific equipment
    */
-  async generateEquipmentMaintenanceSchedule(equipment: HvacEquipmentWorkspaceEntity): Promise<MaintenanceSchedule[]> {
+  async generateEquipmentMaintenanceSchedule(
+    equipment: HvacEquipmentWorkspaceEntity,
+  ): Promise<MaintenanceSchedule[]> {
     const schedules: MaintenanceSchedule[] = [];
-    const maintenanceTypes = this.getMaintenanceTypesForEquipment(equipment.type);
+    const maintenanceTypes = this.getMaintenanceTypesForEquipment(
+      equipment.equipmentType,
+    );
 
     for (const maintenanceType of maintenanceTypes) {
-      const frequency = this.getMaintenanceFrequency(equipment.type, maintenanceType);
-      const lastMaintenance = await this.getLastMaintenanceDate(equipment.id, maintenanceType);
+      const frequency = this.getMaintenanceFrequency(
+        equipment.equipmentType,
+        maintenanceType,
+      );
+      const lastMaintenance = await this.getLastMaintenanceDate(
+        equipment.id,
+        maintenanceType,
+      );
       const nextDueDate = this.calculateNextDueDate(lastMaintenance, frequency);
 
       const schedule: MaintenanceSchedule = {
         equipmentId: equipment.id,
-        equipmentType: equipment.type,
+        equipmentType: equipment.equipmentType,
         maintenanceType,
         frequency,
         nextDueDate,
         lastPerformed: lastMaintenance,
-        priority: this.calculateMaintenancePriority(equipment, maintenanceType, nextDueDate),
-        estimatedDuration: this.getEstimatedDuration(equipment.type, maintenanceType),
-        requiredSkills: this.getRequiredSkills(equipment.type, maintenanceType),
-        checklist: this.getMaintenanceChecklist(equipment.type, maintenanceType),
-        complianceRequirements: this.getComplianceRequirements(equipment.type, maintenanceType),
+        priority: this.calculateMaintenancePriority(
+          equipment,
+          maintenanceType,
+          nextDueDate,
+        ),
+        estimatedDuration: this.getEstimatedDuration(
+          equipment.equipmentType,
+          maintenanceType,
+        ),
+        requiredSkills: this.getRequiredSkills(
+          equipment.equipmentType,
+          maintenanceType,
+        ),
+        checklist: this.getMaintenanceChecklist(
+          equipment.equipmentType,
+          maintenanceType,
+        ),
+        complianceRequirements: this.getComplianceRequirements(
+          equipment.equipmentType,
+          maintenanceType,
+        ),
       };
 
       schedules.push(schedule);
@@ -221,9 +282,13 @@ export class HvacPreventiveMaintenanceService {
   /**
    * Schedule preventive maintenance automatically
    */
-  async schedulePreventiveMaintenance(schedule: MaintenanceSchedule): Promise<string> {
+  async schedulePreventiveMaintenance(
+    schedule: MaintenanceSchedule,
+  ): Promise<string> {
     try {
-      this.logger.log(`Scheduling preventive maintenance for equipment: ${schedule.equipmentId}`);
+      this.logger.log(
+        `Scheduling preventive maintenance for equipment: ${schedule.equipmentId}`,
+      );
 
       // Create service ticket for maintenance
       const ticket = await this.createMaintenanceTicket(schedule);
@@ -244,18 +309,24 @@ export class HvacPreventiveMaintenanceService {
         equipmentType: schedule.equipmentType,
       };
 
-      const result = await this.schedulingEngine.scheduleServiceRequest(schedulingRequest);
+      const result =
+        await this.schedulingEngine.scheduleServiceRequest(schedulingRequest);
 
       if (result.success) {
-        this.logger.log(`Scheduled maintenance for ${schedule.equipmentId} with technician ${result.assignedTechnician}`);
+        this.logger.log(
+          `Scheduled maintenance for ${schedule.equipmentId} with technician ${result.assignedTechnician}`,
+        );
+
         return ticket.id;
       } else {
         this.logger.warn(`Failed to schedule maintenance: ${result.reason}`);
         throw new Error(result.reason);
       }
-
     } catch (error) {
-      this.logger.error(`Failed to schedule preventive maintenance: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to schedule preventive maintenance: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -274,8 +345,9 @@ export class HvacPreventiveMaintenanceService {
       const today = new Date();
 
       for (const equipment of allEquipment) {
-        const schedules = await this.generateEquipmentMaintenanceSchedule(equipment);
-        
+        const schedules =
+          await this.generateEquipmentMaintenanceSchedule(equipment);
+
         for (const schedule of schedules) {
           if (schedule.nextDueDate < today) {
             overdueItems.push(schedule);
@@ -284,13 +356,19 @@ export class HvacPreventiveMaintenanceService {
       }
 
       // Sort by how overdue (most overdue first)
-      overdueItems.sort((a, b) => a.nextDueDate.getTime() - b.nextDueDate.getTime());
+      overdueItems.sort(
+        (a, b) => a.nextDueDate.getTime() - b.nextDueDate.getTime(),
+      );
 
       this.logger.log(`Found ${overdueItems.length} overdue maintenance items`);
-      return overdueItems;
 
+      return overdueItems;
     } catch (error) {
-      this.logger.error(`Failed to get overdue maintenance: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to get overdue maintenance: ${error.message}`,
+        error.stack,
+      );
+
       return [];
     }
   }
@@ -298,7 +376,7 @@ export class HvacPreventiveMaintenanceService {
   /**
    * Get upcoming maintenance (next 30 days)
    */
-  async getUpcomingMaintenance(days: number = 30): Promise<MaintenanceSchedule[]> {
+  async getUpcomingMaintenance(days = 30): Promise<MaintenanceSchedule[]> {
     try {
       const allEquipment = await this.equipmentRepository.find({
         where: { status: HvacEquipmentStatus.ACTIVE },
@@ -310,23 +388,35 @@ export class HvacPreventiveMaintenanceService {
       const futureDate = new Date(today.getTime() + days * 24 * 60 * 60 * 1000);
 
       for (const equipment of allEquipment) {
-        const schedules = await this.generateEquipmentMaintenanceSchedule(equipment);
-        
+        const schedules =
+          await this.generateEquipmentMaintenanceSchedule(equipment);
+
         for (const schedule of schedules) {
-          if (schedule.nextDueDate >= today && schedule.nextDueDate <= futureDate) {
+          if (
+            schedule.nextDueDate >= today &&
+            schedule.nextDueDate <= futureDate
+          ) {
             upcomingItems.push(schedule);
           }
         }
       }
 
       // Sort by due date
-      upcomingItems.sort((a, b) => a.nextDueDate.getTime() - b.nextDueDate.getTime());
+      upcomingItems.sort(
+        (a, b) => a.nextDueDate.getTime() - b.nextDueDate.getTime(),
+      );
 
-      this.logger.log(`Found ${upcomingItems.length} upcoming maintenance items in next ${days} days`);
+      this.logger.log(
+        `Found ${upcomingItems.length} upcoming maintenance items in next ${days} days`,
+      );
+
       return upcomingItems;
-
     } catch (error) {
-      this.logger.error(`Failed to get upcoming maintenance: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to get upcoming maintenance: ${error.message}`,
+        error.stack,
+      );
+
       return [];
     }
   }
@@ -334,7 +424,9 @@ export class HvacPreventiveMaintenanceService {
   /**
    * Generate maintenance analytics for equipment
    */
-  async generateMaintenanceAnalytics(equipmentId: string): Promise<MaintenanceAnalytics> {
+  async generateMaintenanceAnalytics(
+    equipmentId: string,
+  ): Promise<MaintenanceAnalytics> {
     try {
       const equipment = await this.equipmentRepository.findOne({
         where: { id: equipmentId },
@@ -346,16 +438,22 @@ export class HvacPreventiveMaintenanceService {
       }
 
       // Calculate performance metrics
-      const performanceMetrics = await this.calculatePerformanceMetrics(equipment);
-      
+      const performanceMetrics =
+        await this.calculatePerformanceMetrics(equipment);
+
       // Analyze trends
       const trends = await this.analyzeTrends(equipment);
-      
+
       // Generate recommendations
-      const recommendations = await this.generateRecommendations(equipment, performanceMetrics, trends);
-      
+      const recommendations = await this.generateRecommendations(
+        equipment,
+        performanceMetrics,
+        trends,
+      );
+
       // Calculate optimal next maintenance date
-      const nextOptimalMaintenanceDate = await this.calculateOptimalMaintenanceDate(equipment);
+      const nextOptimalMaintenanceDate =
+        await this.calculateOptimalMaintenanceDate(equipment);
 
       return {
         equipmentId,
@@ -364,9 +462,11 @@ export class HvacPreventiveMaintenanceService {
         recommendations,
         nextOptimalMaintenanceDate,
       };
-
     } catch (error) {
-      this.logger.error(`Failed to generate maintenance analytics: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to generate maintenance analytics: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -381,10 +481,12 @@ export class HvacPreventiveMaintenanceService {
 
       // Check for overdue maintenance
       const overdueItems = await this.getOverdueMaintenance();
-      
+
       if (overdueItems.length > 0) {
-        this.logger.warn(`Found ${overdueItems.length} overdue maintenance items`);
-        
+        this.logger.warn(
+          `Found ${overdueItems.length} overdue maintenance items`,
+        );
+
         // Auto-schedule critical overdue items
         for (const item of overdueItems) {
           if (item.priority.level === 'CRITICAL') {
@@ -395,20 +497,24 @@ export class HvacPreventiveMaintenanceService {
 
       // Check upcoming maintenance (next 7 days)
       const upcomingItems = await this.getUpcomingMaintenance(7);
-      
+
       if (upcomingItems.length > 0) {
-        this.logger.log(`Found ${upcomingItems.length} maintenance items due in next 7 days`);
-        
+        this.logger.log(
+          `Found ${upcomingItems.length} maintenance items due in next 7 days`,
+        );
+
         // Auto-schedule upcoming items
         for (const item of upcomingItems) {
-          if (!await this.isMaintenanceAlreadyScheduled(item)) {
+          if (!(await this.isMaintenanceAlreadyScheduled(item))) {
             await this.schedulePreventiveMaintenance(item);
           }
         }
       }
-
     } catch (error) {
-      this.logger.error(`Daily maintenance check failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `Daily maintenance check failed: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
@@ -422,32 +528,44 @@ export class HvacPreventiveMaintenanceService {
 
       // Get all active customers
       const customers = await this.getAllActiveCustomers();
-      
+
       for (const customerId of customers) {
         // Generate/update maintenance plan
         const plan = await this.generateMaintenancePlan(customerId);
-        
+
         // Check compliance status
-        if (plan.complianceStatus === 'AT_RISK' || plan.complianceStatus === 'NON_COMPLIANT') {
-          this.logger.warn(`Customer ${customerId} has compliance issues: ${plan.complianceStatus}`);
+        if (
+          plan.complianceStatus === 'AT_RISK' ||
+          plan.complianceStatus === 'NON_COMPLIANT'
+        ) {
+          this.logger.warn(
+            `Customer ${customerId} has compliance issues: ${plan.complianceStatus}`,
+          );
           // Would send compliance alert
         }
       }
-
     } catch (error) {
-      this.logger.error(`Weekly maintenance planning failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `Weekly maintenance planning failed: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
   // Private helper methods would continue here...
   // Due to length constraints, I'll add them in the next chunk
 
-  private getMaintenanceTypesForEquipment(equipmentType: HvacEquipmentType): HvacMaintenanceType[] {
+  private getMaintenanceTypesForEquipment(
+    equipmentType: HvacEquipmentType,
+  ): HvacMaintenanceType[] {
     // Implementation would return appropriate maintenance types for equipment
     return [HvacMaintenanceType.PREVENTIVE, HvacMaintenanceType.INSPECTION];
   }
 
-  private getMaintenanceFrequency(equipmentType: HvacEquipmentType, maintenanceType: HvacMaintenanceType): MaintenanceFrequency {
+  private getMaintenanceFrequency(
+    equipmentType: HvacEquipmentType,
+    maintenanceType: HvacMaintenanceType,
+  ): MaintenanceFrequency {
     // Implementation would return frequency based on equipment and maintenance type
     return {
       type: 'QUARTERLY',
@@ -455,25 +573,31 @@ export class HvacPreventiveMaintenanceService {
     };
   }
 
-  private async getLastMaintenanceDate(equipmentId: string, maintenanceType: HvacMaintenanceType): Promise<Date | undefined> {
+  private async getLastMaintenanceDate(
+    equipmentId: string,
+    maintenanceType: HvacMaintenanceType,
+  ): Promise<Date | undefined> {
     const lastMaintenance = await this.maintenanceRepository.findOne({
       where: { equipmentId, type: maintenanceType },
       order: { performedDate: 'DESC' },
     });
-    
+
     return lastMaintenance?.performedDate;
   }
 
-  private calculateNextDueDate(lastMaintenance: Date | undefined, frequency: MaintenanceFrequency): Date {
+  private calculateNextDueDate(
+    lastMaintenance: Date | undefined,
+    frequency: MaintenanceFrequency,
+  ): Date {
     const baseDate = lastMaintenance || new Date();
     const nextDate = new Date(baseDate);
-    
+
     switch (frequency.type) {
       case 'MONTHLY':
         nextDate.setMonth(nextDate.getMonth() + frequency.interval);
         break;
       case 'QUARTERLY':
-        nextDate.setMonth(nextDate.getMonth() + (frequency.interval * 3));
+        nextDate.setMonth(nextDate.getMonth() + frequency.interval * 3);
         break;
       case 'ANNUAL':
         nextDate.setFullYear(nextDate.getFullYear() + frequency.interval);
@@ -481,14 +605,14 @@ export class HvacPreventiveMaintenanceService {
       default:
         nextDate.setMonth(nextDate.getMonth() + 3); // Default quarterly
     }
-    
+
     return nextDate;
   }
 
   private calculateMaintenancePriority(
     equipment: HvacEquipmentWorkspaceEntity,
     maintenanceType: HvacMaintenanceType,
-    dueDate: Date
+    dueDate: Date,
   ): MaintenancePriority {
     // Implementation would calculate priority based on various factors
     return {
@@ -502,47 +626,69 @@ export class HvacPreventiveMaintenanceService {
     };
   }
 
-  private getEstimatedDuration(equipmentType: HvacEquipmentType, maintenanceType: HvacMaintenanceType): number {
+  private getEstimatedDuration(
+    equipmentType: HvacEquipmentType,
+    maintenanceType: HvacMaintenanceType,
+  ): number {
     // Implementation would return duration in minutes
     return 120; // 2 hours default
   }
 
-  private getRequiredSkills(equipmentType: HvacEquipmentType, maintenanceType: HvacMaintenanceType): string[] {
+  private getRequiredSkills(
+    equipmentType: HvacEquipmentType,
+    maintenanceType: HvacMaintenanceType,
+  ): string[] {
     // Implementation would return required skills
     return ['MAINTENANCE', equipmentType];
   }
 
-  private getMaintenanceChecklist(equipmentType: HvacEquipmentType, maintenanceType: HvacMaintenanceType): MaintenanceChecklistItem[] {
+  private getMaintenanceChecklist(
+    equipmentType: HvacEquipmentType,
+    maintenanceType: HvacMaintenanceType,
+  ): MaintenanceChecklistItem[] {
     // Implementation would return equipment-specific checklist
     return [];
   }
 
-  private getComplianceRequirements(equipmentType: HvacEquipmentType, maintenanceType: HvacMaintenanceType): ComplianceRequirement[] {
+  private getComplianceRequirements(
+    equipmentType: HvacEquipmentType,
+    maintenanceType: HvacMaintenanceType,
+  ): ComplianceRequirement[] {
     // Implementation would return compliance requirements
     return [];
   }
 
-  private calculateAnnualMaintenanceCost(schedules: MaintenanceSchedule[]): number {
+  private calculateAnnualMaintenanceCost(
+    schedules: MaintenanceSchedule[],
+  ): number {
     // Implementation would calculate annual cost
     return 5000; // PLN
   }
 
-  private generateSeasonalRecommendations(equipment: HvacEquipmentWorkspaceEntity[]): SeasonalRecommendation[] {
+  private generateSeasonalRecommendations(
+    equipment: HvacEquipmentWorkspaceEntity[],
+  ): SeasonalRecommendation[] {
     // Implementation would generate seasonal recommendations
     return [];
   }
 
-  private assessComplianceStatus(schedules: MaintenanceSchedule[]): 'COMPLIANT' | 'AT_RISK' | 'NON_COMPLIANT' {
+  private assessComplianceStatus(
+    schedules: MaintenanceSchedule[],
+  ): 'COMPLIANT' | 'AT_RISK' | 'NON_COMPLIANT' {
     // Implementation would assess compliance
     return 'COMPLIANT';
   }
 
-  private async createMaintenanceTicket(schedule: MaintenanceSchedule): Promise<HvacServiceTicketWorkspaceEntity> {
+  private async createMaintenanceTicket(
+    schedule: MaintenanceSchedule,
+  ): Promise<HvacServiceTicketWorkspaceEntity> {
     // Implementation would create service ticket
     return {} as HvacServiceTicketWorkspaceEntity;
   }
 
-  private convertPriorityToTicketPriority(priority: string): HvacServiceTicketPriority {
+  private convertPriorityToTicketPriority(
+    priority: string,
+  ): HvacServiceTicketPriority {
     switch (priority) {
       case 'CRITICAL':
         return HvacServiceTicketPriority.CRITICAL;
@@ -555,7 +701,9 @@ export class HvacPreventiveMaintenanceService {
     }
   }
 
-  private async calculatePerformanceMetrics(equipment: HvacEquipmentWorkspaceEntity): Promise<MaintenanceAnalytics['performanceMetrics']> {
+  private async calculatePerformanceMetrics(
+    equipment: HvacEquipmentWorkspaceEntity,
+  ): Promise<MaintenanceAnalytics['performanceMetrics']> {
     // Implementation would calculate metrics
     return {
       efficiency: 85,
@@ -566,7 +714,9 @@ export class HvacPreventiveMaintenanceService {
     };
   }
 
-  private async analyzeTrends(equipment: HvacEquipmentWorkspaceEntity): Promise<MaintenanceAnalytics['trends']> {
+  private async analyzeTrends(
+    equipment: HvacEquipmentWorkspaceEntity,
+  ): Promise<MaintenanceAnalytics['trends']> {
     // Implementation would analyze trends
     return {
       efficiencyTrend: 'STABLE',
@@ -578,20 +728,29 @@ export class HvacPreventiveMaintenanceService {
   private async generateRecommendations(
     equipment: HvacEquipmentWorkspaceEntity,
     metrics: MaintenanceAnalytics['performanceMetrics'],
-    trends: MaintenanceAnalytics['trends']
+    trends: MaintenanceAnalytics['trends'],
   ): Promise<string[]> {
     // Implementation would generate recommendations
-    return ['Regular filter replacement recommended', 'Consider efficiency upgrade'];
+    return [
+      'Regular filter replacement recommended',
+      'Consider efficiency upgrade',
+    ];
   }
 
-  private async calculateOptimalMaintenanceDate(equipment: HvacEquipmentWorkspaceEntity): Promise<Date> {
+  private async calculateOptimalMaintenanceDate(
+    equipment: HvacEquipmentWorkspaceEntity,
+  ): Promise<Date> {
     // Implementation would calculate optimal date
     const nextMonth = new Date();
+
     nextMonth.setMonth(nextMonth.getMonth() + 1);
+
     return nextMonth;
   }
 
-  private async isMaintenanceAlreadyScheduled(schedule: MaintenanceSchedule): Promise<boolean> {
+  private async isMaintenanceAlreadyScheduled(
+    schedule: MaintenanceSchedule,
+  ): Promise<boolean> {
     // Implementation would check if already scheduled
     return false;
   }

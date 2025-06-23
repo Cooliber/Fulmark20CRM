@@ -1,7 +1,7 @@
 /**
  * HVAC Dispatch Service
  * "Pasja rodzi profesjonalizm" - Professional HVAC Dispatch Management
- * 
+ *
  * Implements real-time dispatch system with:
  * - Real-time technician tracking
  * - Automated dispatch workflows
@@ -11,12 +11,23 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { HvacServiceTicketWorkspaceEntity, HvacServiceTicketStatus, HvacServiceTicketPriority } from '../standard-objects/hvac-service-ticket.workspace-entity';
-import { HvacTechnicianWorkspaceEntity, HvacTechnicianStatus } from '../standard-objects/hvac-technician.workspace-entity';
-import { HvacSchedulingEngineService, SchedulingRequest, SchedulingResult } from './hvac-scheduling-engine.service';
+import { InjectRepository } from '@nestjs/typeorm';
+
+import { Repository } from 'typeorm';
+
+import {
+    HvacServiceTicketPriority,
+    HvacServiceTicketStatus,
+    HvacServiceTicketWorkspaceEntity,
+} from 'src/modules/hvac/standard-objects/hvac-service-ticket.workspace-entity';
+import { HvacTechnicianWorkspaceEntity } from 'src/modules/hvac/standard-objects/hvac-technician.workspace-entity';
+
+import {
+    HvacSchedulingEngineService,
+    SchedulingRequest,
+    SchedulingResult,
+} from './hvac-scheduling-engine.service';
 
 // Dispatch interfaces
 export interface DispatchRequest {
@@ -70,7 +81,13 @@ export interface TechnicianDispatchInfo {
 export interface DispatchUpdate {
   dispatchId: string;
   technicianId: string;
-  status: 'DISPATCHED' | 'EN_ROUTE' | 'ARRIVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  status:
+    | 'DISPATCHED'
+    | 'EN_ROUTE'
+    | 'ARRIVED'
+    | 'IN_PROGRESS'
+    | 'COMPLETED'
+    | 'CANCELLED';
   location?: {
     latitude: number;
     longitude: number;
@@ -96,10 +113,10 @@ export class HvacDispatchService {
   constructor(
     @InjectRepository(HvacServiceTicketWorkspaceEntity, 'workspace')
     private readonly serviceTicketRepository: Repository<HvacServiceTicketWorkspaceEntity>,
-    
+
     @InjectRepository(HvacTechnicianWorkspaceEntity, 'workspace')
     private readonly technicianRepository: Repository<HvacTechnicianWorkspaceEntity>,
-    
+
     private readonly schedulingEngine: HvacSchedulingEngineService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -107,33 +124,51 @@ export class HvacDispatchService {
   /**
    * Main dispatch method - creates and assigns service request
    */
-  async dispatchServiceRequest(request: DispatchRequest): Promise<DispatchResult> {
+  async dispatchServiceRequest(
+    request: DispatchRequest,
+  ): Promise<DispatchResult> {
     try {
-      this.logger.log(`Dispatching service request for customer: ${request.customerInfo.name}`);
+      this.logger.log(
+        `Dispatching service request for customer: ${request.customerInfo.name}`,
+      );
 
       // Create service ticket
       const ticket = await this.createServiceTicket(request);
-      
+
       // Prepare scheduling request
       const schedulingRequest: SchedulingRequest = {
         ticketId: ticket.id,
         priority: request.priority,
         serviceType: request.serviceType,
         estimatedDuration: this.estimateServiceDuration(request.serviceType),
-        requiredSkills: this.getRequiredSkills(request.serviceType, request.equipmentInfo?.type),
+        requiredSkills: this.getRequiredSkills(
+          request.serviceType,
+          request.equipmentInfo?.type,
+        ),
         preferredDate: request.preferredTimeSlot,
-        customerLocation: request.customerInfo.location,
+        customerLocation: {
+          latitude: request.customerInfo.location.latitude,
+          longitude: request.customerInfo.location.longitude,
+          address: request.customerInfo.address,
+        },
         equipmentType: request.equipmentInfo?.type,
         emergencyLevel: request.emergencyLevel,
       };
 
       // Schedule the service
       let schedulingResult: SchedulingResult;
-      
-      if (request.priority === HvacServiceTicketPriority.EMERGENCY || request.priority === HvacServiceTicketPriority.CRITICAL) {
-        schedulingResult = await this.schedulingEngine.handleEmergencyScheduling(schedulingRequest);
+
+      if (
+        request.priority === HvacServiceTicketPriority.EMERGENCY ||
+        request.priority === HvacServiceTicketPriority.CRITICAL
+      ) {
+        schedulingResult =
+          await this.schedulingEngine.handleEmergencyScheduling(
+            schedulingRequest,
+          );
       } else {
-        schedulingResult = await this.schedulingEngine.scheduleServiceRequest(schedulingRequest);
+        schedulingResult =
+          await this.schedulingEngine.scheduleServiceRequest(schedulingRequest);
       }
 
       if (!schedulingResult.success) {
@@ -146,15 +181,30 @@ export class HvacDispatchService {
       }
 
       // Get technician info
-      const technicianInfo = await this.getTechnicianDispatchInfo(schedulingResult.assignedTechnician!);
-      
+      const technicianInfo = await this.getTechnicianDispatchInfo(
+        schedulingResult.assignedTechnician!,
+      );
+
       // Create dispatch record
-      const dispatchId = await this.createDispatchRecord(ticket.id, technicianInfo, schedulingResult);
-      
+      const dispatchId = await this.createDispatchRecord(
+        ticket.id,
+        technicianInfo,
+        schedulingResult,
+      );
+
       // Send notifications
-      const notificationSent = await this.sendCustomerNotification(request.customerInfo, technicianInfo, schedulingResult);
-      await this.sendTechnicianNotification(technicianInfo, request, schedulingResult);
-      
+      const notificationSent = await this.sendCustomerNotification(
+        request.customerInfo,
+        technicianInfo,
+        schedulingResult,
+      );
+
+      await this.sendTechnicianNotification(
+        technicianInfo,
+        request,
+        schedulingResult,
+      );
+
       // Emit dispatch event
       this.eventEmitter.emit('dispatch.created', {
         dispatchId,
@@ -171,9 +221,12 @@ export class HvacDispatchService {
         trackingUrl: this.generateTrackingUrl(dispatchId),
         customerNotificationSent: notificationSent,
       };
-
     } catch (error) {
-      this.logger.error(`Failed to dispatch service request: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to dispatch service request: ${error.message}`,
+        error.stack,
+      );
+
       return {
         success: false,
         dispatchId: '',
@@ -188,7 +241,9 @@ export class HvacDispatchService {
    */
   async updateDispatchStatus(update: DispatchUpdate): Promise<void> {
     try {
-      this.logger.log(`Updating dispatch ${update.dispatchId} status to ${update.status}`);
+      this.logger.log(
+        `Updating dispatch ${update.dispatchId} status to ${update.status}`,
+      );
 
       // Store the update
       this.activeDispatches.set(update.dispatchId, update);
@@ -214,9 +269,11 @@ export class HvacDispatchService {
           await this.handleCompletionUpdate(update);
           break;
       }
-
     } catch (error) {
-      this.logger.error(`Failed to update dispatch status: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to update dispatch status: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
@@ -237,9 +294,13 @@ export class HvacDispatchService {
   /**
    * Handle emergency dispatch with escalation
    */
-  async handleEmergencyDispatch(emergency: EmergencyDispatch): Promise<DispatchResult> {
+  async handleEmergencyDispatch(
+    emergency: EmergencyDispatch,
+  ): Promise<DispatchResult> {
     try {
-      this.logger.log(`Handling emergency dispatch for ticket: ${emergency.ticketId}`);
+      this.logger.log(
+        `Handling emergency dispatch for ticket: ${emergency.ticketId}`,
+      );
 
       // Get the service ticket
       const ticket = await this.serviceTicketRepository.findOne({
@@ -273,13 +334,18 @@ export class HvacDispatchService {
 
       // Send escalation notifications if needed
       if (emergency.emergencyLevel === 'CRITICAL') {
-        await this.sendEscalationNotifications(emergency.escalationContacts, result);
+        await this.sendEscalationNotifications(
+          emergency.escalationContacts,
+          result,
+        );
       }
 
       return result;
-
     } catch (error) {
-      this.logger.error(`Failed to handle emergency dispatch: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to handle emergency dispatch: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -308,9 +374,12 @@ export class HvacDispatchService {
       this.eventEmitter.emit('dispatch.cancelled', { dispatchId, reason });
 
       return true;
-
     } catch (error) {
-      this.logger.error(`Failed to cancel dispatch: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to cancel dispatch: ${error.message}`,
+        error.stack,
+      );
+
       return false;
     }
   }
@@ -318,18 +387,23 @@ export class HvacDispatchService {
   /**
    * Create service ticket from dispatch request
    */
-  private async createServiceTicket(request: DispatchRequest): Promise<HvacServiceTicketWorkspaceEntity> {
-    const ticket = this.serviceTicketRepository.create({
+  private async createServiceTicket(
+    request: DispatchRequest,
+  ): Promise<HvacServiceTicketWorkspaceEntity> {
+    const ticketData = {
       ticketNumber: this.generateTicketNumber(),
       title: `${request.serviceType} - ${request.customerInfo.name}`,
-      description: request.description,
+      description: request.description || '',
       status: HvacServiceTicketStatus.OPEN,
       priority: request.priority,
       serviceType: request.serviceType as any,
       reportedBy: request.customerInfo.name,
       contactInfo: request.customerInfo.phone,
       preferredDate: request.preferredTimeSlot,
-    });
+      serviceLocation: request.customerInfo.address,
+    };
+
+    const ticket = this.serviceTicketRepository.create(ticketData);
 
     return await this.serviceTicketRepository.save(ticket);
   }
@@ -340,6 +414,7 @@ export class HvacDispatchService {
   private generateTicketNumber(): string {
     const timestamp = Date.now().toString(36);
     const random = Math.random().toString(36).substr(2, 5);
+
     return `HVAC-${timestamp}-${random}`.toUpperCase();
   }
 
@@ -348,12 +423,12 @@ export class HvacDispatchService {
    */
   private estimateServiceDuration(serviceType: string): number {
     const durations: Record<string, number> = {
-      'INSTALLATION': 240, // 4 hours
-      'MAINTENANCE': 120,  // 2 hours
-      'REPAIR': 180,       // 3 hours
-      'INSPECTION': 60,    // 1 hour
-      'EMERGENCY': 90,     // 1.5 hours
-      'CONSULTATION': 45,  // 45 minutes
+      INSTALLATION: 240, // 4 hours
+      MAINTENANCE: 120, // 2 hours
+      REPAIR: 180, // 3 hours
+      INSPECTION: 60, // 1 hour
+      EMERGENCY: 90, // 1.5 hours
+      CONSULTATION: 45, // 45 minutes
     };
 
     return durations[serviceType] || 120; // Default 2 hours
@@ -362,7 +437,10 @@ export class HvacDispatchService {
   /**
    * Get required skills for service type and equipment
    */
-  private getRequiredSkills(serviceType: string, equipmentType?: string): string[] {
+  private getRequiredSkills(
+    serviceType: string,
+    equipmentType?: string,
+  ): string[] {
     const skills: string[] = [];
 
     // Add service type skills
@@ -392,7 +470,9 @@ export class HvacDispatchService {
   /**
    * Get technician dispatch information
    */
-  private async getTechnicianDispatchInfo(technicianId: string): Promise<TechnicianDispatchInfo> {
+  private async getTechnicianDispatchInfo(
+    technicianId: string,
+  ): Promise<TechnicianDispatchInfo> {
     const technician = await this.technicianRepository.findOne({
       where: { id: technicianId },
     });
@@ -404,10 +484,10 @@ export class HvacDispatchService {
     return {
       technicianId: technician.id,
       name: `${technician.name.firstName} ${technician.name.lastName}`,
-      phone: technician.phones?.[0]?.countryCode + technician.phones?.[0]?.number || '',
+      phone: technician.phones?.primaryPhoneNumber || '',
       currentLocation: {
-        latitude: technician.address?.latitude || 52.2297,
-        longitude: technician.address?.longitude || 21.0122,
+        latitude: technician.address?.addressLat || 52.2297,
+        longitude: technician.address?.addressLng || 21.0122,
         lastUpdated: new Date(),
       },
       status: 'AVAILABLE',
@@ -422,10 +502,10 @@ export class HvacDispatchService {
   private async createDispatchRecord(
     ticketId: string,
     technician: TechnicianDispatchInfo,
-    scheduling: SchedulingResult
+    scheduling: SchedulingResult,
   ): Promise<string> {
     const dispatchId = `DISPATCH-${Date.now()}`;
-    
+
     const dispatchUpdate: DispatchUpdate = {
       dispatchId,
       technicianId: technician.technicianId,
@@ -439,6 +519,7 @@ export class HvacDispatchService {
     };
 
     this.activeDispatches.set(dispatchId, dispatchUpdate);
+
     return dispatchId;
   }
 
@@ -448,22 +529,26 @@ export class HvacDispatchService {
   private async sendCustomerNotification(
     customerInfo: DispatchRequest['customerInfo'],
     technician: TechnicianDispatchInfo,
-    scheduling: SchedulingResult
+    scheduling: SchedulingResult,
   ): Promise<boolean> {
     try {
       // This would integrate with SMS/Email service
       this.logger.log(`Sending notification to customer: ${customerInfo.name}`);
-      
-      const message = `Witaj ${customerInfo.name}! Twój technik HVAC ${technician.name} został przydzielony. ` +
-                     `Przewidywany czas przyjazdu: ${scheduling.estimatedArrival?.toLocaleString('pl-PL')}. ` +
-                     `Kontakt: ${technician.phone}`;
-      
+
+      const message =
+        `Witaj ${customerInfo.name}! Twój technik HVAC ${technician.name} został przydzielony. ` +
+        `Przewidywany czas przyjazdu: ${scheduling.estimatedArrival?.toLocaleString('pl-PL')}. ` +
+        `Kontakt: ${technician.phone}`;
+
       // Would send actual SMS/Email here
       this.logger.log(`Customer notification: ${message}`);
-      
+
       return true;
     } catch (error) {
-      this.logger.error(`Failed to send customer notification: ${error.message}`);
+      this.logger.error(
+        `Failed to send customer notification: ${error.message}`,
+      );
+
       return false;
     }
   }
@@ -474,21 +559,23 @@ export class HvacDispatchService {
   private async sendTechnicianNotification(
     technician: TechnicianDispatchInfo,
     request: DispatchRequest,
-    scheduling: SchedulingResult
+    scheduling: SchedulingResult,
   ): Promise<void> {
     try {
       this.logger.log(`Sending notification to technician: ${technician.name}`);
-      
-      const message = `Nowe zlecenie: ${request.serviceType} dla ${request.customerInfo.name}. ` +
-                     `Adres: ${request.customerInfo.address}. ` +
-                     `Czas: ${scheduling.scheduledTime?.toLocaleString('pl-PL')}. ` +
-                     `Priorytet: ${request.priority}`;
-      
+
+      const message =
+        `Nowe zlecenie: ${request.serviceType} dla ${request.customerInfo.name}. ` +
+        `Adres: ${request.customerInfo.address}. ` +
+        `Czas: ${scheduling.scheduledTime?.toLocaleString('pl-PL')}. ` +
+        `Priorytet: ${request.priority}`;
+
       // Would send actual notification here
       this.logger.log(`Technician notification: ${message}`);
-      
     } catch (error) {
-      this.logger.error(`Failed to send technician notification: ${error.message}`);
+      this.logger.error(
+        `Failed to send technician notification: ${error.message}`,
+      );
     }
   }
 
@@ -502,12 +589,16 @@ export class HvacDispatchService {
   /**
    * Update service ticket status based on dispatch status
    */
-  private async updateServiceTicketStatus(dispatchId: string, status: DispatchUpdate['status']): Promise<void> {
+  private async updateServiceTicketStatus(
+    dispatchId: string,
+    status: DispatchUpdate['status'],
+  ): Promise<void> {
     const dispatch = this.activeDispatches.get(dispatchId);
+
     if (!dispatch) return;
 
     let ticketStatus: HvacServiceTicketStatus;
-    
+
     switch (status) {
       case 'DISPATCHED':
       case 'EN_ROUTE':
@@ -529,7 +620,9 @@ export class HvacDispatchService {
 
     // Find and update the service ticket
     // This would need the ticket ID from the dispatch record
-    this.logger.log(`Updating ticket status to ${ticketStatus} for dispatch ${dispatchId}`);
+    this.logger.log(
+      `Updating ticket status to ${ticketStatus} for dispatch ${dispatchId}`,
+    );
   }
 
   /**
@@ -538,11 +631,12 @@ export class HvacDispatchService {
   private async sendRealTimeUpdate(update: DispatchUpdate): Promise<void> {
     try {
       // This would integrate with WebSocket or push notification service
-      this.logger.log(`Sending real-time update for dispatch ${update.dispatchId}: ${update.status}`);
-      
+      this.logger.log(
+        `Sending real-time update for dispatch ${update.dispatchId}: ${update.status}`,
+      );
+
       // Emit WebSocket event for real-time updates
       this.eventEmitter.emit('dispatch.realtime', update);
-      
     } catch (error) {
       this.logger.error(`Failed to send real-time update: ${error.message}`);
     }
@@ -553,7 +647,9 @@ export class HvacDispatchService {
    */
   private async handleEnRouteUpdate(update: DispatchUpdate): Promise<void> {
     // Send ETA update to customer
-    this.logger.log(`Technician ${update.technicianId} is en route for dispatch ${update.dispatchId}`);
+    this.logger.log(
+      `Technician ${update.technicianId} is en route for dispatch ${update.dispatchId}`,
+    );
   }
 
   /**
@@ -561,7 +657,9 @@ export class HvacDispatchService {
    */
   private async handleArrivalUpdate(update: DispatchUpdate): Promise<void> {
     // Notify customer of arrival
-    this.logger.log(`Technician ${update.technicianId} has arrived for dispatch ${update.dispatchId}`);
+    this.logger.log(
+      `Technician ${update.technicianId} has arrived for dispatch ${update.dispatchId}`,
+    );
   }
 
   /**
@@ -570,7 +668,7 @@ export class HvacDispatchService {
   private async handleCompletionUpdate(update: DispatchUpdate): Promise<void> {
     // Send completion notification and request feedback
     this.logger.log(`Service completed for dispatch ${update.dispatchId}`);
-    
+
     // Remove from active dispatches
     this.activeDispatches.delete(update.dispatchId);
   }
@@ -578,7 +676,10 @@ export class HvacDispatchService {
   /**
    * Send escalation notifications for critical emergencies
    */
-  private async sendEscalationNotifications(contacts: string[], result: DispatchResult): Promise<void> {
+  private async sendEscalationNotifications(
+    contacts: string[],
+    result: DispatchResult,
+  ): Promise<void> {
     for (const contact of contacts) {
       this.logger.log(`Sending escalation notification to: ${contact}`);
       // Would send actual escalation notification

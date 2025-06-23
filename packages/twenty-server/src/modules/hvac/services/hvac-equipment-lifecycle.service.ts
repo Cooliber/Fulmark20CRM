@@ -1,16 +1,26 @@
 /**
  * HVAC Equipment Lifecycle Service
  * "Pasja rodzi profesjonalizm" - Professional equipment lifecycle management
- * 
+ *
  * Handles equipment installation, maintenance scheduling, health monitoring,
  * and end-of-life management for HVAC systems.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+
 import { Repository } from 'typeorm';
-import { HvacEquipmentWorkspaceEntity, HvacEquipmentStatus, HvacEquipmentCondition } from '../standard-objects/hvac-equipment.workspace-entity';
-import { HvacMaintenanceRecordWorkspaceEntity, HvacMaintenanceType, HvacMaintenanceStatus } from '../standard-objects/hvac-maintenance-record.workspace-entity';
+
+import {
+    HvacEquipmentCondition,
+    HvacEquipmentStatus,
+    HvacEquipmentType,
+    HvacEquipmentWorkspaceEntity,
+} from 'src/modules/hvac/standard-objects/hvac-equipment.workspace-entity';
+import {
+    HvacMaintenanceRecordWorkspaceEntity,
+    HvacMaintenanceType,
+} from 'src/modules/hvac/standard-objects/hvac-maintenance-record.workspace-entity';
 
 export interface EquipmentHealthScore {
   overall: number; // 0-100
@@ -34,7 +44,12 @@ export interface MaintenanceSchedule {
 
 export interface EquipmentLifecycleEvent {
   equipmentId: string;
-  eventType: 'installation' | 'maintenance' | 'repair' | 'upgrade' | 'retirement';
+  eventType:
+    | 'installation'
+    | 'maintenance'
+    | 'repair'
+    | 'upgrade'
+    | 'retirement';
   date: Date;
   description: string;
   cost?: number;
@@ -56,7 +71,9 @@ export class HvacEquipmentLifecycleService {
   /**
    * Calculate equipment health score based on multiple factors
    */
-  async calculateHealthScore(equipmentId: string): Promise<EquipmentHealthScore> {
+  async calculateHealthScore(
+    equipmentId: string,
+  ): Promise<EquipmentHealthScore> {
     try {
       const equipment = await this.equipmentRepository.findOne({
         where: { id: equipmentId },
@@ -69,30 +86,43 @@ export class HvacEquipmentLifecycleService {
 
       const maintenanceRecords = equipment.maintenanceRecords || [];
       const now = new Date();
-      const installationAge = this.calculateAgeInYears(equipment.installationDate, now);
+      const installationAge = this.calculateAgeInYears(
+        equipment.installationDate,
+        now,
+      );
 
       // Performance score (based on recent maintenance and age)
-      const performance = this.calculatePerformanceScore(maintenanceRecords, installationAge);
+      const performance = this.calculatePerformanceScore(
+        maintenanceRecords,
+        installationAge,
+      );
 
       // Reliability score (based on failure frequency)
       const reliability = this.calculateReliabilityScore(maintenanceRecords);
 
       // Efficiency score (based on energy rating and maintenance compliance)
-      const efficiency = this.calculateEfficiencyScore(equipment, maintenanceRecords);
+      const efficiency = this.calculateEfficiencyScore(
+        equipment,
+        maintenanceRecords,
+      );
 
       // Maintenance compliance score
-      const maintenanceCompliance = this.calculateMaintenanceComplianceScore(maintenanceRecords);
+      const maintenanceCompliance =
+        this.calculateMaintenanceComplianceScore(maintenanceRecords);
 
       // Overall score (weighted average)
       const overall = Math.round(
-        (performance * 0.3 + reliability * 0.25 + efficiency * 0.25 + maintenanceCompliance * 0.2)
+        performance * 0.3 +
+          reliability * 0.25 +
+          efficiency * 0.25 +
+          maintenanceCompliance * 0.2,
       );
 
       // Risk factors and recommendations
       const { riskFactors, recommendations } = this.generateRiskAssessment(
         equipment,
         maintenanceRecords,
-        { performance, reliability, efficiency, maintenanceCompliance }
+        { performance, reliability, efficiency, maintenanceCompliance },
       );
 
       return {
@@ -105,7 +135,10 @@ export class HvacEquipmentLifecycleService {
         recommendations,
       };
     } catch (error) {
-      this.logger.error(`Failed to calculate health score for equipment ${equipmentId}:`, error);
+      this.logger.error(
+        `Failed to calculate health score for equipment ${equipmentId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -113,7 +146,9 @@ export class HvacEquipmentLifecycleService {
   /**
    * Generate predictive maintenance schedule
    */
-  async generateMaintenanceSchedule(equipmentId: string): Promise<MaintenanceSchedule[]> {
+  async generateMaintenanceSchedule(
+    equipmentId: string,
+  ): Promise<MaintenanceSchedule[]> {
     try {
       const equipment = await this.equipmentRepository.findOne({
         where: { id: equipmentId },
@@ -126,10 +161,16 @@ export class HvacEquipmentLifecycleService {
 
       const schedule: MaintenanceSchedule[] = [];
       const healthScore = await this.calculateHealthScore(equipmentId);
-      const lastMaintenance = this.getLastMaintenanceDate(equipment.maintenanceRecords || []);
+      const lastMaintenance = this.getLastMaintenanceDate(
+        equipment.maintenanceRecords || [],
+      );
 
       // Routine maintenance (quarterly)
-      const nextRoutine = this.calculateNextMaintenanceDate(lastMaintenance, 'routine');
+      const nextRoutine = this.calculateNextMaintenanceDate(
+        lastMaintenance,
+        'routine',
+      );
+
       schedule.push({
         equipmentId,
         nextMaintenanceDate: nextRoutine,
@@ -140,14 +181,20 @@ export class HvacEquipmentLifecycleService {
       });
 
       // Preventive maintenance (annually)
-      const nextPreventive = this.calculateNextMaintenanceDate(lastMaintenance, 'preventive');
+      const nextPreventive = this.calculateNextMaintenanceDate(
+        lastMaintenance,
+        'preventive',
+      );
+
       schedule.push({
         equipmentId,
         nextMaintenanceDate: nextPreventive,
         maintenanceType: HvacMaintenanceType.PREVENTIVE,
         priority: 'medium',
         estimatedDuration: 4,
-        requiredParts: this.getPreventiveMaintenanceParts(equipment.equipmentType),
+        requiredParts: this.getPreventiveMaintenanceParts(
+          equipment.equipmentType,
+        ),
       });
 
       // Emergency maintenance (if health score is critical)
@@ -159,13 +206,20 @@ export class HvacEquipmentLifecycleService {
           priority: 'critical',
           estimatedDuration: 6,
           requiredParts: [],
-          specialInstructions: 'Critical health score detected. Immediate inspection required.',
+          specialInstructions:
+            'Critical health score detected. Immediate inspection required.',
         });
       }
 
-      return schedule.sort((a, b) => a.nextMaintenanceDate.getTime() - b.nextMaintenanceDate.getTime());
+      return schedule.sort(
+        (a, b) =>
+          a.nextMaintenanceDate.getTime() - b.nextMaintenanceDate.getTime(),
+      );
     } catch (error) {
-      this.logger.error(`Failed to generate maintenance schedule for equipment ${equipmentId}:`, error);
+      this.logger.error(
+        `Failed to generate maintenance schedule for equipment ${equipmentId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -175,11 +229,13 @@ export class HvacEquipmentLifecycleService {
    */
   async recordLifecycleEvent(event: EquipmentLifecycleEvent): Promise<void> {
     try {
-      this.logger.log(`Recording lifecycle event for equipment ${event.equipmentId}: ${event.eventType}`);
-      
+      this.logger.log(
+        `Recording lifecycle event for equipment ${event.equipmentId}: ${event.eventType}`,
+      );
+
       // Update equipment status based on event type
       await this.updateEquipmentStatusFromEvent(event);
-      
+
       // Log event for audit trail
       this.logger.log(`Lifecycle event recorded: ${JSON.stringify(event)}`);
     } catch (error) {
@@ -193,7 +249,11 @@ export class HvacEquipmentLifecycleService {
    */
   async predictReplacementNeeds(equipmentId: string): Promise<{
     replacementRecommended: boolean;
-    timeframe: 'immediate' | 'within_6_months' | 'within_1_year' | 'within_2_years';
+    timeframe:
+      | 'immediate'
+      | 'within_6_months'
+      | 'within_1_year'
+      | 'within_2_years';
     reasons: string[];
     estimatedCost: number;
   }> {
@@ -208,12 +268,21 @@ export class HvacEquipmentLifecycleService {
       }
 
       const healthScore = await this.calculateHealthScore(equipmentId);
-      const age = this.calculateAgeInYears(equipment.installationDate, new Date());
-      const maintenanceCosts = this.calculateMaintenanceCosts(equipment.maintenanceRecords || []);
+      const age = this.calculateAgeInYears(
+        equipment.installationDate,
+        new Date(),
+      );
+      const maintenanceCosts = this.calculateMaintenanceCosts(
+        equipment.maintenanceRecords || [],
+      );
 
       const reasons: string[] = [];
       let replacementRecommended = false;
-      let timeframe: 'immediate' | 'within_6_months' | 'within_1_year' | 'within_2_years' = 'within_2_years';
+      let timeframe:
+        | 'immediate'
+        | 'within_6_months'
+        | 'within_1_year'
+        | 'within_2_years' = 'within_2_years';
 
       // Age-based assessment
       if (age > 15) {
@@ -234,7 +303,11 @@ export class HvacEquipmentLifecycleService {
       }
 
       // Maintenance cost assessment
-      if (maintenanceCosts.annual > equipment.purchasePrice * 0.3) {
+      const purchasePriceValue = equipment.purchasePrice?.amountMicros
+        ? equipment.purchasePrice.amountMicros / 1000000
+        : 0;
+
+      if (maintenanceCosts.annual > purchasePriceValue * 0.3) {
         reasons.push('Annual maintenance costs exceed 30% of equipment value');
         replacementRecommended = true;
         if (timeframe === 'within_2_years') timeframe = 'within_1_year';
@@ -256,75 +329,101 @@ export class HvacEquipmentLifecycleService {
         estimatedCost,
       };
     } catch (error) {
-      this.logger.error(`Failed to predict replacement needs for equipment ${equipmentId}:`, error);
+      this.logger.error(
+        `Failed to predict replacement needs for equipment ${equipmentId}:`,
+        error,
+      );
       throw error;
     }
   }
 
   // Private helper methods
-  private calculateAgeInYears(installationDate: Date, currentDate: Date): number {
-    return (currentDate.getTime() - installationDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+  private calculateAgeInYears(
+    installationDate: Date,
+    currentDate: Date,
+  ): number {
+    return (
+      (currentDate.getTime() - installationDate.getTime()) /
+      (365.25 * 24 * 60 * 60 * 1000)
+    );
   }
 
-  private calculatePerformanceScore(maintenanceRecords: any[], age: number): number {
+  private calculatePerformanceScore(
+    maintenanceRecords: any[],
+    age: number,
+  ): number {
     // Base score decreases with age
-    let score = Math.max(100 - (age * 3), 20);
-    
+    let score = Math.max(100 - age * 3, 20);
+
     // Adjust based on recent maintenance
     const recentMaintenance = maintenanceRecords.filter(
-      record => new Date(record.completedDate).getTime() > Date.now() - (90 * 24 * 60 * 60 * 1000)
+      (record) =>
+        new Date(record.completedDate).getTime() >
+        Date.now() - 90 * 24 * 60 * 60 * 1000,
     );
-    
+
     if (recentMaintenance.length > 0) {
       score += 10; // Bonus for recent maintenance
     }
-    
+
     return Math.min(Math.max(score, 0), 100);
   }
 
   private calculateReliabilityScore(maintenanceRecords: any[]): number {
     const emergencyRepairs = maintenanceRecords.filter(
-      record => record.maintenanceType === HvacMaintenanceType.EMERGENCY
+      (record) => record.maintenanceType === HvacMaintenanceType.EMERGENCY,
     );
-    
+
     // Start with perfect score, deduct for emergency repairs
-    let score = 100 - (emergencyRepairs.length * 15);
-    
+    const score = 100 - emergencyRepairs.length * 15;
+
     return Math.min(Math.max(score, 0), 100);
   }
 
-  private calculateEfficiencyScore(equipment: any, maintenanceRecords: any[]): number {
+  private calculateEfficiencyScore(
+    equipment: any,
+    maintenanceRecords: any[],
+  ): number {
     // Base score from energy rating
     let score = equipment.energyRating ? 80 : 60;
-    
+
     // Adjust based on maintenance frequency
     const regularMaintenance = maintenanceRecords.filter(
-      record => record.maintenanceType === HvacMaintenanceType.ROUTINE
+      (record) => record.maintenanceType === HvacMaintenanceType.ROUTINE,
     );
-    
+
     if (regularMaintenance.length > 2) {
       score += 20; // Well-maintained equipment is more efficient
     }
-    
+
     return Math.min(Math.max(score, 0), 100);
   }
 
-  private calculateMaintenanceComplianceScore(maintenanceRecords: any[]): number {
+  private calculateMaintenanceComplianceScore(
+    maintenanceRecords: any[],
+  ): number {
     // Calculate based on maintenance frequency and timeliness
     const routineMaintenance = maintenanceRecords.filter(
-      record => record.maintenanceType === HvacMaintenanceType.ROUTINE
+      (record) => record.maintenanceType === HvacMaintenanceType.ROUTINE,
     );
-    
+
     // Should have at least 4 routine maintenance per year
     const expectedAnnualMaintenance = 4;
     const actualAnnualMaintenance = routineMaintenance.length;
-    
-    const complianceRatio = Math.min(actualAnnualMaintenance / expectedAnnualMaintenance, 1);
-    
+
+    const complianceRatio = Math.min(
+      actualAnnualMaintenance / expectedAnnualMaintenance,
+      1,
+    );
+
     return Math.round(complianceRatio * 100);
   }
 
-  private generateRiskAssessment(equipment: any, maintenanceRecords: any[], scores: any): {
+  private generateRiskAssessment(
+    equipment: any,
+    maintenanceRecords: any[],
+    scores: any,
+  ): {
     riskFactors: string[];
     recommendations: string[];
   } {
@@ -358,42 +457,60 @@ export class HvacEquipmentLifecycleService {
     if (maintenanceRecords.length === 0) {
       return new Date(Date.now() - 365 * 24 * 60 * 60 * 1000); // 1 year ago
     }
-    
+
     const sortedRecords = maintenanceRecords.sort(
-      (a, b) => new Date(b.completedDate).getTime() - new Date(a.completedDate).getTime()
+      (a, b) =>
+        new Date(b.completedDate).getTime() -
+        new Date(a.completedDate).getTime(),
     );
-    
+
     return new Date(sortedRecords[0].completedDate);
   }
 
-  private calculateNextMaintenanceDate(lastMaintenance: Date, type: 'routine' | 'preventive'): Date {
+  private calculateNextMaintenanceDate(
+    lastMaintenance: Date,
+    type: 'routine' | 'preventive',
+  ): Date {
     const intervalDays = type === 'routine' ? 90 : 365; // 3 months or 1 year
-    return new Date(lastMaintenance.getTime() + (intervalDays * 24 * 60 * 60 * 1000));
+
+    return new Date(
+      lastMaintenance.getTime() + intervalDays * 24 * 60 * 60 * 1000,
+    );
   }
 
-  private getRoutineMaintenanceParts(equipmentType: string): string[] {
+  private getRoutineMaintenanceParts(
+    equipmentType: HvacEquipmentType,
+  ): string[] {
     const commonParts = ['Air Filter', 'Cleaning Supplies', 'Lubricants'];
-    
+
     switch (equipmentType) {
-      case 'AIR_CONDITIONER':
+      case HvacEquipmentType.AIR_CONDITIONER:
         return [...commonParts, 'Refrigerant', 'Coil Cleaner'];
-      case 'HEAT_PUMP':
+      case HvacEquipmentType.HEAT_PUMP:
         return [...commonParts, 'Refrigerant', 'Defrost Control'];
-      case 'FURNACE':
+      case HvacEquipmentType.FURNACE:
         return [...commonParts, 'Igniter', 'Flame Sensor'];
+      case HvacEquipmentType.BOILER:
+        return [...commonParts, 'Water Treatment', 'Pressure Relief Valve'];
+      case HvacEquipmentType.CHILLER:
+        return [...commonParts, 'Refrigerant', 'Water Treatment'];
       default:
         return commonParts;
     }
   }
 
-  private getPreventiveMaintenanceParts(equipmentType: string): string[] {
+  private getPreventiveMaintenanceParts(
+    equipmentType: HvacEquipmentType,
+  ): string[] {
     const routineParts = this.getRoutineMaintenanceParts(equipmentType);
     const additionalParts = ['Belts', 'Bearings', 'Electrical Contacts'];
-    
+
     return [...routineParts, ...additionalParts];
   }
 
-  private async updateEquipmentStatusFromEvent(event: EquipmentLifecycleEvent): Promise<void> {
+  private async updateEquipmentStatusFromEvent(
+    event: EquipmentLifecycleEvent,
+  ): Promise<void> {
     const equipment = await this.equipmentRepository.findOne({
       where: { id: event.equipmentId },
     });
@@ -421,29 +538,48 @@ export class HvacEquipmentLifecycleService {
     await this.equipmentRepository.save(equipment);
   }
 
-  private calculateMaintenanceCosts(maintenanceRecords: any[]): { annual: number; total: number } {
-    const total = maintenanceRecords.reduce((sum, record) => sum + (record.cost || 0), 0);
+  private calculateMaintenanceCosts(
+    maintenanceRecords: HvacMaintenanceRecordWorkspaceEntity[],
+  ): {
+    annual: number;
+    total: number;
+  } {
+    const total = maintenanceRecords.reduce((sum, record) => {
+      const costAmount = record.cost?.amountMicros
+        ? record.cost.amountMicros / 1000000
+        : 0;
+
+      return sum + costAmount;
+    }, 0);
     const annual = total / Math.max(1, maintenanceRecords.length / 4); // Assuming quarterly maintenance
-    
+
     return { annual, total };
   }
 
-  private estimateReplacementCost(equipment: any): number {
+  private estimateReplacementCost(
+    equipment: HvacEquipmentWorkspaceEntity,
+  ): number {
     // Base cost estimation by equipment type
-    const baseCosts = {
-      'AIR_CONDITIONER': 5000,
-      'HEAT_PUMP': 7000,
-      'FURNACE': 4000,
-      'BOILER': 8000,
-      'CHILLER': 15000,
+    const baseCosts: Record<HvacEquipmentType, number> = {
+      [HvacEquipmentType.AIR_CONDITIONER]: 5000,
+      [HvacEquipmentType.HEAT_PUMP]: 7000,
+      [HvacEquipmentType.FURNACE]: 4000,
+      [HvacEquipmentType.BOILER]: 8000,
+      [HvacEquipmentType.CHILLER]: 15000,
+      [HvacEquipmentType.VENTILATION_SYSTEM]: 6000,
+      [HvacEquipmentType.THERMOSTAT]: 500,
+      [HvacEquipmentType.DUCTWORK]: 3000,
+      [HvacEquipmentType.RADIATOR]: 1500,
+      [HvacEquipmentType.HEAT_EXCHANGER]: 4500,
+      [HvacEquipmentType.OTHER]: 5000,
     };
-    
-    const baseCost = baseCosts[equipment.equipmentType] || 5000;
-    
+
+    const baseCost = baseCosts[equipment.equipmentType] ?? 5000;
+
     // Adjust for capacity and features
     const capacityMultiplier = equipment.capacity ? 1.2 : 1.0;
     const efficiencyMultiplier = equipment.energyRating ? 1.3 : 1.0;
-    
+
     return Math.round(baseCost * capacityMultiplier * efficiencyMultiplier);
   }
 }

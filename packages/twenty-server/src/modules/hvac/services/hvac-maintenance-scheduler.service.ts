@@ -1,17 +1,26 @@
 /**
  * HVAC Maintenance Scheduler Service
  * "Pasja rodzi profesjonalizm" - Professional maintenance scheduling
- * 
+ *
  * Handles intelligent scheduling of maintenance tasks, technician assignment,
  * and optimization of maintenance routes and timing.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+
 import { Repository } from 'typeorm';
-import { HvacMaintenanceRecordWorkspaceEntity, HvacMaintenanceType, HvacMaintenanceStatus } from '../standard-objects/hvac-maintenance-record.workspace-entity';
-import { HvacTechnicianWorkspaceEntity, HvacTechnicianStatus } from '../standard-objects/hvac-technician.workspace-entity';
-import { HvacEquipmentWorkspaceEntity } from '../standard-objects/hvac-equipment.workspace-entity';
+
+import { HvacEquipmentWorkspaceEntity } from 'src/modules/hvac/standard-objects/hvac-equipment.workspace-entity';
+import {
+    HvacMaintenanceRecordWorkspaceEntity,
+    HvacMaintenanceStatus,
+    HvacMaintenanceType,
+} from 'src/modules/hvac/standard-objects/hvac-maintenance-record.workspace-entity';
+import {
+    HvacTechnicianStatus,
+    HvacTechnicianWorkspaceEntity,
+} from 'src/modules/hvac/standard-objects/hvac-technician.workspace-entity';
 
 export interface MaintenanceTask {
   id: string;
@@ -71,7 +80,7 @@ export class HvacMaintenanceSchedulerService {
     maintenanceType: HvacMaintenanceType,
     priority: 'low' | 'medium' | 'high' | 'critical',
     scheduledDate: Date,
-    specialInstructions?: string
+    specialInstructions?: string,
   ): Promise<MaintenanceTask> {
     try {
       const equipment = await this.equipmentRepository.findOne({
@@ -86,21 +95,36 @@ export class HvacMaintenanceSchedulerService {
         id: this.generateTaskId(),
         equipmentId,
         equipmentName: equipment.name,
-        equipmentLocation: equipment.location || 'Unknown',
+        equipmentLocation: equipment.location?.addressStreet1 || 'Unknown',
         maintenanceType,
         priority,
-        estimatedDuration: this.estimateTaskDuration(maintenanceType, equipment.equipmentType),
-        requiredSkills: this.getRequiredSkills(maintenanceType, equipment.equipmentType),
-        requiredParts: this.getRequiredParts(maintenanceType, equipment.equipmentType),
+        estimatedDuration: this.estimateTaskDuration(
+          maintenanceType,
+          equipment.equipmentType,
+        ),
+        requiredSkills: this.getRequiredSkills(
+          maintenanceType,
+          equipment.equipmentType,
+        ),
+        requiredParts: this.getRequiredParts(
+          maintenanceType,
+          equipment.equipmentType,
+        ),
         scheduledDate,
         status: 'scheduled',
         specialInstructions,
       };
 
-      this.logger.log(`Created maintenance task: ${task.id} for equipment: ${equipmentId}`);
+      this.logger.log(
+        `Created maintenance task: ${task.id} for equipment: ${equipmentId}`,
+      );
+
       return task;
     } catch (error) {
-      this.logger.error(`Failed to create maintenance task for equipment ${equipmentId}:`, error);
+      this.logger.error(
+        `Failed to create maintenance task for equipment ${equipmentId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -112,27 +136,37 @@ export class HvacMaintenanceSchedulerService {
     try {
       // This would be implemented with actual task storage
       // For now, we'll simulate the assignment logic
-      
+
       const availableTechnicians = await this.technicianRepository.find({
         where: { status: HvacTechnicianStatus.AVAILABLE },
       });
 
       if (availableTechnicians.length === 0) {
         this.logger.warn(`No available technicians for task: ${taskId}`);
+
         return null;
       }
 
       // Find best technician based on skills, location, and workload
-      const bestTechnician = this.findBestTechnician(availableTechnicians, taskId);
-      
+      const bestTechnician = this.findBestTechnician(
+        availableTechnicians,
+        taskId,
+      );
+
       if (bestTechnician) {
-        this.logger.log(`Assigned technician ${bestTechnician.id} to task: ${taskId}`);
+        this.logger.log(
+          `Assigned technician ${bestTechnician.id} to task: ${taskId}`,
+        );
+
         return bestTechnician.id;
       }
 
       return null;
     } catch (error) {
-      this.logger.error(`Failed to assign technician to task ${taskId}:`, error);
+      this.logger.error(
+        `Failed to assign technician to task ${taskId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -150,11 +184,14 @@ export class HvacMaintenanceSchedulerService {
 
       for (const technician of technicians) {
         const tasks = await this.getTasksForTechnician(technician.id, date);
-        const optimizedTasks = this.optimizeTaskOrder(tasks, technician.location);
-        
+        const optimizedTasks = this.optimizeTaskOrder(
+          tasks,
+          technician.location,
+        );
+
         const schedule: TechnicianSchedule = {
           technicianId: technician.id,
-          technicianName: `${technician.firstName} ${technician.lastName}`,
+          technicianName: `${technician.name.firstName} ${technician.name.lastName}`,
           date,
           tasks: optimizedTasks,
           totalHours: this.calculateTotalHours(optimizedTasks),
@@ -166,10 +203,16 @@ export class HvacMaintenanceSchedulerService {
         schedules.push(schedule);
       }
 
-      this.logger.log(`Generated daily schedule for ${schedules.length} technicians on ${date.toDateString()}`);
+      this.logger.log(
+        `Generated daily schedule for ${schedules.length} technicians on ${date.toDateString()}`,
+      );
+
       return schedules;
     } catch (error) {
-      this.logger.error(`Failed to generate daily schedule for ${date.toDateString()}:`, error);
+      this.logger.error(
+        `Failed to generate daily schedule for ${date.toDateString()}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -177,13 +220,18 @@ export class HvacMaintenanceSchedulerService {
   /**
    * Optimize schedule to minimize travel time and maximize efficiency
    */
-  async optimizeSchedule(originalSchedule: TechnicianSchedule[]): Promise<ScheduleOptimization> {
+  async optimizeSchedule(
+    originalSchedule: TechnicianSchedule[],
+  ): Promise<ScheduleOptimization> {
     try {
       const optimizedSchedule: TechnicianSchedule[] = [];
 
       for (const schedule of originalSchedule) {
-        const optimizedTasks = this.optimizeTaskOrder(schedule.tasks, schedule.tasks[0]?.equipmentLocation);
-        
+        const optimizedTasks = this.optimizeTaskOrder(
+          schedule.tasks,
+          schedule.tasks[0]?.equipmentLocation,
+        );
+
         const optimized: TechnicianSchedule = {
           ...schedule,
           tasks: optimizedTasks,
@@ -196,9 +244,14 @@ export class HvacMaintenanceSchedulerService {
         optimizedSchedule.push(optimized);
       }
 
-      const improvements = this.calculateImprovements(originalSchedule, optimizedSchedule);
+      const improvements = this.calculateImprovements(
+        originalSchedule,
+        optimizedSchedule,
+      );
 
-      this.logger.log(`Schedule optimization completed. Travel time reduced by ${improvements.travelTimeReduction}%`);
+      this.logger.log(
+        `Schedule optimization completed. Travel time reduced by ${improvements.travelTimeReduction}%`,
+      );
 
       return {
         originalSchedule,
@@ -217,7 +270,7 @@ export class HvacMaintenanceSchedulerService {
   async scheduleEmergencyMaintenance(
     equipmentId: string,
     description: string,
-    urgency: 'high' | 'critical'
+    urgency: 'high' | 'critical',
   ): Promise<MaintenanceTask> {
     try {
       const task = await this.createMaintenanceTask(
@@ -225,26 +278,33 @@ export class HvacMaintenanceSchedulerService {
         HvacMaintenanceType.EMERGENCY,
         urgency,
         new Date(), // Immediate
-        `EMERGENCY: ${description}`
+        `EMERGENCY: ${description}`,
       );
 
       // Try to assign immediately
       const assignedTechnicianId = await this.assignTechnician(task.id);
-      
+
       if (assignedTechnicianId) {
         task.assignedTechnicianId = assignedTechnicianId;
         task.status = 'assigned';
-        
+
         // Notify technician (would integrate with notification service)
-        this.logger.log(`Emergency task ${task.id} assigned to technician ${assignedTechnicianId}`);
+        this.logger.log(
+          `Emergency task ${task.id} assigned to technician ${assignedTechnicianId}`,
+        );
       } else {
-        this.logger.warn(`No technician available for emergency task: ${task.id}`);
+        this.logger.warn(
+          `No technician available for emergency task: ${task.id}`,
+        );
         // Would trigger escalation process
       }
 
       return task;
     } catch (error) {
-      this.logger.error(`Failed to schedule emergency maintenance for equipment ${equipmentId}:`, error);
+      this.logger.error(
+        `Failed to schedule emergency maintenance for equipment ${equipmentId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -252,7 +312,10 @@ export class HvacMaintenanceSchedulerService {
   /**
    * Get maintenance workload analytics
    */
-  async getWorkloadAnalytics(startDate: Date, endDate: Date): Promise<{
+  async getWorkloadAnalytics(
+    startDate: Date,
+    endDate: Date,
+  ): Promise<{
     totalTasks: number;
     completedTasks: number;
     averageCompletionTime: number;
@@ -277,52 +340,77 @@ export class HvacMaintenanceSchedulerService {
 
       const totalTasks = maintenanceRecords.length;
       const completedTasks = maintenanceRecords.filter(
-        record => record.status === HvacMaintenanceStatus.COMPLETED
+        (record) => record.status === HvacMaintenanceStatus.COMPLETED,
       ).length;
 
       const completionTimes = maintenanceRecords
-        .filter(record => record.completedDate && record.scheduledDate)
-        .map(record => 
-          new Date(record.completedDate!).getTime() - new Date(record.scheduledDate).getTime()
+        .filter((record) => record.completedDate && record.scheduledDate)
+        .map(
+          (record) =>
+            new Date(record.completedDate!).getTime() -
+            new Date(record.scheduledDate).getTime(),
         );
 
-      const averageCompletionTime = completionTimes.length > 0
-        ? completionTimes.reduce((sum, time) => sum + time, 0) / completionTimes.length / (1000 * 60 * 60) // hours
-        : 0;
+      const averageCompletionTime =
+        completionTimes.length > 0
+          ? completionTimes.reduce((sum, time) => sum + time, 0) /
+            completionTimes.length /
+            (1000 * 60 * 60) // hours
+          : 0;
 
       // Calculate technician utilization
       const technicianUtilization: { [technicianId: string]: number } = {};
       const technicianTasks: { [technicianId: string]: number } = {};
-      
-      maintenanceRecords.forEach(record => {
+
+      maintenanceRecords.forEach((record) => {
         if (record.technician?.id) {
-          technicianTasks[record.technician.id] = (technicianTasks[record.technician.id] || 0) + 1;
+          technicianTasks[record.technician.id] =
+            (technicianTasks[record.technician.id] || 0) + 1;
         }
       });
 
-      Object.keys(technicianTasks).forEach(technicianId => {
+      Object.keys(technicianTasks).forEach((technicianId) => {
         const workingDays = this.calculateWorkingDays(startDate, endDate);
         const tasksPerDay = technicianTasks[technicianId] / workingDays;
-        technicianUtilization[technicianId] = Math.min(tasksPerDay / 8 * 100, 100); // Assuming 8 tasks per day max
+
+        technicianUtilization[technicianId] = Math.min(
+          (tasksPerDay / 8) * 100,
+          100,
+        ); // Assuming 8 tasks per day max
       });
 
       // Equipment maintenance frequency
-      const equipmentMaintenanceFrequency: { [equipmentType: string]: number } = {};
-      maintenanceRecords.forEach(record => {
+      const equipmentMaintenanceFrequency: { [equipmentType: string]: number } =
+        {};
+
+      maintenanceRecords.forEach((record) => {
         if (record.equipment?.equipmentType) {
           const type = record.equipment.equipmentType;
-          equipmentMaintenanceFrequency[type] = (equipmentMaintenanceFrequency[type] || 0) + 1;
+
+          equipmentMaintenanceFrequency[type] =
+            (equipmentMaintenanceFrequency[type] || 0) + 1;
         }
       });
 
       // Cost analysis
-      const totalCost = maintenanceRecords.reduce((sum, record) => sum + (record.cost || 0), 0);
+      const totalCost = maintenanceRecords.reduce((sum, record) => {
+        const costAmount = record.cost?.amountMicros
+          ? record.cost.amountMicros / 1000000
+          : 0;
+
+        return sum + costAmount;
+      }, 0);
       const averageCostPerTask = totalTasks > 0 ? totalCost / totalTasks : 0;
-      
+
       const costByType: { [type: string]: number } = {};
-      maintenanceRecords.forEach(record => {
+
+      maintenanceRecords.forEach((record) => {
         const type = record.maintenanceType;
-        costByType[type] = (costByType[type] || 0) + (record.cost || 0);
+        const costAmount = record.cost?.amountMicros
+          ? record.cost.amountMicros / 1000000
+          : 0;
+
+        costByType[type] = (costByType[type] || 0) + costAmount;
       });
 
       return {
@@ -348,55 +436,80 @@ export class HvacMaintenanceSchedulerService {
     return `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  private estimateTaskDuration(maintenanceType: HvacMaintenanceType, equipmentType: string): number {
-    const baseDurations = {
+  private estimateTaskDuration(
+    maintenanceType: HvacMaintenanceType,
+    equipmentType: string,
+  ): number {
+    const baseDurations: Record<HvacMaintenanceType, number> = {
       [HvacMaintenanceType.ROUTINE]: 2,
       [HvacMaintenanceType.PREVENTIVE]: 4,
       [HvacMaintenanceType.CORRECTIVE]: 6,
       [HvacMaintenanceType.EMERGENCY]: 8,
+      [HvacMaintenanceType.INSPECTION]: 3,
+      [HvacMaintenanceType.CLEANING]: 2,
+      [HvacMaintenanceType.CALIBRATION]: 4,
+      [HvacMaintenanceType.REPLACEMENT]: 8,
     };
 
-    const typeMultipliers = {
-      'AIR_CONDITIONER': 1.0,
-      'HEAT_PUMP': 1.2,
-      'FURNACE': 0.8,
-      'BOILER': 1.5,
-      'CHILLER': 2.0,
+    const typeMultipliers: Record<string, number> = {
+      AIR_CONDITIONER: 1.0,
+      HEAT_PUMP: 1.2,
+      FURNACE: 0.8,
+      BOILER: 1.5,
+      CHILLER: 2.0,
+      VENTILATION_SYSTEM: 1.1,
+      THERMOSTAT: 0.5,
+      DUCTWORK: 1.3,
+      RADIATOR: 0.7,
+      HEAT_EXCHANGER: 1.4,
+      OTHER: 1.0,
     };
 
-    const baseDuration = baseDurations[maintenanceType] || 4;
-    const multiplier = typeMultipliers[equipmentType] || 1.0;
+    const baseDuration = baseDurations[maintenanceType] ?? 4;
+    const multiplier = typeMultipliers[equipmentType] ?? 1.0;
 
     return Math.round(baseDuration * multiplier);
   }
 
-  private getRequiredSkills(maintenanceType: HvacMaintenanceType, equipmentType: string): string[] {
+  private getRequiredSkills(
+    maintenanceType: HvacMaintenanceType,
+    equipmentType: string,
+  ): string[] {
     const baseSkills = ['HVAC_BASICS', 'SAFETY_PROTOCOLS'];
-    
-    const typeSkills = {
-      'AIR_CONDITIONER': ['REFRIGERATION', 'ELECTRICAL'],
-      'HEAT_PUMP': ['REFRIGERATION', 'ELECTRICAL', 'CONTROLS'],
-      'FURNACE': ['GAS_SYSTEMS', 'ELECTRICAL'],
-      'BOILER': ['HYDRONIC_SYSTEMS', 'GAS_SYSTEMS'],
-      'CHILLER': ['REFRIGERATION', 'CONTROLS', 'ELECTRICAL'],
+
+    const typeSkills: Record<string, string[]> = {
+      AIR_CONDITIONER: ['REFRIGERATION', 'ELECTRICAL'],
+      HEAT_PUMP: ['REFRIGERATION', 'ELECTRICAL', 'CONTROLS'],
+      FURNACE: ['GAS_SYSTEMS', 'ELECTRICAL'],
+      BOILER: ['HYDRONIC_SYSTEMS', 'GAS_SYSTEMS'],
+      CHILLER: ['REFRIGERATION', 'CONTROLS', 'ELECTRICAL'],
+      VENTILATION_SYSTEM: ['AIRFLOW', 'ELECTRICAL'],
+      THERMOSTAT: ['CONTROLS', 'ELECTRICAL'],
+      DUCTWORK: ['AIRFLOW', 'INSTALLATION'],
+      RADIATOR: ['HYDRONIC_SYSTEMS'],
+      HEAT_EXCHANGER: ['HYDRONIC_SYSTEMS', 'REFRIGERATION'],
+      OTHER: ['GENERAL_MAINTENANCE'],
     };
 
-    const maintenanceSkills = {
+    const maintenanceSkills: Partial<Record<HvacMaintenanceType, string[]>> = {
       [HvacMaintenanceType.EMERGENCY]: ['TROUBLESHOOTING', 'EMERGENCY_REPAIR'],
       [HvacMaintenanceType.CORRECTIVE]: ['TROUBLESHOOTING', 'REPAIR'],
     };
 
     return [
       ...baseSkills,
-      ...(typeSkills[equipmentType] || []),
-      ...(maintenanceSkills[maintenanceType] || []),
+      ...(typeSkills[equipmentType] ?? []),
+      ...(maintenanceSkills[maintenanceType] ?? []),
     ];
   }
 
-  private getRequiredParts(maintenanceType: HvacMaintenanceType, equipmentType: string): string[] {
+  private getRequiredParts(
+    maintenanceType: HvacMaintenanceType,
+    _equipmentType: string,
+  ): string[] {
     const routineParts = ['Air Filter', 'Cleaning Supplies'];
     const preventiveParts = [...routineParts, 'Belts', 'Lubricants'];
-    
+
     switch (maintenanceType) {
       case HvacMaintenanceType.ROUTINE:
         return routineParts;
@@ -410,7 +523,10 @@ export class HvacMaintenanceSchedulerService {
     }
   }
 
-  private findBestTechnician(technicians: HvacTechnicianWorkspaceEntity[], taskId: string): HvacTechnicianWorkspaceEntity | null {
+  private findBestTechnician(
+    technicians: HvacTechnicianWorkspaceEntity[],
+    _taskId: string,
+  ): HvacTechnicianWorkspaceEntity | null {
     // Simplified technician matching logic
     // In a real implementation, this would consider:
     // - Skills match
@@ -418,28 +534,34 @@ export class HvacMaintenanceSchedulerService {
     // - Current workload
     // - Availability
     // - Performance ratings
-    
+
     return technicians.length > 0 ? technicians[0] : null;
   }
 
-  private async getTasksForTechnician(technicianId: string, date: Date): Promise<MaintenanceTask[]> {
+  private async getTasksForTechnician(
+    _technicianId: string,
+    _date: Date,
+  ): Promise<MaintenanceTask[]> {
     // This would query actual task storage
     // For now, return empty array
     return [];
   }
 
-  private optimizeTaskOrder(tasks: MaintenanceTask[], startLocation: string): MaintenanceTask[] {
+  private optimizeTaskOrder(
+    tasks: MaintenanceTask[],
+    startLocation: string,
+  ): MaintenanceTask[] {
     // Simplified task ordering - in reality would use traveling salesman algorithm
     return tasks.sort((a, b) => {
       // Sort by priority first, then by location proximity
       const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
       const aPriority = priorityOrder[a.priority];
       const bPriority = priorityOrder[b.priority];
-      
+
       if (aPriority !== bPriority) {
         return aPriority - bPriority;
       }
-      
+
       // Then by estimated duration (shorter tasks first)
       return a.estimatedDuration - b.estimatedDuration;
     });
@@ -456,39 +578,56 @@ export class HvacMaintenanceSchedulerService {
 
   private calculateEfficiency(tasks: MaintenanceTask[]): number {
     if (tasks.length === 0) return 0;
-    
+
     const workTime = this.calculateTotalHours(tasks);
     const travelTime = this.calculateTravelTime(tasks);
     const totalTime = workTime + travelTime;
-    
+
     return totalTime > 0 ? (workTime / totalTime) * 100 : 0;
   }
 
   private generateRoute(tasks: MaintenanceTask[]): string[] {
-    return tasks.map(task => task.equipmentLocation);
+    return tasks.map((task) => task.equipmentLocation);
   }
 
-  private calculateImprovements(original: TechnicianSchedule[], optimized: TechnicianSchedule[]): {
+  private calculateImprovements(
+    original: TechnicianSchedule[],
+    optimized: TechnicianSchedule[],
+  ): {
     travelTimeReduction: number;
     efficiencyIncrease: number;
     costSavings: number;
   } {
-    const originalTravelTime = original.reduce((sum, schedule) => sum + schedule.travelTime, 0);
-    const optimizedTravelTime = optimized.reduce((sum, schedule) => sum + schedule.travelTime, 0);
-    
-    const originalEfficiency = original.reduce((sum, schedule) => sum + schedule.efficiency, 0) / original.length;
-    const optimizedEfficiency = optimized.reduce((sum, schedule) => sum + schedule.efficiency, 0) / optimized.length;
-    
-    const travelTimeReduction = originalTravelTime > 0 
-      ? ((originalTravelTime - optimizedTravelTime) / originalTravelTime) * 100 
-      : 0;
-    
-    const efficiencyIncrease = originalEfficiency > 0 
-      ? ((optimizedEfficiency - originalEfficiency) / originalEfficiency) * 100 
-      : 0;
-    
+    const originalTravelTime = original.reduce(
+      (sum, schedule) => sum + schedule.travelTime,
+      0,
+    );
+    const optimizedTravelTime = optimized.reduce(
+      (sum, schedule) => sum + schedule.travelTime,
+      0,
+    );
+
+    const originalEfficiency =
+      original.reduce((sum, schedule) => sum + schedule.efficiency, 0) /
+      original.length;
+    const optimizedEfficiency =
+      optimized.reduce((sum, schedule) => sum + schedule.efficiency, 0) /
+      optimized.length;
+
+    const travelTimeReduction =
+      originalTravelTime > 0
+        ? ((originalTravelTime - optimizedTravelTime) / originalTravelTime) *
+          100
+        : 0;
+
+    const efficiencyIncrease =
+      originalEfficiency > 0
+        ? ((optimizedEfficiency - originalEfficiency) / originalEfficiency) *
+          100
+        : 0;
+
     const costSavings = travelTimeReduction * 50; // $50 per hour saved
-    
+
     return {
       travelTimeReduction: Math.round(travelTimeReduction),
       efficiencyIncrease: Math.round(efficiencyIncrease),
@@ -497,8 +636,11 @@ export class HvacMaintenanceSchedulerService {
   }
 
   private calculateWorkingDays(startDate: Date, endDate: Date): number {
-    const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    const workingDays = Math.floor(days * 5 / 7); // Assuming 5-day work week
+    const days = Math.ceil(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    const workingDays = Math.floor((days * 5) / 7); // Assuming 5-day work week
+
     return Math.max(1, workingDays);
   }
 }

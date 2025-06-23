@@ -10,12 +10,12 @@ import { NavigationDrawerSection } from '@/ui/navigation/navigation-drawer/compo
 import { NavigationDrawerItem } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerItem';
 import { AppPath } from '@/types/AppPath';
 import { useLingui } from '@lingui/react/macro';
-import { 
-  IconCalendar, 
-  IconWrench, 
-  IconMobile, 
-  IconChartBar,
+import {
+  IconCalendar,
   IconTool,
+  IconPhone,
+  IconChartLine,
+  IconSettings,
   IconUsers,
   IconMapPin,
 } from 'twenty-ui/display';
@@ -38,17 +38,17 @@ export const HvacNavigationSection: React.FC = () => {
       <NavigationDrawerItem
         label="Konserwacja"
         to={`${AppPath.HvacServicePlanner}#maintenance`}
-        Icon={IconWrench}
+        Icon={IconTool}
       />
       <NavigationDrawerItem
         label="Mobilny"
         to={`${AppPath.HvacServicePlanner}#mobile`}
-        Icon={IconMobile}
+        Icon={IconPhone}
       />
       <NavigationDrawerItem
         label="Analityka"
         to={`${AppPath.HvacServicePlanner}#analytics`}
-        Icon={IconChartBar}
+        Icon={IconChartLine}
       />
     </NavigationDrawerSection>
   );

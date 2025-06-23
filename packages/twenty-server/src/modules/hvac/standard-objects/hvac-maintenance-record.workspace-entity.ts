@@ -1,7 +1,14 @@
+import { registerEnumType } from '@nestjs/graphql';
+
+import { msg } from '@lingui/core/macro';
+import { FieldMetadataType } from 'twenty-shared/types';
+
+import { RelationType } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-type.interface';
 import { Relation } from 'src/engine/workspace-manager/workspace-sync-metadata/interfaces/relation.interface';
 
-import { FieldMetadataType } from 'twenty-shared/types';
-import { RelationType } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-type.interface';
+import { ActorMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/actor.composite-type';
+import { CurrencyMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/currency.composite-type';
+import { RelationOnDeleteAction } from 'src/engine/metadata-modules/relation-metadata/relation-on-delete-action.type';
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
 import { WorkspaceEntity } from 'src/engine/twenty-orm/decorators/workspace-entity.decorator';
 import { WorkspaceField } from 'src/engine/twenty-orm/decorators/workspace-field.decorator';
@@ -9,14 +16,9 @@ import { WorkspaceIsNotAuditLogged } from 'src/engine/twenty-orm/decorators/work
 import { WorkspaceIsNullable } from 'src/engine/twenty-orm/decorators/workspace-is-nullable.decorator';
 import { WorkspaceIsSystem } from 'src/engine/twenty-orm/decorators/workspace-is-system.decorator';
 import { WorkspaceRelation } from 'src/engine/twenty-orm/decorators/workspace-relation.decorator';
-import { RelationOnDeleteAction } from 'src/engine/metadata-modules/relation-metadata/relation-on-delete-action.type';
 import { HVAC_MAINTENANCE_RECORD_STANDARD_FIELD_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-field-ids';
-import { STANDARD_OBJECT_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-ids';
 import { STANDARD_OBJECT_ICONS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-icons';
-import { ActorMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/actor.composite-type';
-import { CurrencyMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/currency.composite-type';
-import { msg } from '@lingui/core/macro';
-import { registerEnumType } from '@nestjs/graphql';
+import { STANDARD_OBJECT_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-ids';
 
 // Import related entities
 import { HvacEquipmentWorkspaceEntity } from './hvac-equipment.workspace-entity';
@@ -30,6 +32,7 @@ export enum HvacMaintenanceType {
   CLEANING = 'CLEANING',
   CALIBRATION = 'CALIBRATION',
   REPLACEMENT = 'REPLACEMENT',
+  ROUTINE = 'ROUTINE',
 }
 
 export enum HvacMaintenanceStatus {
@@ -76,13 +79,48 @@ export class HvacMaintenanceRecordWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Type of maintenance performed`,
     icon: 'IconTool',
     options: [
-      { value: HvacMaintenanceType.PREVENTIVE, label: 'Preventive', position: 0, color: 'green' },
-      { value: HvacMaintenanceType.CORRECTIVE, label: 'Corrective', position: 1, color: 'orange' },
-      { value: HvacMaintenanceType.EMERGENCY, label: 'Emergency', position: 2, color: 'red' },
-      { value: HvacMaintenanceType.INSPECTION, label: 'Inspection', position: 3, color: 'blue' },
-      { value: HvacMaintenanceType.CLEANING, label: 'Cleaning', position: 4, color: 'purple' },
-      { value: HvacMaintenanceType.CALIBRATION, label: 'Calibration', position: 5, color: 'yellow' },
-      { value: HvacMaintenanceType.REPLACEMENT, label: 'Replacement', position: 6, color: 'gray' },
+      {
+        value: HvacMaintenanceType.PREVENTIVE,
+        label: 'Preventive',
+        position: 0,
+        color: 'green',
+      },
+      {
+        value: HvacMaintenanceType.CORRECTIVE,
+        label: 'Corrective',
+        position: 1,
+        color: 'orange',
+      },
+      {
+        value: HvacMaintenanceType.EMERGENCY,
+        label: 'Emergency',
+        position: 2,
+        color: 'red',
+      },
+      {
+        value: HvacMaintenanceType.INSPECTION,
+        label: 'Inspection',
+        position: 3,
+        color: 'blue',
+      },
+      {
+        value: HvacMaintenanceType.CLEANING,
+        label: 'Cleaning',
+        position: 4,
+        color: 'purple',
+      },
+      {
+        value: HvacMaintenanceType.CALIBRATION,
+        label: 'Calibration',
+        position: 5,
+        color: 'yellow',
+      },
+      {
+        value: HvacMaintenanceType.REPLACEMENT,
+        label: 'Replacement',
+        position: 6,
+        color: 'gray',
+      },
     ],
   })
   maintenanceType: HvacMaintenanceType;
@@ -94,11 +132,36 @@ export class HvacMaintenanceRecordWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Current status of the maintenance`,
     icon: 'IconProgressCheck',
     options: [
-      { value: HvacMaintenanceStatus.SCHEDULED, label: 'Scheduled', position: 0, color: 'blue' },
-      { value: HvacMaintenanceStatus.IN_PROGRESS, label: 'In Progress', position: 1, color: 'yellow' },
-      { value: HvacMaintenanceStatus.COMPLETED, label: 'Completed', position: 2, color: 'green' },
-      { value: HvacMaintenanceStatus.CANCELLED, label: 'Cancelled', position: 3, color: 'red' },
-      { value: HvacMaintenanceStatus.OVERDUE, label: 'Overdue', position: 4, color: 'red' },
+      {
+        value: HvacMaintenanceStatus.SCHEDULED,
+        label: 'Scheduled',
+        position: 0,
+        color: 'blue',
+      },
+      {
+        value: HvacMaintenanceStatus.IN_PROGRESS,
+        label: 'In Progress',
+        position: 1,
+        color: 'yellow',
+      },
+      {
+        value: HvacMaintenanceStatus.COMPLETED,
+        label: 'Completed',
+        position: 2,
+        color: 'green',
+      },
+      {
+        value: HvacMaintenanceStatus.CANCELLED,
+        label: 'Cancelled',
+        position: 3,
+        color: 'red',
+      },
+      {
+        value: HvacMaintenanceStatus.OVERDUE,
+        label: 'Overdue',
+        position: 4,
+        color: 'red',
+      },
     ],
     defaultValue: HvacMaintenanceStatus.SCHEDULED,
   })
@@ -213,6 +276,36 @@ export class HvacMaintenanceRecordWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`The creator of the record`,
   })
   createdBy: ActorMetadata;
+
+  @WorkspaceField({
+    standardId: '20202020-hvac-mr-equipment-id-field',
+    type: FieldMetadataType.TEXT,
+    label: msg`Equipment ID`,
+    description: msg`ID of the equipment that was maintained`,
+    icon: 'IconTool',
+  })
+  @WorkspaceIsNullable()
+  equipmentId: string;
+
+  @WorkspaceField({
+    standardId: '20202020-hvac-mr-type-field-value',
+    type: FieldMetadataType.TEXT,
+    label: msg`Type`,
+    description: msg`Type of maintenance (alias for maintenanceType)`,
+    icon: 'IconSettings',
+  })
+  @WorkspaceIsNullable()
+  type: string;
+
+  @WorkspaceField({
+    standardId: '20202020-hvac-mr-performed-date-fld',
+    type: FieldMetadataType.DATE_TIME,
+    label: msg`Performed Date`,
+    description: msg`Date when maintenance was performed`,
+    icon: 'IconCalendarCheck',
+  })
+  @WorkspaceIsNullable()
+  performedDate: Date;
 
   // Relations
   @WorkspaceRelation({

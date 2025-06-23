@@ -1,4 +1,14 @@
+import { registerEnumType } from '@nestjs/graphql';
+
+import { msg } from '@lingui/core/macro';
+
 import { FieldMetadataType } from 'twenty-shared/types';
+
+import { ActorMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/actor.composite-type';
+import { AddressMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/address.composite-type';
+import { CurrencyMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/currency.composite-type';
+import { RelationType } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-type.interface';
+import { RelationOnDeleteAction } from 'src/engine/metadata-modules/relation-metadata/relation-on-delete-action.type';
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
 import { WorkspaceEntity } from 'src/engine/twenty-orm/decorators/workspace-entity.decorator';
 import { WorkspaceField } from 'src/engine/twenty-orm/decorators/workspace-field.decorator';
@@ -6,17 +16,10 @@ import { WorkspaceIsNotAuditLogged } from 'src/engine/twenty-orm/decorators/work
 import { WorkspaceIsNullable } from 'src/engine/twenty-orm/decorators/workspace-is-nullable.decorator';
 import { WorkspaceIsSystem } from 'src/engine/twenty-orm/decorators/workspace-is-system.decorator';
 import { WorkspaceRelation } from 'src/engine/twenty-orm/decorators/workspace-relation.decorator';
-import { RelationType } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-type.interface';
-import { RelationOnDeleteAction } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-on-delete-action.interface';
-import { Relation } from 'src/engine/workspace-manager/workspace-sync-metadata/interfaces/relation.interface';
 import { HVAC_SERVICE_TICKET_STANDARD_FIELD_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-field-ids';
-import { STANDARD_OBJECT_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-ids';
 import { STANDARD_OBJECT_ICONS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-icons';
-import { ActorMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/actor.composite-type';
-import { AddressMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/address.composite-type';
-import { CurrencyMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/currency.composite-type';
-import { msg } from '@lingui/core/macro';
-import { registerEnumType } from '@nestjs/graphql';
+import { STANDARD_OBJECT_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-ids';
+import { Relation } from 'src/engine/workspace-manager/workspace-sync-metadata/interfaces/relation.interface';
 
 // Import related entities
 import { HvacEquipmentWorkspaceEntity } from './hvac-equipment.workspace-entity';
@@ -29,6 +32,7 @@ export enum HvacServiceTicketStatus {
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
   SCHEDULED = 'SCHEDULED',
+  ASSIGNED = 'ASSIGNED',
 }
 
 export enum HvacServiceTicketPriority {
@@ -251,6 +255,46 @@ export class HvacServiceTicketWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`The creator of the record`,
   })
   createdBy: ActorMetadata;
+
+  @WorkspaceField({
+    standardId: '20202020-hvac-st-reported-by-field',
+    type: FieldMetadataType.TEXT,
+    label: msg`Reported By`,
+    description: msg`Name of the person who reported the issue`,
+    icon: 'IconUser',
+  })
+  @WorkspaceIsNullable()
+  reportedBy: string;
+
+  @WorkspaceField({
+    standardId: '20202020-hvac-st-contact-info-field',
+    type: FieldMetadataType.TEXT,
+    label: msg`Contact Info`,
+    description: msg`Contact information for the reporter`,
+    icon: 'IconPhone',
+  })
+  @WorkspaceIsNullable()
+  contactInfo: string;
+
+  @WorkspaceField({
+    standardId: '20202020-hvac-st-started-at-field',
+    type: FieldMetadataType.DATE_TIME,
+    label: msg`Started At`,
+    description: msg`When work on the ticket started`,
+    icon: 'IconPlay',
+  })
+  @WorkspaceIsNullable()
+  startedAt: Date;
+
+  @WorkspaceField({
+    standardId: '20202020-hvac-st-service-location-field',
+    type: FieldMetadataType.TEXT,
+    label: msg`Service Location`,
+    description: msg`Location where service will be performed`,
+    icon: 'IconMapPin',
+  })
+  @WorkspaceIsNullable()
+  serviceLocation: string;
 
   // Relations
   // Note: Customer relation will be handled through Company entity

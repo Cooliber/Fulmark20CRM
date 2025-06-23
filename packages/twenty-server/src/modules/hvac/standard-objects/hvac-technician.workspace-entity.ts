@@ -1,7 +1,16 @@
-import { Relation } from 'src/engine/workspace-manager/workspace-sync-metadata/interfaces/relation.interface';
+import { registerEnumType } from '@nestjs/graphql';
+
+import { msg } from '@lingui/core/macro';
 
 import { FieldMetadataType } from 'twenty-shared/types';
+
+import { ActorMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/actor.composite-type';
+import { AddressMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/address.composite-type';
+import { EmailsMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/emails.composite-type';
+import { FullNameMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/full-name.composite-type';
+import { PhonesMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/phones.composite-type';
 import { RelationType } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-type.interface';
+import { RelationOnDeleteAction } from 'src/engine/metadata-modules/relation-metadata/relation-on-delete-action.type';
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
 import { WorkspaceEntity } from 'src/engine/twenty-orm/decorators/workspace-entity.decorator';
 import { WorkspaceField } from 'src/engine/twenty-orm/decorators/workspace-field.decorator';
@@ -9,21 +18,14 @@ import { WorkspaceIsNotAuditLogged } from 'src/engine/twenty-orm/decorators/work
 import { WorkspaceIsNullable } from 'src/engine/twenty-orm/decorators/workspace-is-nullable.decorator';
 import { WorkspaceIsSystem } from 'src/engine/twenty-orm/decorators/workspace-is-system.decorator';
 import { WorkspaceRelation } from 'src/engine/twenty-orm/decorators/workspace-relation.decorator';
-import { RelationOnDeleteAction } from 'src/engine/metadata-modules/relation-metadata/relation-on-delete-action.type';
 import { HVAC_TECHNICIAN_STANDARD_FIELD_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-field-ids';
-import { STANDARD_OBJECT_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-ids';
 import { STANDARD_OBJECT_ICONS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-icons';
-import { ActorMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/actor.composite-type';
-import { FullNameMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/full-name.composite-type';
-import { EmailsMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/emails.composite-type';
-import { PhonesMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/phones.composite-type';
-import { AddressMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/address.composite-type';
-import { msg } from '@lingui/core/macro';
-import { registerEnumType } from '@nestjs/graphql';
+import { STANDARD_OBJECT_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-ids';
+import { Relation } from 'src/engine/workspace-manager/workspace-sync-metadata/interfaces/relation.interface';
 
 // Import related entities
-import { HvacServiceTicketWorkspaceEntity } from './hvac-service-ticket.workspace-entity';
 import { HvacMaintenanceRecordWorkspaceEntity } from './hvac-maintenance-record.workspace-entity';
+import { HvacServiceTicketWorkspaceEntity } from './hvac-service-ticket.workspace-entity';
 
 export enum HvacTechnicianStatus {
   ACTIVE = 'ACTIVE',
@@ -31,6 +33,7 @@ export enum HvacTechnicianStatus {
   ON_LEAVE = 'ON_LEAVE',
   TRAINING = 'TRAINING',
   TERMINATED = 'TERMINATED',
+  AVAILABLE = 'AVAILABLE',
 }
 
 export enum HvacTechnicianLevel {
@@ -255,6 +258,43 @@ export class HvacTechnicianWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`The creator of the record`,
   })
   createdBy: ActorMetadata;
+
+  @WorkspaceField({
+    standardId: '20202020-hvac-tech-weekly-capacity-f',
+    type: FieldMetadataType.NUMBER,
+    label: msg`Weekly Capacity`,
+    description: msg`Weekly working hours capacity`,
+    icon: 'IconClock',
+    defaultValue: 40,
+  })
+  @WorkspaceIsNullable()
+  weeklyCapacity: number;
+
+  @WorkspaceField({
+    standardId: '20202020-hvac-tech-skills-field-val',
+    type: FieldMetadataType.MULTI_SELECT,
+    label: msg`Skills`,
+    description: msg`Technical skills and competencies`,
+    icon: 'IconTool',
+    options: [
+      { value: 'HEATING', label: 'Heating Systems', position: 0, color: 'red' },
+      { value: 'COOLING', label: 'Cooling Systems', position: 1, color: 'blue' },
+      { value: 'ELECTRICAL', label: 'Electrical Work', position: 2, color: 'yellow' },
+      { value: 'PLUMBING', label: 'Plumbing', position: 3, color: 'green' },
+    ],
+  })
+  @WorkspaceIsNullable()
+  skills: string[];
+
+  @WorkspaceField({
+    standardId: '20202020-hvac-tech-location-field-v',
+    type: FieldMetadataType.TEXT,
+    label: msg`Location`,
+    description: msg`Current location or base location`,
+    icon: 'IconMapPin',
+  })
+  @WorkspaceIsNullable()
+  location: string;
 
   // Relations
   @WorkspaceRelation({

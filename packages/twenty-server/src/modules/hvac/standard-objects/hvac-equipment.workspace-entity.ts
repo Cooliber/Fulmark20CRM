@@ -1,22 +1,25 @@
+import { registerEnumType } from '@nestjs/graphql';
+
+import { msg } from '@lingui/core/macro';
 import { FieldMetadataType } from 'twenty-shared/types';
-import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
-import { WorkspaceEntity } from 'src/engine/twenty-orm/decorators/workspace-entity.decorator';
-import { WorkspaceField } from 'src/engine/twenty-orm/decorators/workspace-field.decorator';
-import { WorkspaceRelation } from 'src/engine/twenty-orm/decorators/workspace-relation.decorator';
-import { WorkspaceIsNotAuditLogged } from 'src/engine/twenty-orm/decorators/workspace-is-not-audit-logged.decorator';
-import { WorkspaceIsNullable } from 'src/engine/twenty-orm/decorators/workspace-is-nullable.decorator';
-import { WorkspaceIsSystem } from 'src/engine/twenty-orm/decorators/workspace-is-system.decorator';
-import { HVAC_EQUIPMENT_STANDARD_FIELD_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-field-ids';
-import { STANDARD_OBJECT_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-ids';
-import { STANDARD_OBJECT_ICONS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-icons';
+
+import { RelationType } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-type.interface';
+import { Relation } from 'src/engine/workspace-manager/workspace-sync-metadata/interfaces/relation.interface';
+
 import { ActorMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/actor.composite-type';
 import { AddressMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/address.composite-type';
 import { CurrencyMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/currency.composite-type';
-import { RelationType } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-type.interface';
-import { RelationOnDeleteAction } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-on-delete-action.interface';
-import { Relation } from 'src/engine/workspace-manager/workspace-sync-metadata/interfaces/relation.interface';
-import { msg } from '@lingui/core/macro';
-import { registerEnumType } from '@nestjs/graphql';
+import { RelationOnDeleteAction } from 'src/engine/metadata-modules/relation-metadata/relation-on-delete-action.type';
+import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
+import { WorkspaceEntity } from 'src/engine/twenty-orm/decorators/workspace-entity.decorator';
+import { WorkspaceField } from 'src/engine/twenty-orm/decorators/workspace-field.decorator';
+import { WorkspaceIsNotAuditLogged } from 'src/engine/twenty-orm/decorators/workspace-is-not-audit-logged.decorator';
+import { WorkspaceIsNullable } from 'src/engine/twenty-orm/decorators/workspace-is-nullable.decorator';
+import { WorkspaceIsSystem } from 'src/engine/twenty-orm/decorators/workspace-is-system.decorator';
+import { WorkspaceRelation } from 'src/engine/twenty-orm/decorators/workspace-relation.decorator';
+import { HVAC_EQUIPMENT_STANDARD_FIELD_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-field-ids';
+import { STANDARD_OBJECT_ICONS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-icons';
+import { STANDARD_OBJECT_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-ids';
 
 // Import for maintenance records relation
 import { HvacMaintenanceRecordWorkspaceEntity } from './hvac-maintenance-record.workspace-entity';
@@ -43,6 +46,7 @@ export enum HvacEquipmentStatus {
   REPAIR_NEEDED = 'REPAIR_NEEDED',
   DECOMMISSIONED = 'DECOMMISSIONED',
   WARRANTY = 'WARRANTY',
+  OPERATIONAL = 'OPERATIONAL',
 }
 
 export enum HvacEquipmentCondition {
@@ -93,17 +97,72 @@ export class HvacEquipmentWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Type of HVAC equipment`,
     icon: 'IconCategory',
     options: [
-      { value: HvacEquipmentType.BOILER, label: 'Boiler', position: 0, color: 'red' },
-      { value: HvacEquipmentType.HEAT_PUMP, label: 'Heat Pump', position: 1, color: 'orange' },
-      { value: HvacEquipmentType.AIR_CONDITIONER, label: 'Air Conditioner', position: 2, color: 'blue' },
-      { value: HvacEquipmentType.FURNACE, label: 'Furnace', position: 3, color: 'yellow' },
-      { value: HvacEquipmentType.VENTILATION_SYSTEM, label: 'Ventilation System', position: 4, color: 'green' },
-      { value: HvacEquipmentType.THERMOSTAT, label: 'Thermostat', position: 5, color: 'purple' },
-      { value: HvacEquipmentType.DUCTWORK, label: 'Ductwork', position: 6, color: 'gray' },
-      { value: HvacEquipmentType.RADIATOR, label: 'Radiator', position: 7, color: 'red' },
-      { value: HvacEquipmentType.HEAT_EXCHANGER, label: 'Heat Exchanger', position: 8, color: 'orange' },
-      { value: HvacEquipmentType.CHILLER, label: 'Chiller', position: 9, color: 'blue' },
-      { value: HvacEquipmentType.OTHER, label: 'Other', position: 10, color: 'gray' },
+      {
+        value: HvacEquipmentType.BOILER,
+        label: 'Boiler',
+        position: 0,
+        color: 'red',
+      },
+      {
+        value: HvacEquipmentType.HEAT_PUMP,
+        label: 'Heat Pump',
+        position: 1,
+        color: 'orange',
+      },
+      {
+        value: HvacEquipmentType.AIR_CONDITIONER,
+        label: 'Air Conditioner',
+        position: 2,
+        color: 'blue',
+      },
+      {
+        value: HvacEquipmentType.FURNACE,
+        label: 'Furnace',
+        position: 3,
+        color: 'yellow',
+      },
+      {
+        value: HvacEquipmentType.VENTILATION_SYSTEM,
+        label: 'Ventilation System',
+        position: 4,
+        color: 'green',
+      },
+      {
+        value: HvacEquipmentType.THERMOSTAT,
+        label: 'Thermostat',
+        position: 5,
+        color: 'purple',
+      },
+      {
+        value: HvacEquipmentType.DUCTWORK,
+        label: 'Ductwork',
+        position: 6,
+        color: 'gray',
+      },
+      {
+        value: HvacEquipmentType.RADIATOR,
+        label: 'Radiator',
+        position: 7,
+        color: 'red',
+      },
+      {
+        value: HvacEquipmentType.HEAT_EXCHANGER,
+        label: 'Heat Exchanger',
+        position: 8,
+        color: 'orange',
+      },
+      {
+        value: HvacEquipmentType.CHILLER,
+        label: 'Chiller',
+        position: 9,
+        color: 'blue',
+      },
+      {
+        value: HvacEquipmentType.OTHER,
+        label: 'Other',
+        position: 10,
+        color: 'gray',
+      },
     ],
   })
   equipmentType: HvacEquipmentType;
@@ -165,12 +224,42 @@ export class HvacEquipmentWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Current status of the equipment`,
     icon: 'IconProgressCheck',
     options: [
-      { value: HvacEquipmentStatus.ACTIVE, label: 'Active', position: 0, color: 'green' },
-      { value: HvacEquipmentStatus.INACTIVE, label: 'Inactive', position: 1, color: 'gray' },
-      { value: HvacEquipmentStatus.MAINTENANCE, label: 'Under Maintenance', position: 2, color: 'yellow' },
-      { value: HvacEquipmentStatus.REPAIR_NEEDED, label: 'Repair Needed', position: 3, color: 'orange' },
-      { value: HvacEquipmentStatus.DECOMMISSIONED, label: 'Decommissioned', position: 4, color: 'red' },
-      { value: HvacEquipmentStatus.WARRANTY, label: 'Under Warranty', position: 5, color: 'blue' },
+      {
+        value: HvacEquipmentStatus.ACTIVE,
+        label: 'Active',
+        position: 0,
+        color: 'green',
+      },
+      {
+        value: HvacEquipmentStatus.INACTIVE,
+        label: 'Inactive',
+        position: 1,
+        color: 'gray',
+      },
+      {
+        value: HvacEquipmentStatus.MAINTENANCE,
+        label: 'Under Maintenance',
+        position: 2,
+        color: 'yellow',
+      },
+      {
+        value: HvacEquipmentStatus.REPAIR_NEEDED,
+        label: 'Repair Needed',
+        position: 3,
+        color: 'orange',
+      },
+      {
+        value: HvacEquipmentStatus.DECOMMISSIONED,
+        label: 'Decommissioned',
+        position: 4,
+        color: 'red',
+      },
+      {
+        value: HvacEquipmentStatus.WARRANTY,
+        label: 'Under Warranty',
+        position: 5,
+        color: 'blue',
+      },
     ],
     defaultValue: HvacEquipmentStatus.ACTIVE,
   })
@@ -183,11 +272,36 @@ export class HvacEquipmentWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Current condition of the equipment`,
     icon: 'IconMoodCheck',
     options: [
-      { value: HvacEquipmentCondition.EXCELLENT, label: 'Excellent', position: 0, color: 'green' },
-      { value: HvacEquipmentCondition.GOOD, label: 'Good', position: 1, color: 'blue' },
-      { value: HvacEquipmentCondition.FAIR, label: 'Fair', position: 2, color: 'yellow' },
-      { value: HvacEquipmentCondition.POOR, label: 'Poor', position: 3, color: 'orange' },
-      { value: HvacEquipmentCondition.CRITICAL, label: 'Critical', position: 4, color: 'red' },
+      {
+        value: HvacEquipmentCondition.EXCELLENT,
+        label: 'Excellent',
+        position: 0,
+        color: 'green',
+      },
+      {
+        value: HvacEquipmentCondition.GOOD,
+        label: 'Good',
+        position: 1,
+        color: 'blue',
+      },
+      {
+        value: HvacEquipmentCondition.FAIR,
+        label: 'Fair',
+        position: 2,
+        color: 'yellow',
+      },
+      {
+        value: HvacEquipmentCondition.POOR,
+        label: 'Poor',
+        position: 3,
+        color: 'orange',
+      },
+      {
+        value: HvacEquipmentCondition.CRITICAL,
+        label: 'Critical',
+        position: 4,
+        color: 'red',
+      },
     ],
     defaultValue: HvacEquipmentCondition.GOOD,
   })
@@ -282,6 +396,26 @@ export class HvacEquipmentWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`The creator of the record`,
   })
   createdBy: ActorMetadata;
+
+  @WorkspaceField({
+    standardId: '20202020-hvac-eq-customer-id-field',
+    type: FieldMetadataType.TEXT,
+    label: msg`Customer ID`,
+    description: msg`ID of the customer who owns this equipment`,
+    icon: 'IconUser',
+  })
+  @WorkspaceIsNullable()
+  customerId: string;
+
+  @WorkspaceField({
+    standardId: '20202020-hvac-eq-type-field-value',
+    type: FieldMetadataType.TEXT,
+    label: msg`Type`,
+    description: msg`Type of equipment (alias for equipmentType)`,
+    icon: 'IconTool',
+  })
+  @WorkspaceIsNullable()
+  type: string;
 
   // Relations
   // Note: Owner and Company relations are commented out for now
