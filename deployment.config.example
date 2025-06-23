@@ -1,0 +1,112 @@
+# HVAC CRM Deployment Configuration
+# Copy this file to deployment.config and customize for your environment
+
+# =============================================================================
+# VPS Configuration
+# =============================================================================
+VPS_HOST=your-vps-ip-or-hostname
+VPS_USER=root
+SSH_KEY_PATH=/path/to/your/ssh/private/key
+# Leave SSH_KEY_PATH empty to use password authentication
+
+# =============================================================================
+# Domain and SSL Configuration
+# =============================================================================
+DOMAIN=hvac.yourdomain.com
+EMAIL=your-email@domain.com
+
+# =============================================================================
+# Application Configuration
+# =============================================================================
+APP_NAME=hvac-crm
+DEPLOY_DIR=/opt/hvac-crm
+REPO_URL=https://github.com/Cooliber/Fulmark20CRM.git
+
+# =============================================================================
+# Database Configuration
+# =============================================================================
+# These will be auto-generated if not specified
+# PG_DATABASE_PASSWORD=your-secure-password
+# APP_SECRET=your-app-secret
+
+# =============================================================================
+# HVAC Specific Configuration
+# =============================================================================
+HVAC_ENABLED=true
+HVAC_SENTRY_DSN=your-sentry-dsn-here
+HVAC_WEAVIATE_URL=http://localhost:8080
+HVAC_WEAVIATE_API_KEY=
+
+# =============================================================================
+# Storage Configuration
+# =============================================================================
+STORAGE_TYPE=local
+# For production, consider using S3:
+# STORAGE_TYPE=s3
+# STORAGE_S3_REGION=us-east-1
+# STORAGE_S3_NAME=your-bucket-name
+# STORAGE_S3_ENDPOINT=
+
+# =============================================================================
+# Email Configuration (Optional)
+# =============================================================================
+# EMAIL_FROM_ADDRESS=noreply@yourdomain.com
+# EMAIL_FROM_NAME=HVAC CRM System
+# EMAIL_SYSTEM_ADDRESS=system@yourdomain.com
+# EMAIL_DRIVER=smtp
+# EMAIL_SMTP_HOST=smtp.your-provider.com
+# EMAIL_SMTP_PORT=587
+# EMAIL_SMTP_USER=your-smtp-user
+# EMAIL_SMTP_PASSWORD=your-smtp-password
+
+# =============================================================================
+# Monitoring Configuration
+# =============================================================================
+BACKUP_RETENTION_DAYS=7
+MONITORING_INTERVAL=5  # minutes
+HEALTH_CHECK_TIMEOUT=30  # seconds
+
+# =============================================================================
+# Security Configuration
+# =============================================================================
+ENABLE_FIREWALL=true
+ALLOWED_SSH_IPS=  # Comma-separated list, leave empty for all IPs
+FAIL2BAN_ENABLED=true
+
+# =============================================================================
+# Performance Configuration
+# =============================================================================
+DOCKER_MEMORY_LIMIT=2g
+DOCKER_CPU_LIMIT=1.0
+POSTGRES_SHARED_BUFFERS=256MB
+REDIS_MAXMEMORY=512mb
+
+# =============================================================================
+# Development/Testing Configuration
+# =============================================================================
+# Set to true for development deployments
+DEVELOPMENT_MODE=false
+DEBUG_LOGGING=false
+SKIP_SSL=false  # Only for development!
+
+# =============================================================================
+# Backup Configuration
+# =============================================================================
+BACKUP_ENABLED=true
+BACKUP_SCHEDULE="0 2 * * *"  # Daily at 2 AM
+BACKUP_LOCATION=/opt/backups/hvac-crm
+S3_BACKUP_BUCKET=  # Optional: backup to S3
+
+# =============================================================================
+# Notification Configuration
+# =============================================================================
+# Slack webhook for deployment notifications
+SLACK_WEBHOOK_URL=
+DISCORD_WEBHOOK_URL=
+
+# Email notifications for critical issues
+ALERT_EMAIL=admin@yourdomain.com
+SMTP_ALERT_HOST=
+SMTP_ALERT_PORT=587
+SMTP_ALERT_USER=
+SMTP_ALERT_PASSWORD=
