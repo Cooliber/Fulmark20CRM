@@ -10,21 +10,19 @@
  * - PrimeReact/PrimeFlex UI consistency
  */
 
-import React, { useCallback, useState } from 'react';
-import { Card } from 'primereact/card';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
-import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
+import { Button } from 'primereact/button';
+import { Card } from 'primereact/card';
+import { Column } from 'primereact/column';
+import { DataTable } from 'primereact/datatable';
 import { Tag } from 'primereact/tag';
-import { Dialog } from 'primereact/dialog';
-import { Skeleton } from 'primereact/skeleton';
+import React, { useState } from 'react';
 
 // HVAC services and hooks
 import {
-  useEquipmentManagement,
-  HVACEquipment as Equipment,
-  trackHVACUserAction
+    HVACEquipment as Equipment,
+    trackHVACUserAction,
+    useEquipmentManagement
 } from '../../index';
 
 interface Customer360EquipmentTabProps {
@@ -69,18 +67,19 @@ export const Customer360EquipmentTab: React.FC<Customer360EquipmentTabProps> = (
 
   // Status configuration
   const statusConfig: Record<Equipment['status'], { label: string; severity: 'success' | 'warning' | 'danger' | 'secondary' }> = {
-    sprawny: { label: 'Sprawny', severity: 'success' },
-    wymaga_serwisu: { label: 'Wymaga serwisu', severity: 'warning' },
-    awaria: { label: 'Awaria', severity: 'danger' },
-    wyłączony: { label: 'Wyłączony', severity: 'secondary' },
+    ACTIVE: { label: 'Sprawny', severity: 'success' },
+    MAINTENANCE: { label: 'Wymaga serwisu', severity: 'warning' },
+    REPAIR_NEEDED: { label: 'Awaria', severity: 'danger' },
+    INACTIVE: { label: 'Wyłączony', severity: 'secondary' },
   };
 
   // Type configuration
   const typeConfig: Record<Equipment['type'], { label: string; color: string }> = {
-    klimatyzacja: { label: 'Klimatyzacja', color: 'blue' },
-    wentylacja: { label: 'Wentylacja', color: 'green' },
-    ogrzewanie: { label: 'Ogrzewanie', color: 'orange' },
-    inne: { label: 'Inne', color: 'gray' },
+    AIR_CONDITIONING: { label: 'Klimatyzacja', color: 'blue' },
+    VENTILATION: { label: 'Wentylacja', color: 'green' },
+    HEATING: { label: 'Ogrzewanie', color: 'orange' },
+    REFRIGERATION: { label: 'Chłodzenie', color: 'cyan' },
+    HEAT_PUMP: { label: 'Pompa ciepła', color: 'purple' },
   };
 
   // Handle equipment actions
@@ -166,9 +165,9 @@ export const Customer360EquipmentTab: React.FC<Customer360EquipmentTabProps> = (
       {/* Equipment Table */}
       <div className="col-12">
         <Card title="Lista urządzeń">
-          {mockEquipment.length > 0 ? (
+          {displayEquipment.length > 0 ? (
             <DataTable
-              value={mockEquipment}
+              value={displayEquipment}
               responsiveLayout="scroll"
               stripedRows
               showGridlines

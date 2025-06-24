@@ -10,75 +10,25 @@
  * - Communication tools
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
-import { Badge } from 'primereact/badge';
-import { Tag } from 'primereact/tag';
 import { Avatar } from 'primereact/avatar';
-import { ProgressBar } from 'primereact/progressbar';
-import { Timeline } from 'primereact/timeline';
-import { OverlayPanel } from 'primereact/overlaypanel';
+import { Button } from 'primereact/button';
+import { Card } from 'primereact/card';
+import { Chip } from 'primereact/chip';
+import { Divider } from 'primereact/divider';
 import { Menu } from 'primereact/menu';
+import { OverlayPanel } from 'primereact/overlaypanel';
+import { ProgressBar } from 'primereact/progressbar';
+import { Tag } from 'primereact/tag';
 import { Toast } from 'primereact/toast';
 import { Tooltip } from 'primereact/tooltip';
-import { Chip } from 'primereact/chip';
-import { Panel } from 'primereact/panel';
-import { Divider } from 'primereact/divider';
 import { classNames } from 'primereact/utils';
+import React, { useCallback, useRef, useState } from 'react';
 
-// Types
-interface Technician {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  status: 'AVAILABLE' | 'BUSY' | 'EN_ROUTE' | 'ON_BREAK' | 'OFFLINE';
-  level: 'APPRENTICE' | 'JUNIOR' | 'SENIOR' | 'LEAD' | 'SUPERVISOR';
-  skills: string[];
-  currentLocation: {
-    latitude: number;
-    longitude: number;
-    address?: string;
-    lastUpdated: Date;
-  };
-  workingHours: {
-    start: string;
-    end: string;
-  };
-  todayStats: {
-    jobsCompleted: number;
-    jobsScheduled: number;
-    hoursWorked: number;
-    travelTime: number;
-    efficiency: number;
-  };
-  currentJob?: {
-    id: string;
-    customerName: string;
-    serviceType: string;
-    startTime: Date;
-    estimatedCompletion: Date;
-    progress: number;
-  };
-  avatar?: string;
-  color: string;
-}
-
-interface ActiveDispatch {
-  id: string;
-  technicianId: string;
-  status: 'DISPATCHED' | 'EN_ROUTE' | 'ARRIVED' | 'IN_PROGRESS' | 'COMPLETED';
-  estimatedArrival?: Date;
-  location?: {
-    latitude: number;
-    longitude: number;
-  };
-  customerInfo: {
-    name: string;
-    address: string;
-  };
-}
+// Import unified types
+import {
+    type ActiveDispatch,
+    type Technician
+} from '../../index';
 
 interface TrackerProps {
   technicians: Technician[];

@@ -1,15 +1,27 @@
 import { collection, config, fields } from '@keystatic/core';
 import { wrapper } from '@keystatic/core/content-components';
 
+// Check if we're in build mode and missing required env vars
+const isBuilding =
+  process.env.NODE_ENV === 'production' ||
+  process.env.NEXT_PHASE === 'phase-production-build';
+const hasRequiredEnvVars =
+  process.env.KEYSTATIC_GITHUB_CLIENT_ID &&
+  process.env.KEYSTATIC_GITHUB_CLIENT_SECRET &&
+  process.env.KEYSTATIC_SECRET;
+
 export default config({
-  storage: {
-    kind: 'github',
-    repo: {
-      owner: 'twentyhq',
-      name: 'twenty',
-    },
-    pathPrefix: 'packages/twenty-website',
-  },
+  storage:
+    isBuilding && !hasRequiredEnvVars
+      ? { kind: 'local' }
+      : {
+          kind: 'github',
+          repo: {
+            owner: 'twentyhq',
+            name: 'twenty',
+          },
+          pathPrefix: 'packages/twenty-website',
+        },
   collections: {
     developers: collection({
       label: 'Technical documentation',

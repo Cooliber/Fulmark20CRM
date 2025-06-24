@@ -10,19 +10,18 @@
  * - Time slot optimization
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
-import { Calendar } from 'primereact/calendar';
 import { Badge } from 'primereact/badge';
-import { Tag } from 'primereact/tag';
-import { OverlayPanel } from 'primereact/overlaypanel';
-import { Menu } from 'primereact/menu';
+import { Button } from 'primereact/button';
+import { Card } from 'primereact/card';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
-import { Toast } from 'primereact/toast';
+import { Menu } from 'primereact/menu';
+import { OverlayPanel } from 'primereact/overlaypanel';
 import { ProgressSpinner } from 'primereact/progressspinner';
+import { Tag } from 'primereact/tag';
+import { Toast } from 'primereact/toast';
 import { Tooltip } from 'primereact/tooltip';
 import { classNames } from 'primereact/utils';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // Types
 interface ScheduledJob {
@@ -355,7 +354,7 @@ export const HvacSchedulingCalendar: React.FC<CalendarProps> = ({
               job.priority === 'HIGH' ? 'warning' :
               job.priority === 'MEDIUM' ? 'info' : 'success'
             }
-            size="small"
+
           />
         </div>
         

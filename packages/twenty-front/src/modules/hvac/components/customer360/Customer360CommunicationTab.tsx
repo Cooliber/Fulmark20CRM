@@ -10,11 +10,11 @@
  * - PrimeReact/PrimeFlex UI consistency
  */
 
-import React from 'react';
+import { Badge } from 'primereact/badge';
+import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Timeline } from 'primereact/timeline';
-import { Button } from 'primereact/button';
-import { Badge } from 'primereact/badge';
+import React from 'react';
 
 // HVAC monitoring
 import { trackHVACUserAction } from '../../index';
@@ -82,7 +82,7 @@ export const Customer360CommunicationTab: React.FC<Customer360CommunicationTabPr
   };
 
   // Get color for communication direction
-  const getDirectionColor = (direction: Communication['direction']): string => {
+  const getDirectionColor = (direction: Communication['direction']): 'success' | 'info' | 'warning' | 'danger' | 'secondary' | 'contrast' => {
     return direction === 'inbound' ? 'info' : 'success';
   };
 

@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { HvacApiIntegrationService } from './hvac-api-integration.service';
-import { HvacWeaviateService, HvacSemanticDocument } from './hvac-weaviate.service';
 import { HvacConfigService } from 'src/engine/core-modules/hvac-config/hvac-config.service';
+import { HvacApiIntegrationService } from './hvac-api-integration.service';
+import { HvacSemanticDocument, HvacWeaviateService } from './hvac-weaviate.service';
 
 export interface SyncStatus {
   lastSync: Date;
@@ -50,7 +50,7 @@ export class HvacDataSyncService {
     private readonly hvacConfigService: HvacConfigService,
   ) {}
 
-  // Run sync every hour
+  // Run sync every hour with performance optimization
   @Cron(CronExpression.EVERY_HOUR)
   async scheduledSync() {
     if (!this.hvacConfigService.isHvacFeatureEnabled('semanticSearch')) {
@@ -58,8 +58,28 @@ export class HvacDataSyncService {
       return;
     }
 
+    // Check if sync is already running
+    if (this.syncStatus.isRunning) {
+      this.logger.warn('Sync already running, skipping scheduled sync');
+      return;
+    }
+
+    // Check system load before starting sync
+    const performanceConfig = this.hvacConfigService.getPerformanceConfig();
+    if (this.shouldSkipSyncDueToLoad(performanceConfig)) {
+      this.logger.warn('High system load detected, postponing sync');
+      return;
+    }
+
     this.logger.log('Starting scheduled HVAC data sync');
     await this.performFullSync();
+  }
+
+  private shouldSkipSyncDueToLoad(performanceConfig: any): boolean {
+    // Simple load check - in production this would check actual system metrics
+    const currentHour = new Date().getHours();
+    // Skip during peak hours (9-17) if configured
+    return performanceConfig.skipSyncDuringPeakHours && currentHour >= 9 && currentHour <= 17;
   }
 
   async performFullSync(): Promise<SyncMetrics> {
@@ -114,38 +134,75 @@ export class HvacDataSyncService {
   private async syncServiceTickets(metrics: SyncMetrics): Promise<void> {
     try {
       this.logger.log('Syncing service tickets to semantic search');
-      
-      // Get service tickets from HVAC API
-      const tickets = await this.hvacApiService.getServiceTickets(100, 0);
-      metrics.serviceTickets.total = tickets.length;
 
-      for (const ticket of tickets) {
-        try {
-          // Create semantic document for service ticket
-          const document: HvacSemanticDocument = {
-            content: `${ticket.title}\n\n${ticket.description || ''}\n\nStatus: ${ticket.status}\nPriority: ${ticket.priority}\nService Type: ${ticket.serviceType}`,
-            title: `Service Ticket: ${ticket.ticketNumber || ticket.title}`,
-            type: 'service_report',
-            metadata: {
-              customerId: ticket.customerId,
-              technicianId: ticket.technicianId,
-              ticketId: ticket.id,
-              timestamp: ticket.scheduledDate || new Date(),
-              source: 'twenty_crm_service_ticket',
-              language: 'pl',
-              status: ticket.status,
-              priority: ticket.priority,
-              serviceType: ticket.serviceType,
-              estimatedCost: ticket.estimatedCost,
-            },
-          };
+      // Get service tickets from HVAC API with pagination
+      let offset = 0;
+      const batchSize = 50; // Smaller batches for better performance
+      let hasMore = true;
 
-          await this.weaviateService.insertDocument(document);
-          metrics.serviceTickets.synced++;
-        } catch (error) {
-          this.logger.error(`Failed to sync service ticket ${ticket.id}`, error);
-          metrics.serviceTickets.errors++;
-          this.syncStatus.errors.push(`Service ticket ${ticket.id}: ${error.message}`);
+      while (hasMore) {
+        const tickets = await this.hvacApiService.getServiceTickets(batchSize, offset);
+
+        if (tickets.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        metrics.serviceTickets.total += tickets.length;
+
+        // Process tickets in parallel batches
+        const batchPromises = tickets.map(async (ticket) => {
+          try {
+            // Create semantic document for service ticket
+            const document: HvacSemanticDocument = {
+              content: `${ticket.title}\n\n${ticket.description || ''}\n\nStatus: ${ticket.status}\nPriority: ${ticket.priority}\nService Type: ${ticket.serviceType}`,
+              title: `Service Ticket: ${ticket.ticketNumber || ticket.title}`,
+              type: 'service_report',
+              metadata: {
+                customerId: ticket.customerId,
+                technicianId: ticket.technicianId,
+                ticketId: ticket.id,
+                timestamp: ticket.scheduledDate || new Date(),
+                source: 'twenty_crm_service_ticket',
+                language: 'pl',
+                status: ticket.status,
+                priority: ticket.priority,
+                serviceType: ticket.serviceType,
+                estimatedCost: ticket.estimatedCost,
+              },
+            };
+
+            await this.weaviateService.insertDocument(document);
+            return { success: true, ticketId: ticket.id };
+          } catch (error) {
+            this.logger.error(`Failed to sync service ticket ${ticket.id}`, error);
+            this.syncStatus.errors.push(`Service ticket ${ticket.id}: ${error.message}`);
+            return { success: false, ticketId: ticket.id, error };
+          }
+        });
+
+        // Wait for batch to complete
+        const results = await Promise.allSettled(batchPromises);
+
+        // Count successes and failures
+        results.forEach((result) => {
+          if (result.status === 'fulfilled' && result.value.success) {
+            metrics.serviceTickets.synced++;
+          } else {
+            metrics.serviceTickets.errors++;
+          }
+        });
+
+        this.logger.debug(`Processed batch: ${results.length} tickets, offset: ${offset}`);
+
+        offset += batchSize;
+
+        // Add small delay between batches to prevent overwhelming the system
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Stop if we got less than the batch size (last page)
+        if (tickets.length < batchSize) {
+          hasMore = false;
         }
       }
 

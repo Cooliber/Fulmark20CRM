@@ -10,33 +10,27 @@
  * - Performance analytics
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
-import { Calendar } from 'primereact/calendar';
-import { Dropdown } from 'primereact/dropdown';
 import { Badge } from 'primereact/badge';
-import { ProgressBar } from 'primereact/progressbar';
-import { Toast } from 'primereact/toast';
+import { Button } from 'primereact/button';
+import { Card } from 'primereact/card';
 import { ConfirmDialog } from 'primereact/confirmdialog';
-import { Splitter, SplitterPanel } from 'primereact/splitter';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
-import { Timeline } from 'primereact/timeline';
-import { Tag } from 'primereact/tag';
-import { Chip } from 'primereact/chip';
-import { Panel } from 'primereact/panel';
-import { Toolbar } from 'primereact/toolbar';
+import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
-import { FilterMatchMode } from 'primereact/api';
-import { useDebounce } from '@/hooks/useDebounce';
-import { useHvacScheduling } from '../hooks/useHvacScheduling';
-import { useHvacDispatch } from '../hooks/useHvacDispatch';
-import { useHvacTechnicians } from '../hooks/useHvacTechnicians';
-import { HvacSchedulingCalendar } from './HvacSchedulingCalendar';
-import { HvacTechnicianTracker } from './HvacTechnicianTracker';
+import { Splitter, SplitterPanel } from 'primereact/splitter';
+import { Tag } from 'primereact/tag';
+import { Toast } from 'primereact/toast';
+import { Toolbar } from 'primereact/toolbar';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useDebounce } from '../../hooks/useDebounce';
+import { useHvacDispatch } from '../../hooks/useHvacDispatch';
+import { useHvacScheduling } from '../../hooks/useHvacScheduling';
+import { useHvacTechnicians } from '../../hooks/useHvacTechnicians';
 import { HvacDispatchPanel } from './HvacDispatchPanel';
 import { HvacRouteOptimizer } from './HvacRouteOptimizer';
+import { HvacSchedulingCalendar } from './HvacSchedulingCalendar';
+import { HvacTechnicianTracker } from './HvacTechnicianTracker';
+
+// Import unified types
 
 // Types
 interface SchedulingFilters {
@@ -101,7 +95,7 @@ export const HvacSchedulingDashboard: React.FC = () => {
   const [showRouteOptimizer, setShowRouteOptimizer] = useState(false);
 
   // Debounced search
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const debouncedSearchTerm = useDebounce(searchTerm, { delay: 300 });
 
   // Custom hooks
   const {
@@ -223,26 +217,26 @@ export const HvacSchedulingDashboard: React.FC = () => {
   // Priority badge template
   const priorityTemplate = (priority: string) => {
     const severity = {
-      CRITICAL: 'danger',
-      HIGH: 'warning',
-      MEDIUM: 'info',
-      LOW: 'success',
-    }[priority] || 'info';
+      CRITICAL: 'danger' as const,
+      HIGH: 'warning' as const,
+      MEDIUM: 'info' as const,
+      LOW: 'success' as const,
+    }[priority] || ('info' as const);
 
-    return <Badge value={priority} severity={severity as any} />;
+    return <Badge value={priority} severity={severity} />;
   };
 
   // Status template
   const statusTemplate = (status: string) => {
     const statusConfig = {
-      SCHEDULED: { label: 'Zaplanowane', severity: 'info' },
-      EN_ROUTE: { label: 'W drodze', severity: 'warning' },
-      IN_PROGRESS: { label: 'W trakcie', severity: 'warning' },
-      COMPLETED: { label: 'Zakończone', severity: 'success' },
-      CANCELLED: { label: 'Anulowane', severity: 'danger' },
-    }[status] || { label: status, severity: 'info' };
+      SCHEDULED: { label: 'Zaplanowane', severity: 'info' as const },
+      EN_ROUTE: { label: 'W drodze', severity: 'warning' as const },
+      IN_PROGRESS: { label: 'W trakcie', severity: 'warning' as const },
+      COMPLETED: { label: 'Zakończone', severity: 'success' as const },
+      CANCELLED: { label: 'Anulowane', severity: 'danger' as const },
+    }[status] || { label: status, severity: 'info' as const };
 
-    return <Tag value={statusConfig.label} severity={statusConfig.severity as any} />;
+    return <Tag value={statusConfig.label} severity={statusConfig.severity} />;
   };
 
   // Toolbar content

@@ -10,14 +10,14 @@
  * - PrimeReact/PrimeFlex UI consistency
  */
 
-import React, { Suspense, lazy, useCallback } from 'react';
 import { Card } from 'primereact/card';
-import { Skeleton } from 'primereact/skeleton';
 import { ProgressSpinner } from 'primereact/progressspinner';
-import { Button } from 'primereact/button';
+import { Skeleton } from 'primereact/skeleton';
+import React, { Suspense, lazy } from 'react';
 
 // HVAC monitoring
 import { trackHVACUserAction } from '../../index';
+import { HVACErrorBoundary } from '../HVACErrorBoundary';
 
 // Lazy load Customer 360 components
 const Customer360Container = lazy(() => 
@@ -84,40 +84,7 @@ const Customer360LoadingSkeleton: React.FC = () => (
   </div>
 );
 
-// Error boundary fallback
-const Customer360ErrorFallback: React.FC<{ 
-  error: Error; 
-  onRetry: () => void; 
-}> = ({ error, onRetry }) => (
-  <Card className="text-center p-6">
-    <i className="pi pi-exclamation-triangle text-6xl text-red-500 mb-4" />
-    <h3 className="text-900 font-semibold mb-2">Błąd ładowania Customer 360</h3>
-    <p className="text-600 mb-4">
-      Wystąpił problem podczas ładowania danych klienta.
-    </p>
-    <p className="text-sm text-500 mb-4">
-      {error.message}
-    </p>
-    <div className="flex gap-2 justify-content-center">
-      <Button
-        label="Spróbuj ponownie"
-        icon="pi pi-refresh"
-        onClick={onRetry}
-      />
-      <Button
-        label="Zgłoś problem"
-        icon="pi pi-exclamation-triangle"
-        severity="secondary"
-        outlined
-        onClick={() => {
-          trackHVACUserAction('customer360_error_reported', 'ERROR_REPORTING', {
-            error: error.message,
-          });
-        }}
-      />
-    </div>
-  </Card>
-);
+
 
 // Suspense fallback with progress indicator
 const Customer360SuspenseFallback: React.FC = () => (
@@ -137,15 +104,7 @@ export const LazyCustomer360: React.FC<LazyCustomer360Props> = ({
   onTabChange,
   className = '',
 }) => {
-  // Handle retry for error boundary
-  const handleRetry = useCallback(() => {
-    trackHVACUserAction('customer360_retry_clicked', 'USER_INTERACTION', {
-      customerId,
-    });
-    
-    // Force component remount by changing key
-    window.location.reload();
-  }, [customerId]);
+
 
   // Track lazy loading
   React.useEffect(() => {
@@ -157,13 +116,16 @@ export const LazyCustomer360: React.FC<LazyCustomer360Props> = ({
 
   return (
     <div className={`lazy-customer360 ${className}`}>
-      <React.ErrorBoundary
-        fallback={({ error }) => (
-          <Customer360ErrorFallback 
-            error={error} 
-            onRetry={handleRetry} 
-          />
-        )}
+      <HVACErrorBoundary
+        context="CUSTOMER_360"
+        customTitle="Błąd ładowania Customer 360"
+        customMessage="Wystąpił problem podczas ładowania danych klienta."
+        onError={(error) => {
+          trackHVACUserAction('customer360_error', 'ERROR_REPORTING', {
+            customerId,
+            error: error.message,
+          });
+        }}
       >
         <Suspense fallback={<Customer360SuspenseFallback />}>
           <Customer360Container
@@ -172,7 +134,7 @@ export const LazyCustomer360: React.FC<LazyCustomer360Props> = ({
             onTabChange={onTabChange}
           />
         </Suspense>
-      </React.ErrorBoundary>
+      </HVACErrorBoundary>
     </div>
   );
 };
@@ -181,33 +143,45 @@ export const LazyCustomer360: React.FC<LazyCustomer360Props> = ({
 export const LazyCustomer360CommunicationTab: React.FC<{
   customerId: string;
 }> = ({ customerId }) => (
-  <React.ErrorBoundary
-    fallback={({ error }) => (
-      <Customer360ErrorFallback 
-        error={error} 
-        onRetry={() => window.location.reload()} 
-      />
-    )}
+  <HVACErrorBoundary
+    context="CUSTOMER_360"
+    customTitle="Błąd ładowania komunikacji"
+    customMessage="Wystąpił problem podczas ładowania danych komunikacji klienta."
+    onError={(error) => {
+      trackHVACUserAction('customer360_communication_error', 'ERROR_REPORTING', {
+        customerId,
+        error: error.message,
+      });
+    }}
   >
     <Suspense fallback={<Customer360LoadingSkeleton />}>
       <Customer360CommunicationTabEnhanced customerId={customerId} />
     </Suspense>
-  </React.ErrorBoundary>
+  </HVACErrorBoundary>
 );
 
 export const LazyCustomer360EquipmentTab: React.FC<{
   customerId: string;
 }> = ({ customerId }) => (
-  <React.ErrorBoundary
-    fallback={({ error }) => (
-      <Customer360ErrorFallback 
-        error={error} 
-        onRetry={() => window.location.reload()} 
-      />
-    )}
+  <HVACErrorBoundary
+    context="CUSTOMER_360"
+    customTitle="Błąd ładowania sprzętu"
+    customMessage="Wystąpił problem podczas ładowania danych sprzętu klienta."
+    onError={(error) => {
+      trackHVACUserAction('customer360_equipment_error', 'ERROR_REPORTING', {
+        customerId,
+        error: error.message,
+      });
+    }}
   >
     <Suspense fallback={<Customer360LoadingSkeleton />}>
       <Customer360EquipmentTab customerId={customerId} />
     </Suspense>
-  </React.ErrorBoundary>
+  </HVACErrorBoundary>
 );
+
+// Export new lazy components for bundle size optimization
+export { LazyAnalyticsDashboard } from './LazyAnalyticsDashboard';
+export { LazyKanbanBoard } from './LazyKanbanBoard';
+export { LazyMaintenanceDashboard } from './LazyMaintenanceDashboard';
+

@@ -11,22 +11,20 @@
  * - Automated alerts
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
-import { Tag } from 'primereact/tag';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
-import { ProgressBar } from 'primereact/progressbar';
-import { Toast } from 'primereact/toast';
-import { Timeline } from 'primereact/timeline';
+import { Button } from 'primereact/button';
+import { Card } from 'primereact/card';
 import { Chip } from 'primereact/chip';
-import { Knob } from 'primereact/knob';
-import { TabView, TabPanel } from 'primereact/tabview';
-import { Calendar } from 'primereact/calendar';
+import { Column } from 'primereact/column';
+import { DataTable } from 'primereact/datatable';
 import { Dropdown } from 'primereact/dropdown';
-import { classNames } from 'primereact/utils';
+import { Knob } from 'primereact/knob';
+import { ProgressBar } from 'primereact/progressbar';
+import { TabPanel, TabView } from 'primereact/tabview';
+import { Tag } from 'primereact/tag';
+import { Timeline } from 'primereact/timeline';
+import { Toast } from 'primereact/toast';
+import React, { useEffect, useRef, useState } from 'react';
 
 // Types
 interface ComplianceItem {
@@ -150,16 +148,16 @@ export const HvacComplianceTracker: React.FC<ComplianceTrackerProps> = ({
   // Status template
   const statusTemplate = (item: ComplianceItem) => {
     const statusConfig = {
-      COMPLIANT: { label: 'Zgodne', severity: 'success', icon: 'pi-check' },
-      AT_RISK: { label: 'Zagrożone', severity: 'warning', icon: 'pi-exclamation-triangle' },
-      NON_COMPLIANT: { label: 'Niezgodne', severity: 'danger', icon: 'pi-times' },
-      EXPIRED: { label: 'Wygasłe', severity: 'danger', icon: 'pi-clock' },
+      COMPLIANT: { label: 'Zgodne', severity: 'success' as const, icon: 'pi-check' },
+      AT_RISK: { label: 'Zagrożone', severity: 'warning' as const, icon: 'pi-exclamation-triangle' },
+      NON_COMPLIANT: { label: 'Niezgodne', severity: 'danger' as const, icon: 'pi-times' },
+      EXPIRED: { label: 'Wygasłe', severity: 'danger' as const, icon: 'pi-clock' },
     }[item.status];
 
     return (
       <Tag
         value={statusConfig.label}
-        severity={statusConfig.severity as any}
+        severity={statusConfig.severity}
         icon={`pi ${statusConfig.icon}`}
       />
     );

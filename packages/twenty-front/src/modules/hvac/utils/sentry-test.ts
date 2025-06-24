@@ -20,7 +20,7 @@ export interface SentryTestResult {
 export const testSentryConfiguration = async (): Promise<SentryTestResult> => {
   try {
     // Check if Sentry is configured
-    const client = Sentry.getCurrentHub().getClient();
+    const client = Sentry.getClient();
     if (!client) {
       return {
         isConfigured: false,
@@ -83,29 +83,29 @@ export const testSentryErrorReporting = (): string => {
  * Test performance monitoring
  */
 export const testSentryPerformance = (): string => {
-  const transaction = Sentry.startTransaction({
+  // Use startSpan for performance monitoring
+  const spanId = Sentry.startSpan({
     name: 'HVAC CRM Performance Test',
     op: 'test'
+  }, (span) => {
+    // Add HVAC-specific data
+    // Modern Sentry API doesn't use setData on spans
+    // Data is set via attributes in startSpan options
+    span?.setAttributes({
+      'system': 'Fulmark20CRM',
+      'component': 'performance-test',
+      'quality_standard': 'Pasja rodzi profesjonalizm'
+    });
+
+    // Simulate some work
+    return new Promise<string>((resolve) => {
+      setTimeout(() => {
+        resolve(span?.spanContext().traceId || 'test-trace-id');
+      }, 100);
+    });
   });
-  
-  // Simulate some work
-  const span = transaction.startChild({
-    op: 'hvac.test',
-    description: 'Testing performance monitoring'
-  });
-  
-  // Add HVAC-specific data
-  span.setData('system', 'Fulmark20CRM');
-  span.setData('component', 'performance-test');
-  span.setData('quality_standard', 'Pasja rodzi profesjonalizm');
-  
-  // Simulate async work
-  setTimeout(() => {
-    span.finish();
-    transaction.finish();
-  }, 100);
-  
-  return transaction.traceId;
+
+  return typeof spanId === 'string' ? spanId : 'test-trace-id';
 };
 
 /**

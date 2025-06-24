@@ -9,13 +9,13 @@
  * - Polish business context
  */
 
-import * as Sentry from '@sentry/nextjs';
-import { BrowserOptions } from '@sentry/react';
+import type { BrowserOptions } from '@sentry/react';
+import * as Sentry from '@sentry/react';
 
 // HVAC-specific error contexts for better categorization
 export const HVACErrorContexts = {
   CUSTOMER_360: 'customer_360',
-  EQUIPMENT_MANAGEMENT: 'equipment_management', 
+  EQUIPMENT_MANAGEMENT: 'equipment_management',
   SERVICE_TICKETS: 'service_tickets',
   SEMANTIC_SEARCH: 'semantic_search',
   WEAVIATE_INTEGRATION: 'weaviate_integration',
@@ -24,6 +24,25 @@ export const HVACErrorContexts = {
   DATA_SYNC: 'data_sync',
   PERFORMANCE: 'performance',
   UI_COMPONENT: 'ui_component',
+  // Additional contexts for comprehensive tracking
+  VALIDATION: 'validation',
+  API_SUCCESS: 'api_success',
+  API_ERROR: 'api_error',
+  API_CACHE: 'api_cache',
+  API_REQUEST: 'api_request',
+  COMMUNICATION: 'communication',
+  AI_PROCESSING: 'ai_processing',
+  CUSTOMER_FLOW: 'customer_flow',
+  QUOTE_MANAGEMENT: 'quote_management',
+  KANBAN_MANAGEMENT: 'kanban_management',
+  KANBAN_AUTOMATION: 'kanban_automation',
+  KANBAN_INTERACTION: 'kanban_interaction',
+  DATA_PIPELINE: 'data_pipeline',
+  CUSTOMER_VALIDATION: 'customer_validation',
+  // User interaction and error reporting contexts
+  USER_INTERACTION: 'user_interaction',
+  ERROR_REPORTING: 'error_reporting',
+  ANALYTICS: 'analytics',
 } as const;
 
 export type HVACErrorContext = keyof typeof HVACErrorContexts;
@@ -54,11 +73,11 @@ const PERFORMANCE_CONFIG = {
 
 // Error filtering configuration
 const ERROR_FILTERS = {
-  beforeSend(event: Sentry.Event, hint: Sentry.EventHint): Sentry.Event | null {
+  beforeSend(event: Sentry.ErrorEvent, hint: Sentry.EventHint): Sentry.ErrorEvent | null {
     // Filter out development-only errors in production
     if (isProduction && hint.originalException) {
       const error = hint.originalException;
-      
+
       if (error instanceof Error) {
         // Skip hydration errors, HMR errors, and development warnings
         if (
@@ -76,7 +95,7 @@ const ERROR_FILTERS = {
     event.tags = {
       ...event.tags,
       application: 'hvac-crm',
-      version: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
+      version: process.env.VITE_APP_VERSION || '1.0.0',
       region: 'PL',
       language: 'pl',
     };
@@ -94,26 +113,13 @@ const ERROR_FILTERS = {
 
     return event;
   },
-
-  beforeSendTransaction(event: Sentry.Event): Sentry.Event | null {
-    // Filter out health check and development transactions
-    if (
-      event.transaction === 'GET /api/health' ||
-      event.transaction === 'GET /_next/static' ||
-      event.transaction?.includes('hot-update')
-    ) {
-      return null;
-    }
-
-    return event;
-  },
 };
 
 // Main Sentry configuration
 export const hvacSentryConfig: BrowserOptions = {
   dsn: SENTRY_DSN,
   environment: process.env.NODE_ENV || 'development',
-  release: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
+  release: process.env.VITE_APP_VERSION || '1.0.0',
   debug: isDevelopment,
 
   // Performance monitoring
@@ -124,13 +130,7 @@ export const hvacSentryConfig: BrowserOptions = {
 
   // Integrations
   integrations: [
-    Sentry.browserTracingIntegration({
-      tracePropagationTargets: [
-        'localhost:3001',
-        'localhost:3002', 
-        process.env.NEXT_PUBLIC_SERVER_BASE_URL || 'http://localhost:3001',
-      ],
-    }),
+    Sentry.browserTracingIntegration(),
     Sentry.replayIntegration(),
   ],
 
@@ -237,12 +237,14 @@ export const reportPolishBusinessError = (
 
 // Performance monitoring helpers
 export const startHVACTransaction = (name: string, operation: string) => {
-  return Sentry.startTransaction({
+  return Sentry.startSpan({
     name,
     op: operation,
-    tags: {
+    attributes: {
       component: 'hvac-crm',
     },
+  }, () => {
+    // Transaction logic will be handled by the caller
   });
 };
 

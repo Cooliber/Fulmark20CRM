@@ -10,8 +10,8 @@
  * - Location tracking
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
 import { useApolloClient } from '@apollo/client';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Types
 interface Technician {
@@ -539,6 +539,7 @@ export const useHvacTechnicians = () => {
   return {
     // State
     technicians,
+    availableTechnicians: technicians.filter(tech => tech.status === 'AVAILABLE' && tech.isOnline),
     loading,
     error,
     lastUpdate,

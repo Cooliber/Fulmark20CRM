@@ -10,17 +10,16 @@
  * - PrimeReact/PrimeFlex UI consistency
  */
 
-import React from 'react';
-import { Card } from 'primereact/card';
 import { motion } from 'framer-motion';
-import { IconSearch, IconTool, IconCalendar } from 'twenty-ui/display';
-import { IconTag as IconTicket } from 'twenty-ui/display';
+import { Card } from 'primereact/card';
+import React from 'react';
+import { IconCalendar, IconSearch, IconTag as IconTicket, IconTool } from 'twenty-ui/display';
 
 // Types
 interface StatItem {
   label: string;
   value: string;
-  icon: React.ComponentType<{ size: number }>;
+  icon: React.ComponentType<any>;
   color: string;
 }
 

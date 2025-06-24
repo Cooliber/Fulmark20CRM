@@ -10,35 +10,32 @@
  * - PrimeReact/PrimeFlex UI consistency
  */
 
-import React, { useCallback, useState } from 'react';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
-import { Skeleton } from 'primereact/skeleton';
-import { Dialog } from 'primereact/dialog';
+import { Button } from 'primereact/button';
+import { Card } from 'primereact/card';
 import { ScrollPanel } from 'primereact/scrollpanel';
+import { Skeleton } from 'primereact/skeleton';
+import React, { useCallback, useState } from 'react';
 
 // HVAC services and hooks
-import { 
-  useKanbanFlow,
-  KanbanBoard as KanbanBoardType,
-  KanbanColumn,
-  KanbanCard,
-  trackHVACUserAction 
+import {
+    KanbanCardType,
+    trackHVACUserAction,
+    useKanbanFlow,
+    type KanbanBoardType
 } from '../../index';
 
-// Kanban components will be imported when created
-// import { KanbanColumn as KanbanColumnComponent } from './KanbanColumn';
-// import { KanbanCard as KanbanCardComponent } from './KanbanCard';
-// import { CreateCardDialog } from './CreateCardDialog';
+// Kanban components
+import { CreateCardDialog } from './CreateCardDialog';
+import { KanbanColumn as KanbanColumnComponent } from './KanbanColumn';
 
 // Component props
 interface KanbanBoardProps {
   boardId?: string;
   board?: KanbanBoardType;
-  onCardClick?: (card: KanbanCard) => void;
-  onCardCreate?: (card: KanbanCard) => void;
-  onCardUpdate?: (card: KanbanCard) => void;
+  onCardClick?: (card: KanbanCardType) => void;
+  onCardCreate?: (card: KanbanCardType) => void;
+  onCardUpdate?: (card: KanbanCardType) => void;
   className?: string;
 }
 
@@ -105,7 +102,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }, [boardId, propBoard, loadBoard]);
 
   // Handle card drag start
-  const handleCardDragStart = useCallback((card: KanbanCard, columnId: string) => {
+  const handleCardDragStart = useCallback((card: KanbanCardType, columnId: string) => {
     startDrag(card, columnId);
   }, [startDrag]);
 
@@ -143,9 +140,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }, []);
 
   // Handle card click
-  const handleCardClick = useCallback((card: KanbanCard) => {
+  const handleCardClick = useCallback((card: KanbanCardType) => {
     onCardClick?.(card);
-    
+
     trackHVACUserAction('kanban_card_clicked', 'KANBAN_INTERACTION', {
       cardId: card.id,
       cardType: card.type,
@@ -279,7 +276,33 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         }}
         onCreateCard={async (cardData) => {
           if (selectedColumnForCard) {
-            await createCard(selectedColumnForCard, cardData);
+            // Ensure required fields are present
+            const completeCardData: Omit<KanbanCardType, 'id' | 'position' | 'createdAt' | 'updatedAt'> = {
+              title: cardData.title || 'Untitled',
+              description: cardData.description || '',
+              type: cardData.type || 'task',
+              status: cardData.status || 'active',
+              priority: cardData.priority || 'medium',
+              columnId: selectedColumnForCard,
+              tags: cardData.tags || [],
+              assignedTo: cardData.assignedTo || [],
+              dueDate: cardData.dueDate,
+              checklist: cardData.checklist || [],
+              customFields: {},
+              attachments: [],
+              comments: [],
+              relatedCards: [],
+              estimatedHours: 0,
+              actualHours: 0,
+              metadata: {
+                timeInCurrentColumn: 0,
+                totalTimeInBoard: 0,
+                moveHistory: [],
+                activityLog: [],
+              },
+              createdBy: 'current-user',
+            };
+            await createCard(selectedColumnForCard, completeCardData);
           }
         }}
       />

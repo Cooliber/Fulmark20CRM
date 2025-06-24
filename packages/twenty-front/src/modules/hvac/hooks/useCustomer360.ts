@@ -9,14 +9,13 @@
  * - Performance optimization with debouncing
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { 
-  customerAPIService, 
-  Customer360Data, 
-  Customer,
-  type CustomerAPIService 
-} from '../services/CustomerAPIService';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useHVACErrorReporting, useHVACPerformanceMonitoring } from '../index';
+import {
+    Customer,
+    Customer360Data,
+    customerAPIService
+} from '../services/CustomerAPIService';
 
 // Hook state interface
 interface UseCustomer360State {

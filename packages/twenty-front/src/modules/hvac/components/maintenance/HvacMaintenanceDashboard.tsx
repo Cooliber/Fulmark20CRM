@@ -11,35 +11,25 @@
  * - Cost optimization
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card } from 'primereact/card';
+import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
 import { Calendar } from 'primereact/calendar';
-import { Dropdown } from 'primereact/dropdown';
-import { Badge } from 'primereact/badge';
-import { ProgressBar } from 'primereact/progressbar';
-import { Toast } from 'primereact/toast';
+import { Card } from 'primereact/card';
 import { ConfirmDialog } from 'primereact/confirmdialog';
-import { Splitter, SplitterPanel } from 'primereact/splitter';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
-import { Timeline } from 'primereact/timeline';
-import { Tag } from 'primereact/tag';
-import { Chip } from 'primereact/chip';
-import { Panel } from 'primereact/panel';
-import { Toolbar } from 'primereact/toolbar';
 import { InputText } from 'primereact/inputtext';
-import { TabView, TabPanel } from 'primereact/tabview';
-import { Chart } from 'primereact/chart';
 import { Knob } from 'primereact/knob';
-import { FilterMatchMode } from 'primereact/api';
-import { useDebounce } from '@/hooks/useDebounce';
-import { useHvacMaintenance } from '../hooks/useHvacMaintenance';
-import { useHvacEquipment } from '../hooks/useHvacEquipment';
-import { HvacMaintenanceCalendar } from './HvacMaintenanceCalendar';
-import { HvacMaintenanceChecklist } from './HvacMaintenanceChecklist';
+import { TabPanel, TabView } from 'primereact/tabview';
+import { Tag } from 'primereact/tag';
+import { Toast } from 'primereact/toast';
+import { Toolbar } from 'primereact/toolbar';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useDebounce } from '../../hooks/useDebounce';
+import { useEquipmentManagement } from '../../hooks/useEquipmentManagement';
+import { useHvacMaintenance } from '../../hooks/useHvacMaintenance';
 import { HvacComplianceTracker } from './HvacComplianceTracker';
 import { HvacMaintenanceAnalytics } from './HvacMaintenanceAnalytics';
+import { HvacMaintenanceCalendar } from './HvacMaintenanceCalendar';
+import { HvacMaintenanceChecklist } from './HvacMaintenanceChecklist';
 
 // Types
 interface MaintenanceFilters {
@@ -116,7 +106,7 @@ export const HvacMaintenanceDashboard: React.FC = () => {
   const [selectedMaintenance, setSelectedMaintenance] = useState<string[]>([]);
 
   // Debounced search
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const debouncedSearchTerm = useDebounce(searchTerm, { delay: 300 });
 
   // Custom hooks
   const {
@@ -134,8 +124,7 @@ export const HvacMaintenanceDashboard: React.FC = () => {
   const {
     equipment,
     loading: equipmentLoading,
-    getEquipmentByCustomer,
-  } = useHvacEquipment();
+  } = useEquipmentManagement();
 
   // Stats
   const [stats, setStats] = useState<MaintenanceStats>({
@@ -303,26 +292,26 @@ export const HvacMaintenanceDashboard: React.FC = () => {
   // Priority badge template
   const priorityTemplate = (priority: string) => {
     const severity = {
-      CRITICAL: 'danger',
-      HIGH: 'warning',
-      MEDIUM: 'info',
-      LOW: 'success',
-    }[priority] || 'info';
+      CRITICAL: 'danger' as const,
+      HIGH: 'warning' as const,
+      MEDIUM: 'info' as const,
+      LOW: 'success' as const,
+    }[priority] || ('info' as const);
 
-    return <Badge value={priority} severity={severity as any} />;
+    return <Badge value={priority} severity={severity} />;
   };
 
   // Status template
   const statusTemplate = (status: string) => {
     const statusConfig = {
-      SCHEDULED: { label: 'Zaplanowane', severity: 'info' },
-      OVERDUE: { label: 'Przeterminowane', severity: 'danger' },
-      IN_PROGRESS: { label: 'W trakcie', severity: 'warning' },
-      COMPLETED: { label: 'Zakończone', severity: 'success' },
-      CANCELLED: { label: 'Anulowane', severity: 'secondary' },
-    }[status] || { label: status, severity: 'info' };
+      SCHEDULED: { label: 'Zaplanowane', severity: 'info' as const },
+      OVERDUE: { label: 'Przeterminowane', severity: 'danger' as const },
+      IN_PROGRESS: { label: 'W trakcie', severity: 'warning' as const },
+      COMPLETED: { label: 'Zakończone', severity: 'success' as const },
+      CANCELLED: { label: 'Anulowane', severity: 'secondary' as const },
+    }[status] || { label: status, severity: 'info' as const };
 
-    return <Tag value={statusConfig.label} severity={statusConfig.severity as any} />;
+    return <Tag value={statusConfig.label} severity={statusConfig.severity} />;
   };
 
   // Toolbar content
@@ -506,7 +495,10 @@ export const HvacMaintenanceDashboard: React.FC = () => {
 
         <TabPanel header="Listy kontrolne" leftIcon="pi pi-list">
           <HvacMaintenanceChecklist
-            equipment={equipment}
+            equipment={equipment.map(eq => ({
+              ...eq,
+              location: eq.location || 'Unknown Location'
+            }))}
             onChecklistComplete={(data) => console.log('Checklist completed:', data)}
             loading={equipmentLoading}
           />

@@ -9,12 +9,11 @@
  * - Performance optimization with 300ms debouncing
  */
 
-import { useCallback, useRef, useEffect } from 'react';
-import { 
-  startHVACTransaction, 
-  addHVACBreadcrumb,
-  reportHVACMessage,
-  HVACErrorContext 
+import { useCallback, useEffect, useRef } from 'react';
+import {
+    addHVACBreadcrumb,
+    HVACErrorContext,
+    reportHVACMessage
 } from '../config/sentry.config';
 
 // Performance metrics interface
@@ -59,7 +58,7 @@ const activeOperations = new Map<string, PerformanceMetrics>();
 
 // Generate unique operation ID
 const generateOperationId = (): string => {
-  return `hvac_op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `hvac_op_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 };
 
 // Determine performance level based on duration
@@ -107,17 +106,18 @@ const reportPerformanceMetrics = (metrics: PerformanceMetrics): void => {
     );
   }
 
-  // Start Sentry transaction for detailed tracking
-  const transaction = startHVACTransaction(operation, `hvac.${context}`);
-  transaction.setData('duration', duration);
-  transaction.setData('performanceLevel', performanceLevel);
-  transaction.setData('context', context);
-  if (metadata) {
-    Object.entries(metadata).forEach(([key, value]) => {
-      transaction.setData(key, value);
-    });
-  }
-  transaction.finish();
+  // Report performance metrics to Sentry using modern API
+  reportHVACMessage(
+    `Performance: ${operation} completed in ${duration}ms (${performanceLevel})`,
+    'info',
+    context,
+    {
+      operation,
+      duration,
+      performanceLevel,
+      ...metadata,
+    }
+  );
 };
 
 // Main hook implementation

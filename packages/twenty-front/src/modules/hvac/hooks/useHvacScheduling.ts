@@ -10,10 +10,8 @@
  * - Real-time updates
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
 import { useApolloClient } from '@apollo/client';
-import { useRecoilState, useRecoilValue } from 'recoil';
-import { useDebounce } from '@/hooks/useDebounce';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Types
 interface ScheduledJob {

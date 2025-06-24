@@ -10,27 +10,26 @@
  * - PrimeReact/PrimeFlex UI consistency
  */
 
-import React, { useCallback } from 'react';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
+import { Button } from 'primereact/button';
+import { Card } from 'primereact/card';
 import { ProgressBar } from 'primereact/progressbar';
+import React, { useCallback } from 'react';
 
 // HVAC services and hooks
-import { 
-  KanbanColumn as KanbanColumnType,
-  KanbanCard,
-  trackHVACUserAction 
+import {
+    type KanbanCardType,
+    type KanbanColumnType
 } from '../../index';
 
 // Component props
 interface KanbanColumnProps {
   column: KanbanColumnType;
-  cards: KanbanCard[];
+  cards: KanbanCardType[];
   metrics: ColumnMetrics;
   isDragOver: boolean;
-  onCardDragStart: (card: KanbanCard, columnId: string) => void;
-  onCardClick: (card: KanbanCard) => void;
+  onCardDragStart: (card: KanbanCardType, columnId: string) => void;
+  onCardClick: (card: KanbanCardType) => void;
   onCreateCard: () => void;
   onDragOver: (e: React.DragEvent, position: number) => void;
   onDrop: (e: React.DragEvent, position: number) => void;
@@ -60,7 +59,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   // Handle card drag start
   const handleCardDragStart = useCallback((
     e: React.DragEvent,
-    card: KanbanCard
+    card: KanbanCardType
   ) => {
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', card.id);

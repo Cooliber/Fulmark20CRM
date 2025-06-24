@@ -5,26 +5,22 @@
  * Custom navigation section for HVAC functionality
  */
 
-import React from 'react';
-import { NavigationDrawerSection } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerSection';
-import { NavigationDrawerItem } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerItem';
 import { AppPath } from '@/types/AppPath';
-import { useLingui } from '@lingui/react/macro';
+import { NavigationDrawerItem } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerItem';
+import { NavigationDrawerSection } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerSection';
+import { NavigationDrawerSectionTitle } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerSectionTitle';
+import React from 'react';
 import {
-  IconCalendar,
-  IconTool,
-  IconPhone,
-  IconChartLine,
-  IconSettings,
-  IconUsers,
-  IconMapPin,
+    IconCalendar,
+    IconChartCandle,
+    IconPhone,
+    IconTool
 } from 'twenty-ui/display';
 
 export const HvacNavigationSection: React.FC = () => {
-  const { t } = useLingui();
-
   return (
-    <NavigationDrawerSection title="HVAC">
+    <NavigationDrawerSection>
+      <NavigationDrawerSectionTitle label="HVAC" />
       <NavigationDrawerItem
         label="Planer Serwisowy"
         to={AppPath.HvacServicePlanner}
@@ -48,7 +44,7 @@ export const HvacNavigationSection: React.FC = () => {
       <NavigationDrawerItem
         label="Analityka"
         to={`${AppPath.HvacServicePlanner}#analytics`}
-        Icon={IconChartLine}
+        Icon={IconChartCandle}
       />
     </NavigationDrawerSection>
   );

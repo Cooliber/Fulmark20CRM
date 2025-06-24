@@ -10,22 +10,20 @@
  * - Drag-and-drop rescheduling
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
-import { Calendar } from 'primereact/calendar';
 import { Badge } from 'primereact/badge';
-import { Tag } from 'primereact/tag';
-import { OverlayPanel } from 'primereact/overlaypanel';
-import { Menu } from 'primereact/menu';
-import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
-import { Toast } from 'primereact/toast';
-import { ProgressSpinner } from 'primereact/progressspinner';
-import { Tooltip } from 'primereact/tooltip';
-import { Timeline } from 'primereact/timeline';
+import { Button } from 'primereact/button';
+import { Card } from 'primereact/card';
 import { Chip } from 'primereact/chip';
+import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { Divider } from 'primereact/divider';
+import { Menu } from 'primereact/menu';
+import { OverlayPanel } from 'primereact/overlaypanel';
+import { ProgressSpinner } from 'primereact/progressspinner';
+import { Tag } from 'primereact/tag';
+import { Toast } from 'primereact/toast';
+import { Tooltip } from 'primereact/tooltip';
 import { classNames } from 'primereact/utils';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // Types
 interface MaintenanceSchedule {
@@ -260,7 +258,6 @@ export const HvacMaintenanceCalendar: React.FC<CalendarProps> = ({
               maintenance.priority === 'HIGH' ? 'warning' :
               maintenance.priority === 'MEDIUM' ? 'info' : 'success'
             }
-            size="small"
           />
         </div>
         
@@ -336,7 +333,6 @@ export const HvacMaintenanceCalendar: React.FC<CalendarProps> = ({
             <Badge
               value={maintenance.length}
               severity={hasOverdue ? 'danger' : 'info'}
-              size="small"
             />
           )}
         </div>

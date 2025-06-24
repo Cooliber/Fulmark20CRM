@@ -10,8 +10,8 @@
  * - Status updates
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
 import { useApolloClient } from '@apollo/client';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Types
 interface DispatchRequest {
@@ -556,6 +556,8 @@ export const useHvacDispatch = () => {
   return {
     // State
     activeDispatches,
+    pendingJobs: activeDispatches.filter(dispatch => dispatch.status === 'DISPATCHED'),
+    activeJobs: activeDispatches.filter(dispatch => ['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(dispatch.status)),
     loading,
     error,
     lastUpdate,

@@ -10,23 +10,26 @@
  * - PrimeReact/PrimeFlex UI consistency
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { Card } from 'primereact/card';
-import { Chart } from 'primereact/chart';
-import { Dropdown } from 'primereact/dropdown';
-import { Calendar } from 'primereact/calendar';
-import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
-import { DataTable } from 'primereact/datatable';
+import { Button } from 'primereact/button';
+import { Calendar } from 'primereact/calendar';
+import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
+import { DataTable } from 'primereact/datatable';
+import { Dropdown } from 'primereact/dropdown';
 import { ProgressBar } from 'primereact/progressbar';
+import { Skeleton } from 'primereact/skeleton';
+import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+
+// Lazy load heavy Chart component
+const Chart = lazy(() => import('primereact/chart').then(module => ({ default: module.Chart })));
 
 // HVAC services and hooks
-import { 
-  useCustomerDataFlow,
-  useQuoteManagement,
-  useDataPipeline,
-  trackHVACUserAction 
+import {
+    trackHVACUserAction,
+    useCustomerDataFlow,
+    useDataPipeline,
+    useQuoteManagement
 } from '../../index';
 
 // Component props
@@ -319,23 +322,27 @@ export const AdvancedAnalyticsDashboard: React.FC<AdvancedAnalyticsDashboardProp
       <div className="grid mb-4">
         <div className="col-12 md:col-8">
           <Card title="Przepływ klientów w czasie" className="h-full">
-            <Chart 
-              type="line" 
-              data={customerFlowChartData} 
-              options={chartOptions}
-              style={{ height: '300px' }}
-            />
+            <Suspense fallback={<Skeleton width="100%" height="300px" />}>
+              <Chart
+                type="line"
+                data={customerFlowChartData}
+                options={chartOptions}
+                style={{ height: '300px' }}
+              />
+            </Suspense>
           </Card>
         </div>
-        
+
         <div className="col-12 md:col-4">
           <Card title="Status ofert" className="h-full">
-            <Chart 
-              type="doughnut" 
-              data={quoteChartData} 
-              options={{ responsive: true, maintainAspectRatio: false }}
-              style={{ height: '300px' }}
-            />
+            <Suspense fallback={<Skeleton width="100%" height="300px" />}>
+              <Chart
+                type="doughnut"
+                data={quoteChartData}
+                options={{ responsive: true, maintainAspectRatio: false }}
+                style={{ height: '300px' }}
+              />
+            </Suspense>
           </Card>
         </div>
       </div>

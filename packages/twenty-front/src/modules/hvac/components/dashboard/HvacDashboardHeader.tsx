@@ -10,10 +10,9 @@
  * - PrimeReact/PrimeFlex UI consistency
  */
 
-import React from 'react';
 import { Button } from 'primereact/button';
-import { IconSearch, IconTool, IconCalendar } from 'twenty-ui/display';
-import { IconTag as IconTicket, IconGauge as IconChartBar } from 'twenty-ui/display';
+import React from 'react';
+import { IconGauge as IconChartBar, IconSearch, IconTag as IconTicket, IconTool } from 'twenty-ui/display';
 
 // Types
 export type TabType = 'overview' | 'search' | 'tickets' | 'equipment' | 'analytics';
@@ -21,7 +20,7 @@ export type TabType = 'overview' | 'search' | 'tickets' | 'equipment' | 'analyti
 interface Tab {
   id: TabType;
   label: string;
-  icon: React.ComponentType<{ size: number }>;
+  icon: React.ComponentType<any>;
 }
 
 interface HvacDashboardHeaderProps {

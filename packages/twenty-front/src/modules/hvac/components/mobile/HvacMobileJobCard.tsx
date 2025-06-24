@@ -11,16 +11,15 @@
  * - Offline support
  */
 
-import React, { useState, useCallback } from 'react';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
-import { Tag } from 'primereact/tag';
+import { Button } from 'primereact/button';
+import { Card } from 'primereact/card';
 import { Chip } from 'primereact/chip';
-import { OverlayPanel } from 'primereact/overlaypanel';
-import { Menu } from 'primereact/menu';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
+import { Menu } from 'primereact/menu';
+import { Tag } from 'primereact/tag';
 import { classNames } from 'primereact/utils';
+import React, { useCallback, useState } from 'react';
 
 // Types
 interface TechnicianJob {
@@ -239,7 +238,6 @@ export const HvacMobileJobCard: React.FC<JobCardProps> = ({
             <Badge
               value={job.priority}
               severity={getPriorityColor(job.priority) as any}
-              size="small"
             />
           </div>
           

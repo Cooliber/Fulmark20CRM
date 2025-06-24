@@ -1,7 +1,7 @@
 /**
  * HVAC Service Planner Page
  * "Pasja rodzi profesjonalizm" - Professional HVAC Service Planning Interface
- * 
+ *
  * Main page for HVAC service planning functionality including:
  * - Scheduling dashboard
  * - Preventive maintenance
@@ -9,29 +9,24 @@
  * - Analytics and reporting
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { TabView, TabPanel } from 'primereact/tabview';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
-import { Toast } from 'primereact/toast';
+import { Button } from 'primereact/button';
+import { Card } from 'primereact/card';
 import { ConfirmDialog } from 'primereact/confirmdialog';
 import { ProgressSpinner } from 'primereact/progressspinner';
-import { useRef } from 'react';
+import { TabPanel, TabView } from 'primereact/tabview';
+import { Toast } from 'primereact/toast';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-// Import HVAC components
+// Import HVAC components and hooks
 import {
-  HvacSchedulingDashboard,
-  HvacMaintenanceDashboard,
-  HvacMobileDashboard,
-} from '@/modules/hvac';
-
-// Import hooks
-import {
-  useHvacScheduling,
-  useHvacMaintenance,
-  useHvacTechnicians,
-} from '@/modules/hvac';
+    HvacMobileDashboard,
+    HvacSchedulingDashboard,
+    LazyMaintenanceDashboard,
+    useHvacMaintenance,
+    useHvacScheduling,
+    useHvacTechnicians,
+} from '~/modules/hvac';
 
 // Types
 interface ServicePlannerStats {
@@ -86,20 +81,28 @@ export const HvacServicePlannerPage: React.FC = () => {
   // Calculate stats
   useEffect(() => {
     const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
     const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
 
-    const todayJobs = scheduledJobs.filter(job => {
+    const todayJobs = scheduledJobs.filter((job) => {
       const jobDate = new Date(job.scheduledTime);
       return jobDate >= todayStart && jobDate < todayEnd;
     });
 
     const newStats: ServicePlannerStats = {
       todayJobs: todayJobs.length,
-      activeJobs: scheduledJobs.filter(job => 
-        job.status === 'IN_PROGRESS' || job.status === 'EN_ROUTE' || job.status === 'ARRIVED'
+      activeJobs: scheduledJobs.filter(
+        (job) =>
+          job.status === 'IN_PROGRESS' ||
+          job.status === 'EN_ROUTE' ||
+          job.status === 'ARRIVED',
       ).length,
-      completedJobs: scheduledJobs.filter(job => job.status === 'COMPLETED').length,
+      completedJobs: scheduledJobs.filter((job) => job.status === 'COMPLETED')
+        .length,
       availableTechnicians: availableTechnicians.length,
       scheduledMaintenance: maintenanceSchedules.length,
       overdueMaintenance: overdueItems.length,
@@ -111,13 +114,16 @@ export const HvacServicePlannerPage: React.FC = () => {
 
   // Handle loading states
   useEffect(() => {
-    const isLoading = schedulingLoading || maintenanceLoading || techniciansLoading;
+    const isLoading =
+      schedulingLoading || maintenanceLoading || techniciansLoading;
     setLoading(isLoading);
   }, [schedulingLoading, maintenanceLoading, techniciansLoading]);
 
   // Handle errors
   useEffect(() => {
-    const errors = [schedulingError, maintenanceError, techniciansError].filter(Boolean);
+    const errors = [schedulingError, maintenanceError, techniciansError].filter(
+      Boolean,
+    );
     if (errors.length > 0) {
       setError(errors[0]);
       toast.current?.show({
@@ -147,7 +153,9 @@ export const HvacServicePlannerPage: React.FC = () => {
       <div className="hvac-service-planner-page h-full flex align-items-center justify-content-center">
         <div className="text-center">
           <ProgressSpinner />
-          <div className="text-white mt-3">Ładowanie planera serwisowego...</div>
+          <div className="text-white mt-3">
+            Ładowanie planera serwisowego...
+          </div>
         </div>
       </div>
     );
@@ -187,7 +195,7 @@ export const HvacServicePlannerPage: React.FC = () => {
               Zarządzanie harmonogramem, konserwacją i zespołem techników
             </p>
           </div>
-          
+
           <div className="flex gap-2">
             <Button
               icon="pi pi-refresh"
@@ -206,37 +214,51 @@ export const HvacServicePlannerPage: React.FC = () => {
         {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-400">{stats.todayJobs}</div>
+            <div className="text-2xl font-bold text-blue-400">
+              {stats.todayJobs}
+            </div>
             <div className="text-xs text-gray-400">Dzisiaj</div>
           </div>
-          
+
           <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-400">{stats.activeJobs}</div>
+            <div className="text-2xl font-bold text-yellow-400">
+              {stats.activeJobs}
+            </div>
             <div className="text-xs text-gray-400">Aktywne</div>
           </div>
-          
+
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-400">{stats.completedJobs}</div>
+            <div className="text-2xl font-bold text-green-400">
+              {stats.completedJobs}
+            </div>
             <div className="text-xs text-gray-400">Ukończone</div>
           </div>
-          
+
           <div className="text-center">
-            <div className="text-2xl font-bold text-purple-400">{stats.availableTechnicians}</div>
+            <div className="text-2xl font-bold text-purple-400">
+              {stats.availableTechnicians}
+            </div>
             <div className="text-xs text-gray-400">Dostępni</div>
           </div>
-          
+
           <div className="text-center">
-            <div className="text-2xl font-bold text-cyan-400">{stats.scheduledMaintenance}</div>
+            <div className="text-2xl font-bold text-cyan-400">
+              {stats.scheduledMaintenance}
+            </div>
             <div className="text-xs text-gray-400">Konserwacje</div>
           </div>
-          
+
           <div className="text-center">
-            <div className="text-2xl font-bold text-red-400">{stats.overdueMaintenance}</div>
+            <div className="text-2xl font-bold text-red-400">
+              {stats.overdueMaintenance}
+            </div>
             <div className="text-xs text-gray-400">Przeterminowane</div>
           </div>
-          
+
           <div className="text-center">
-            <div className="text-2xl font-bold text-emerald-400">{stats.complianceRate}%</div>
+            <div className="text-2xl font-bold text-emerald-400">
+              {stats.complianceRate}%
+            </div>
             <div className="text-xs text-gray-400">Zgodność</div>
           </div>
         </div>
@@ -244,18 +266,18 @@ export const HvacServicePlannerPage: React.FC = () => {
 
       {/* Main Content */}
       <div className="p-4 h-full">
-        <TabView 
-          activeIndex={activeTab} 
+        <TabView
+          activeIndex={activeTab}
           onTabChange={handleTabChange}
           className="h-full"
         >
-          <TabPanel 
+          <TabPanel
             header={
               <div className="flex align-items-center gap-2">
                 <i className="pi pi-calendar" />
                 <span>Harmonogram</span>
                 {stats.todayJobs > 0 && (
-                  <Badge value={stats.todayJobs} severity="info" size="small" />
+                  <Badge value={stats.todayJobs} severity="info" />
                 )}
               </div>
             }
@@ -263,27 +285,35 @@ export const HvacServicePlannerPage: React.FC = () => {
             <HvacSchedulingDashboard />
           </TabPanel>
 
-          <TabPanel 
+          <TabPanel
             header={
               <div className="flex align-items-center gap-2">
                 <i className="pi pi-wrench" />
                 <span>Konserwacja</span>
                 {stats.overdueMaintenance > 0 && (
-                  <Badge value={stats.overdueMaintenance} severity="danger" size="small" />
+                  <Badge
+                    value={stats.overdueMaintenance}
+                    severity="danger"
+
+                  />
                 )}
               </div>
             }
           >
-            <HvacMaintenanceDashboard />
+            <LazyMaintenanceDashboard />
           </TabPanel>
 
-          <TabPanel 
+          <TabPanel
             header={
               <div className="flex align-items-center gap-2">
                 <i className="pi pi-mobile" />
                 <span>Mobilny</span>
                 {stats.activeJobs > 0 && (
-                  <Badge value={stats.activeJobs} severity="warning" size="small" />
+                  <Badge
+                    value={stats.activeJobs}
+                    severity="warning"
+
+                  />
                 )}
               </div>
             }
@@ -291,7 +321,7 @@ export const HvacServicePlannerPage: React.FC = () => {
             <HvacMobileDashboard />
           </TabPanel>
 
-          <TabPanel 
+          <TabPanel
             header={
               <div className="flex align-items-center gap-2">
                 <i className="pi pi-chart-line" />
@@ -312,12 +342,17 @@ export const HvacServicePlannerPage: React.FC = () => {
                   <Card className="bg-gray-700 border-gray-600">
                     <div className="text-center">
                       <div className="text-3xl font-bold text-blue-400 mb-2">
-                        {((stats.completedJobs / (stats.completedJobs + stats.activeJobs)) * 100 || 0).toFixed(1)}%
+                        {(
+                          (stats.completedJobs /
+                            (stats.completedJobs + stats.activeJobs)) *
+                            100 || 0
+                        ).toFixed(1)}
+                        %
                       </div>
                       <div className="text-gray-300">Efektywność zespołu</div>
                     </div>
                   </Card>
-                  
+
                   <Card className="bg-gray-700 border-gray-600">
                     <div className="text-center">
                       <div className="text-3xl font-bold text-green-400 mb-2">
@@ -326,13 +361,15 @@ export const HvacServicePlannerPage: React.FC = () => {
                       <div className="text-gray-300">Zgodność z przepisami</div>
                     </div>
                   </Card>
-                  
+
                   <Card className="bg-gray-700 border-gray-600">
                     <div className="text-center">
                       <div className="text-3xl font-bold text-purple-400 mb-2">
                         {stats.availableTechnicians + busyTechnicians.length}
                       </div>
-                      <div className="text-gray-300">Łączna liczba techników</div>
+                      <div className="text-gray-300">
+                        Łączna liczba techników
+                      </div>
                     </div>
                   </Card>
                 </div>

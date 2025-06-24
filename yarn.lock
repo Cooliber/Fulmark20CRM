@@ -9374,6 +9374,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@kurkle/color@npm:^0.3.0":
+  version: 0.3.4
+  resolution: "@kurkle/color@npm:0.3.4"
+  checksum: 10c0/0e9fd55c614b005c5f0c4c755bca19ec0293bc7513b4ea3ec1725234f9c2fa81afbc78156baf555c8b9cb0d305619253c3f5bca016067daeebb3d00ebb4ea683
+  languageName: node
+  linkType: hard
+
 "@lezer/common@npm:^1.0.0, @lezer/common@npm:^1.0.2, @lezer/common@npm:^1.1.0, @lezer/common@npm:^1.2.0":
   version: 1.2.1
   resolution: "@lezer/common@npm:1.2.1"
@@ -30070,6 +30077,15 @@ __metadata:
   version: 1.0.1
   resolution: "charset@npm:1.0.1"
   checksum: 10c0/20575230d85e940dcf4694ce488881207fb2a3c916f1c62b9e105c4e42f9ff7f3a52cd6c473ca0342dcef61272c6c6e533fcee62a08d101deeff0793a547a6ea
+  languageName: node
+  linkType: hard
+
+"chart.js@npm:^4.4.0":
+  version: 4.5.0
+  resolution: "chart.js@npm:4.5.0"
+  dependencies:
+    "@kurkle/color": "npm:^0.3.0"
+  checksum: 10c0/f12c7f9a238ee7ce6d3f7111628e9daba86bb8ff8e54cfe63525fde6ded9003c72c4c8d2c7d5702539dc0aff7e682dfec058660ade8d03a970da002656d4ac91
   languageName: node
   linkType: hard
 
@@ -56548,6 +56564,7 @@ __metadata:
     "@typescript-eslint/utils": "npm:6.21.0"
     "@xyflow/react": "npm:^12.4.2"
     buffer: "npm:^6.0.3"
+    chart.js: "npm:^4.4.0"
     docx: "npm:^9.1.0"
     eslint: "npm:^8.53.0"
     eslint-config-next: "npm:14.0.4"

@@ -53,6 +53,7 @@
     "@tiptap/react": "^2.10.4",
     "@xyflow/react": "^12.4.2",
     "buffer": "^6.0.3",
+    "chart.js": "^4.4.0",
     "docx": "^9.1.0",
     "file-saver": "^2.0.5",
     "primeflex": "^4.0.0",

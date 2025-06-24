@@ -1,0 +1,104 @@
+# HVAC Production Dockerfile
+# "Pasja rodzi profesjonalizm" - Fulmark HVAC Professional CRM
+# 
+# Multi-stage build for optimized production deployment
+# Features:
+# - Security hardening
+# - Performance optimization
+# - Health checks
+# - Non-root user execution
+
+# Build stage
+FROM node:18-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    git \
+    curl
+
+# Copy package files
+COPY package*.json ./
+COPY packages/twenty-server/package*.json ./packages/twenty-server/
+
+# Install dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# Remove development dependencies and clean up
+RUN npm prune --production && \
+    rm -rf .git && \
+    rm -rf packages/*/src && \
+    rm -rf packages/*/test && \
+    rm -rf packages/*/*.md && \
+    rm -rf docs
+
+# Production stage
+FROM node:18-alpine AS production
+
+# Install production dependencies
+RUN apk add --no-cache \
+    dumb-init \
+    curl \
+    postgresql-client \
+    redis \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1001 -S hvac && \
+    adduser -S hvac -u 1001 -G hvac
+
+# Set working directory
+WORKDIR /app
+
+# Copy built application from builder stage
+COPY --from=builder --chown=hvac:hvac /app .
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/uploads /app/cache && \
+    chown -R hvac:hvac /app
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=3001
+ENV LOG_LEVEL=info
+ENV CACHE_ENABLED=true
+ENV SENTRY_ENVIRONMENT=production
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3001/hvac/health || exit 1
+
+# Expose port
+EXPOSE 3001
+
+# Switch to non-root user
+USER hvac
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the application
+CMD ["npm", "run", "start:prod"]
+
+# Labels for metadata
+LABEL maintainer="HVAC Team <admin@hvac-company.com>"
+LABEL version="1.0.0"
+LABEL description="HVAC Professional CRM - Production Container"
+LABEL org.opencontainers.image.title="HVAC CRM"
+LABEL org.opencontainers.image.description="Professional HVAC Customer Relationship Management System"
+LABEL org.opencontainers.image.vendor="Fulmark HVAC"
+LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.created="2024-01-01T00:00:00Z"
+LABEL org.opencontainers.image.source="https://github.com/hvac-company/hvac-crm"
+LABEL org.opencontainers.image.documentation="https://docs.hvac-company.com"

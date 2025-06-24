@@ -3,10 +3,10 @@
  * "Pasja rodzi profesjonalizm" - Quality monitoring dashboard
  */
 
-import React, { useState, useEffect } from 'react';
 import styled from '@emotion/styled';
-import { IconShield, IconAlertTriangle, IconCheck, IconX } from 'twenty-ui/display';
-import { testSentryConfiguration, SentryTestResult } from '../utils/sentry-test';
+import React, { useEffect, useState } from 'react';
+import { IconAlertTriangle, IconCheck, IconLockCustom, IconX } from 'twenty-ui/display';
+import { SentryTestResult, testSentryConfiguration } from '../utils/sentry-test';
 
 const StyledContainer = styled.div`
   background: ${({ theme }) => theme.background.secondary};
@@ -69,7 +69,7 @@ const StyledStatusLabel = styled.span`
 const StyledStatusValue = styled.span`
   color: ${({ theme }) => theme.font.color.tertiary};
   font-size: ${({ theme }) => theme.font.size.xs};
-  font-family: ${({ theme }) => theme.font.family.monospace};
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 `;
 
 const StyledTestButton = styled.button`
@@ -147,7 +147,7 @@ export const HvacSentryStatus: React.FC = () => {
   return (
     <StyledContainer>
       <StyledHeader>
-        <IconShield size={20} />
+        <IconLockCustom size={20} />
         <StyledTitle>Sentry Error Monitoring</StyledTitle>
       </StyledHeader>
 

@@ -16,17 +16,19 @@ export interface Equipment {
   id: string;
   customerId: string;
   name: string;
-  type: 'klimatyzacja' | 'wentylacja' | 'ogrzewanie' | 'inne';
+  type: 'AIR_CONDITIONING' | 'HEATING' | 'VENTILATION' | 'REFRIGERATION' | 'HEAT_PUMP';
   brand: string;
   model: string;
   serialNumber: string;
   installationDate: Date;
   lastService: Date;
   nextService: Date;
-  status: 'sprawny' | 'wymaga_serwisu' | 'awaria' | 'wyłączony';
+  status: 'ACTIVE' | 'MAINTENANCE' | 'REPAIR_NEEDED' | 'INACTIVE';
   warrantyExpiry?: Date;
   technicalSpecs: Record<string, unknown>;
   maintenanceHistory: MaintenanceRecord[];
+  manufacturer: string;
+  customerName: string;
   location?: string;
   notes?: string;
 }

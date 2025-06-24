@@ -9,288 +9,197 @@ export { HvacServiceTicketList } from './components/HvacServiceTicketList';
 // Enhanced Customer 360 Components
 export { Customer360CommunicationTabEnhanced } from './components/customer360/Customer360CommunicationTabEnhanced';
 
-// Lazy Loading Components
+// Lazy Loading Components - Bundle Size Optimization
 export {
-  LazyCustomer360,
-  LazyCustomer360CommunicationTab,
-  LazyCustomer360EquipmentTab,
-} from './components/lazy/LazyCustomer360';
+    LazyAnalyticsDashboard, LazyCustomer360,
+    LazyCustomer360CommunicationTab,
+    LazyCustomer360EquipmentTab, LazyKanbanBoard,
+    LazyMaintenanceDashboard, createLoadingTracker, preloadHeavyComponents
+} from './components/lazy';
 
 // Performance Components
 export { PerformanceMonitor } from './components/performance/PerformanceMonitor';
 
-// Kanban Components
+// Kanban Components - Use lazy versions for bundle optimization
+export { CreateCardDialog } from './components/kanban/CreateCardDialog';
 export { KanbanBoard } from './components/kanban/KanbanBoard';
+export { KanbanCard } from './components/kanban/KanbanCard';
 export { KanbanColumn } from './components/kanban/KanbanColumn';
 
-// Analytics Components
-export { AdvancedAnalyticsDashboard } from './components/analytics/AdvancedAnalyticsDashboard';
+// Alias for KanbanColumn to match import expectations
+export { KanbanColumn as KanbanColumnComponent } from './components/kanban/KanbanColumn';
+
+// Analytics Components - Use lazy versions for bundle optimization
+// export { AdvancedAnalyticsDashboard } from './components/analytics/AdvancedAnalyticsDashboard'; // Replaced with LazyAnalyticsDashboard
 
 // Service Planner Components
 export {
-  HvacSchedulingDashboard,
-  HvacSchedulingCalendar,
-  HvacTechnicianTracker,
-  HvacDispatchPanel,
-  HvacRouteOptimizer,
+    HvacDispatchPanel,
+    HvacRouteOptimizer, HvacSchedulingCalendar, HvacSchedulingDashboard, HvacTechnicianTracker
 } from './components/scheduling';
 
+// Maintenance Components - Use lazy versions for bundle optimization
 export {
-  HvacMaintenanceDashboard,
-  HvacMaintenanceCalendar,
-  HvacMaintenanceChecklist,
-  HvacComplianceTracker,
-  HvacMaintenanceAnalytics,
+    HvacComplianceTracker,
+    HvacMaintenanceAnalytics, HvacMaintenanceCalendar,
+    HvacMaintenanceChecklist
 } from './components/maintenance';
 
 export {
-  HvacMobileDashboard,
-  HvacMobileJobCard,
-  HvacMobileWorkOrder,
-  HvacMobileNavigation,
+    HvacMobileDashboard,
+    HvacMobileJobCard, HvacMobileNavigation, HvacMobileWorkOrder
 } from './components/mobile';
 
 // Navigation Components
 export {
-  HvacNavigationSection,
+    HvacNavigationSection
 } from './components/navigation';
 
-// Customer 360 Components
-export {
-  Customer360Container,
-  Customer360LoadingState,
-  Customer360ErrorState,
-  Customer360Content,
-  Customer360Header,
-  Customer360KPICards,
-  Customer360ProfileTab,
-  Customer360CommunicationTab,
-  Customer360EquipmentTab,
-  Customer360AnalyticsTab,
-} from './components/customer360';
+// Customer 360 Components - Use lazy versions for bundle optimization
+// export {
+//     Customer360AnalyticsTab, Customer360CommunicationTab, Customer360Container, Customer360Content, Customer360EquipmentTab, Customer360ErrorState, Customer360Header,
+//     Customer360KPICards, Customer360LoadingState, Customer360ProfileTab
+// } from './components/customer360';
 
 // Services
 export {
-  customerAPIService,
-  CustomerAPIService,
-  type Customer,
-  type CustomerInsights,
-  type Customer360Data,
-  type Equipment,
-  type ServiceTicket,
-  type Contract,
-  type CustomerAddress,
-  type EmergencyContact,
-  CustomerStatus,
-  CustomerType,
-  CompanySize,
-  PaymentMethod,
-  ContactMethod,
-  RiskLevel,
+    CompanySize, ContactMethod, CustomerAPIService, CustomerStatus,
+    CustomerType, PaymentMethod, RiskLevel, customerAPIService, type Contract, type Customer, type Customer360Data, type CustomerAddress, type CustomerInsights, type EmergencyContact, type Equipment,
+    type ServiceTicket
 } from './services/CustomerAPIService';
 
 export {
-  polishBusinessValidationService,
-  PolishBusinessValidationService,
-  type ValidationResult,
-  type NIPValidationResult,
-  type REGONValidationResult,
-  type VATCalculation,
-  VATCategory,
+    PolishBusinessValidationService, VATCategory, polishBusinessValidationService, type NIPValidationResult,
+    type REGONValidationResult,
+    type VATCalculation, type ValidationResult
 } from './services/PolishBusinessValidationService';
 
 export {
-  equipmentAPIService,
-  EquipmentAPIService,
-  type Equipment as HVACEquipment,
-  type MaintenanceRecord,
-  type EquipmentFilter,
-  type CreateEquipmentRequest,
-  type UpdateEquipmentRequest,
-  type ScheduleMaintenanceRequest,
+    EquipmentAPIService, equipmentAPIService, type CreateEquipmentRequest, type EquipmentFilter, type Equipment as HVACEquipment,
+    type MaintenanceRecord, type ScheduleMaintenanceRequest, type UpdateEquipmentRequest
 } from './services/EquipmentAPIService';
 
 export {
-  communicationAPIService,
-  CommunicationAPIService,
-  type Communication,
-  type AIInsights,
-  type CommunicationFilter,
-  type CreateCommunicationRequest,
-  type CommunicationStats,
-  type Participant,
-  type Attachment,
+    CommunicationAPIService, communicationAPIService, type AIInsights, type Attachment, type Communication, type CommunicationFilter, type CommunicationStats, type CreateCommunicationRequest, type Participant
 } from './services/CommunicationAPIService';
 
 export {
-  customerDataFlowService,
-  CustomerDataFlowService,
-  type CustomerDataFlow,
-  type CustomerStage,
-  type FlowStatus,
-  type Priority,
-  type CustomerSource,
-  type FlowAnalytics,
-  type CustomerFlowMetadata,
-  type HVACRequirement,
+    CustomerDataFlowService, customerDataFlowService, type CustomerDataFlow, type CustomerFlowMetadata, type CustomerSource, type CustomerStage, type FlowAnalytics, type FlowStatus, type HVACRequirement, type Priority
 } from './services/CustomerDataFlowService';
 
 export {
-  quoteManagementService,
-  QuoteManagementService,
-  type Quote,
-  type QuoteStatus,
-  type QuoteItem,
-  type QuoteTemplate,
-  type QuoteAnalytics,
-  type HVACCategory,
-  type PaymentMethod as QuotePaymentMethod,
+    QuoteManagementService, quoteManagementService, type HVACCategory, type Quote, type QuoteAnalytics, type QuoteItem, type PaymentMethod as QuotePaymentMethod, type QuoteStatus, type QuoteTemplate
 } from './services/QuoteManagementService';
 
 export {
-  kanbanFlowService,
-  KanbanFlowService,
-  type KanbanBoard as KanbanBoardType,
-  type KanbanColumn as KanbanColumnType,
-  type KanbanCard as KanbanCardType,
-  type KanbanAnalytics,
-  type BoardType,
-  type CardType,
-  type CardStatus,
+    KanbanFlowService, kanbanFlowService, type BoardType, type CardStatus, type CardType, type KanbanAnalytics, type KanbanBoard as KanbanBoardType, type KanbanCard as KanbanCardType, type KanbanColumn as KanbanColumnType
 } from './services/KanbanFlowService';
 
 export {
-  dataPipelineService,
-  DataPipelineService,
-  type DataPipeline,
-  type PipelineType,
-  type PipelineStatus,
-  type PipelineAnalytics,
-  type RealTimeSyncConfig,
+    DataPipelineService, dataPipelineService, type DataPipeline, type PipelineAnalytics, type PipelineStatus, type PipelineType, type RealTimeSyncConfig
 } from './services/DataPipelineService';
 
 // Hooks
 export {
-  useCustomer360,
-  useCustomerList,
+    useCustomer360,
+    useCustomerList
 } from './hooks/useCustomer360';
 
 export {
-  useCustomerValidation,
+    useCustomerValidation
 } from './hooks/useCustomerValidation';
 
 export {
-  useDebounce,
-  useDebounceSearch,
+    useDebounce,
+    useDebounceSearch
 } from './hooks/useDebounce';
 
 export {
-  useServerSideFilter,
+    useServerSideFilter
 } from './hooks/useServerSideFilter';
 
 export {
-  useEquipmentManagement,
+    useEquipmentManagement
 } from './hooks/useEquipmentManagement';
 
 export {
-  useCommunicationTimeline,
+    useCommunicationTimeline
 } from './hooks/useCommunicationTimeline';
 
 export {
-  useDataLoader,
+    useDataLoader
 } from './hooks/useDataLoader';
 
 export {
-  useCustomerDataFlow,
+    useCustomerDataFlow
 } from './hooks/useCustomerDataFlow';
 
 export {
-  useQuoteManagement,
+    useQuoteManagement
 } from './hooks/useQuoteManagement';
 
 export {
-  useKanbanFlow,
+    useKanbanFlow
 } from './hooks/useKanbanFlow';
 
 export {
-  useDataPipeline,
+    useDataPipeline
 } from './hooks/useDataPipeline';
 
 // Service Planner Hooks
 export {
-  useHvacScheduling,
+    useHvacScheduling
 } from './hooks/useHvacScheduling';
 
 export {
-  useHvacDispatch,
+    useHvacDispatch
 } from './hooks/useHvacDispatch';
 
 export {
-  useHvacTechnicians,
+    useHvacTechnicians
 } from './hooks/useHvacTechnicians';
 
 export {
-  useHvacMaintenance,
+    useHvacMaintenance
 } from './hooks/useHvacMaintenance';
 
 export {
-  useHvacMobileTechnician,
+    useHvacMobileTechnician
 } from './hooks/useHvacMobileTechnician';
 
-// Dashboard Components
-export {
-  HvacDashboardHeader,
-  HvacDashboardStats,
-  HvacDashboardWelcome,
-  HvacDashboardOverview,
-  HvacDashboardPlaceholder,
-  type TabType,
-} from './components/dashboard';
+// Dashboard Components - Use lazy versions for bundle optimization
+// export {
+//     HvacDashboardHeader, HvacDashboardOverview,
+//     HvacDashboardPlaceholder, HvacDashboardStats,
+//     HvacDashboardWelcome, type TabType
+// } from './components/dashboard';
 
 // Error Handling & Monitoring
 export {
-  HVACErrorBoundary,
-  withHVACErrorBoundary,
-  useHVACErrorReporting
+    HVACErrorBoundary, useHVACErrorReporting, withHVACErrorBoundary
 } from './components/HVACErrorBoundary';
 
 // Fault Tolerance Components
 export {
-  HVACRetryWrapper,
-  HVACSuspenseWrapper,
-  HVACNetworkMonitor,
+    HVACNetworkMonitor, HVACRetryWrapper,
+    HVACSuspenseWrapper
 } from './components/fault-tolerance';
 
 // Performance Monitoring
 export {
-  useHVACPerformanceMonitoring,
-  useHVACDebouncedPerformance,
-  PERFORMANCE_THRESHOLDS
+    PERFORMANCE_THRESHOLDS, useHVACDebouncedPerformance, useHVACPerformanceMonitoring
 } from './hooks/useHVACPerformanceMonitoring';
 
 // Sentry Configuration & Utilities
 export {
-  initializeHVACSentry,
-  updateHVACUserContext,
-  clearHVACUserSession,
-  trackHVACUserAction,
-  trackHVACNavigation,
-  trackHVACAPICall,
-  trackPolishBusinessOperation,
-  isHVACSentryInitialized,
-  HVACErrorContexts,
+    HVACErrorContexts, clearHVACUserSession, initializeHVACSentry, isHVACSentryInitialized, trackHVACAPICall, trackHVACNavigation, trackHVACUserAction, trackPolishBusinessOperation, updateHVACUserContext
 } from './utils/sentry-init';
 
 export {
-  reportHVACError,
-  reportHVACMessage,
-  reportPolishBusinessError,
-  startHVACTransaction,
-  addHVACBreadcrumb,
-  setHVACUserContext,
-  clearHVACUserContext,
-  HVACErrorContexts as ErrorContexts,
-  PolishBusinessTags,
+    HVACErrorContexts as ErrorContexts,
+    PolishBusinessTags, addHVACBreadcrumb, clearHVACUserContext, reportHVACError,
+    reportHVACMessage,
+    reportPolishBusinessError, setHVACUserContext, startHVACTransaction
 } from './config/sentry.config';
 
 // Types
@@ -321,6 +230,13 @@ export type HvacSearchResult = {
 
 // Error handling types
 export type { HVACErrorContext } from './config/sentry.config';
+
+// Unified Types - Canonical type definitions
+export type {
+    ActiveDispatch, ChecklistItem, RouteOptimization, ScheduledJob, Technician, TechnicianJob,
+    Communication as UnifiedCommunication,
+    Customer as UnifiedCustomer, CustomerAddress as UnifiedCustomerAddress, Equipment as UnifiedEquipment, MaintenanceRecord as UnifiedMaintenanceRecord
+} from './types/unified';
 
 export type HvacSearchFilters = {
   type?: string;

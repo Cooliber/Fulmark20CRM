@@ -10,16 +10,16 @@
  * - Traffic and ETA information
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
-import { Tag } from 'primereact/tag';
+import { Button } from 'primereact/button';
+import { Card } from 'primereact/card';
 import { Chip } from 'primereact/chip';
 import { OverlayPanel } from 'primereact/overlaypanel';
-import { Toast } from 'primereact/toast';
 import { ProgressSpinner } from 'primereact/progressspinner';
+import { Tag } from 'primereact/tag';
+import { Toast } from 'primereact/toast';
 import { classNames } from 'primereact/utils';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // Types
 interface TechnicianJob {
@@ -387,7 +387,6 @@ export const HvacMobileNavigation: React.FC<NavigationProps> = ({
                           job.location.longitude
                         ).toFixed(1)} km`}
                         severity="info"
-                        size="small"
                       />
                     )}
                     
