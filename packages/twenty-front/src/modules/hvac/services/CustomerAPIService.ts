@@ -416,62 +416,250 @@ export class CustomerAPIService {
    * Get customer insights and analytics
    * TODO: Refactor this to use GraphQL if an endpoint is available, or keep using direct HVAC API if necessary.
    */
-  async getCustomerInsights(customerId: string): Promise<CustomerInsights> {
-    const response = await this.makeAPICall<CustomerInsights>(`/api/v1/customers/${customerId}/insights`);
-    return response.data;
+  async getCustomerInsights(customerId: string): Promise<CustomerInsights | null> {
+    const cacheKey = `customer_insights_${customerId}`;
+    const cached = this.getCachedData<CustomerInsights>(cacheKey);
+    if (cached) {
+      trackHVACUserAction('customer_insights_cache_hit', 'API_CACHE', { customerId });
+      return cached;
+    }
+
+    const GET_HVAC_CUSTOMER_INSIGHTS_QUERY = `
+      query GetHvacCustomerInsights($customerId: ID!) {
+        hvacCustomerInsights(customerId: $customerId) {
+          financialMetrics {
+            totalRevenue
+            lifetimeValue
+            averageOrderValue
+            monthlyRecurringRevenue
+            paymentHistory { id amount currency date status invoiceNumber }
+          }
+          riskIndicators {
+            churnRisk
+            paymentRisk
+            satisfactionTrend
+            lastContactDays
+          }
+          behaviorMetrics {
+            serviceFrequency
+            preferredContactMethod
+            responseTime
+            issueResolutionRate
+          }
+        }
+      }
+    `;
+    try {
+      const response = await this.fetchGraphQL<{ hvacCustomerInsights: CustomerInsights | null }>(
+        GET_HVAC_CUSTOMER_INSIGHTS_QUERY, { customerId }
+      );
+      if (response.hvacCustomerInsights) {
+        this.setCachedData(cacheKey, response.hvacCustomerInsights);
+      }
+      return response.hvacCustomerInsights;
+    } catch (error) {
+      trackHVACUserAction('get_customer_insights_graphql_error', 'API_ERROR', {
+        customerId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
   }
 
   /**
-   * Get customer equipment list
-   * TODO: Refactor this to use GraphQL if an endpoint is available, or keep using direct HVAC API if necessary.
+   * Get customer equipment list via GraphQL
+   * This will use the hvacEquipments query with a customerId filter.
    */
-  async getCustomerEquipment(customerId: string): Promise<Equipment[]> {
-    const response = await this.makeAPICall<Equipment[]>(`/api/v1/customers/${customerId}/equipment`);
-    return response.data;
+  async getCustomerEquipment(customerId: string, page = 1, limit = 100): Promise<Equipment[]> { // Default limit high to get all for 360 view initially
+    const cacheKey = `customer_equipment_${customerId}_${page}_${limit}`;
+    const cached = this.getCachedData<Equipment[]>(cacheKey);
+    if (cached) return cached;
+
+    const GET_CUSTOMER_EQUIPMENT_QUERY = `
+      query GetCustomerHvacEquipment($filters: HvacEquipmentFilterInput, $page: Int, $limit: Int) {
+        hvacEquipments(filters: $filters, page: $page, limit: $limit) {
+          equipment {
+            id
+            name
+            type
+            brand
+            model
+            serialNumber
+            installationDate
+            lastService
+            nextService
+            status
+            # Add other Equipment fields as needed by Customer 360 view
+          }
+          # total # if needed
+        }
+      }
+    `;
+    try {
+      const filters = { customerId };
+      const response = await this.fetchGraphQL<{ hvacEquipments: { equipment: Equipment[] } }>(
+        GET_CUSTOMER_EQUIPMENT_QUERY, { filters, page, limit }
+      );
+      const equipmentList = response.hvacEquipments?.equipment || [];
+      this.setCachedData(cacheKey, equipmentList);
+      return equipmentList;
+    } catch (error) {
+      trackHVACUserAction('get_customer_equipment_graphql_error', 'API_ERROR', { customerId, error: error instanceof Error ? error.message : 'Unknown error' });
+      throw error;
+    }
   }
 
   /**
-   * Get customer communications
-   * TODO: Refactor this to use GraphQL if an endpoint is available, or keep using direct HVAC API if necessary.
+   * Get customer communications via GraphQL
    */
-  async getCustomerCommunications(customerId: string): Promise<Communication[]> {
-    const response = await this.makeAPICall<Communication[]>(`/api/v1/customers/${customerId}/communications`);
-    return response.data;
+  async getCustomerCommunications(customerId: string, page = 1, limit = 100): Promise<Communication[]> {
+    const cacheKey = `customer_communications_${customerId}_${page}_${limit}`;
+    const cached = this.getCachedData<Communication[]>(cacheKey);
+    if (cached) return cached;
+
+    const GET_CUSTOMER_COMMUNICATIONS_QUERY = `
+      query GetCustomerHvacCommunications($filters: HvacCommunicationFilterInput, $page: Int, $limit: Int) {
+        hvacCommunications(filters: $filters, page: $page, limit: $limit) {
+          communications {
+            id
+            type
+            direction
+            subject
+            content
+            timestamp
+            status
+            # Add other Communication fields as needed
+          }
+          # total
+        }
+      }
+    `;
+    try {
+      const filters = { customerId };
+      const response = await this.fetchGraphQL<{ hvacCommunications: { communications: Communication[] } }>(
+        GET_CUSTOMER_COMMUNICATIONS_QUERY, { filters, page, limit }
+      );
+      const communicationsList = response.hvacCommunications?.communications || [];
+      this.setCachedData(cacheKey, communicationsList);
+      return communicationsList;
+    } catch (error) {
+      trackHVACUserAction('get_customer_communications_graphql_error', 'API_ERROR', { customerId, error: error instanceof Error ? error.message : 'Unknown error' });
+      throw error;
+    }
   }
 
   /**
-   * Get customer service tickets
-   * TODO: Refactor this to use GraphQL if an endpoint is available, or keep using direct HVAC API if necessary.
+   * Get customer service tickets via GraphQL
    */
-  async getCustomerTickets(customerId: string): Promise<ServiceTicket[]> {
-    const response = await this.makeAPICall<ServiceTicket[]>(`/api/v1/customers/${customerId}/tickets`);
-    return response.data;
+  async getCustomerTickets(customerId: string, page = 1, limit = 100): Promise<ServiceTicket[]> {
+    const cacheKey = `customer_tickets_${customerId}_${page}_${limit}`;
+    const cached = this.getCachedData<ServiceTicket[]>(cacheKey);
+    if (cached) return cached;
+
+    const GET_CUSTOMER_SERVICE_TICKETS_QUERY = `
+      query GetCustomerHvacServiceTickets($filters: HvacServiceTicketFilterInput, $page: Int, $limit: Int) {
+        hvacServiceTickets(filters: $filters, page: $page, limit: $limit) {
+          tickets {
+            id
+            title
+            description
+            status
+            priority
+            scheduledDate
+            # Add other ServiceTicket fields as needed
+          }
+          # total
+        }
+      }
+    `;
+    try {
+      const filters = { customerId };
+      const response = await this.fetchGraphQL<{ hvacServiceTickets: { tickets: ServiceTicket[] } }>(
+        GET_CUSTOMER_SERVICE_TICKETS_QUERY, { filters, page, limit }
+      );
+      const ticketsList = response.hvacServiceTickets?.tickets || [];
+      this.setCachedData(cacheKey, ticketsList);
+      return ticketsList;
+    } catch (error) {
+      trackHVACUserAction('get_customer_tickets_graphql_error', 'API_ERROR', { customerId, error: error instanceof Error ? error.message : 'Unknown error' });
+      throw error;
+    }
   }
 
   /**
-   * Get customer contracts
-   * TODO: Refactor this to use GraphQL if an endpoint is available, or keep using direct HVAC API if necessary.
+   * Get customer contracts via GraphQL
    */
-  async getCustomerContracts(customerId: string): Promise<Contract[]> {
-    const response = await this.makeAPICall<Contract[]>(`/api/v1/customers/${customerId}/contracts`);
-    return response.data;
+  async getCustomerContracts(customerId: string, page = 1, limit = 100): Promise<Contract[]> {
+    const cacheKey = `customer_contracts_${customerId}_${page}_${limit}`;
+    const cached = this.getCachedData<Contract[]>(cacheKey);
+    if (cached) return cached;
+
+    const GET_CUSTOMER_CONTRACTS_QUERY = `
+      query GetCustomerHvacContracts($filters: HvacContractFilterInput, $page: Int, $limit: Int) {
+        hvacContracts(filters: $filters, page: $page, limit: $limit) {
+          contracts {
+            id
+            type
+            startDate
+            endDate
+            value
+            status
+            # Add other Contract fields as needed
+          }
+          # total
+        }
+      }
+    `;
+    try {
+      const filters = { customerId };
+      const response = await this.fetchGraphQL<{ hvacContracts: { contracts: Contract[] } }>(
+        GET_CUSTOMER_CONTRACTS_QUERY, { filters, page, limit }
+      );
+      const contractsList = response.hvacContracts?.contracts || [];
+      this.setCachedData(cacheKey, contractsList);
+      return contractsList;
+    } catch (error) {
+      trackHVACUserAction('get_customer_contracts_graphql_error', 'API_ERROR', { customerId, error: error instanceof Error ? error.message : 'Unknown error' });
+      throw error;
+    }
   }
 
   /**
-   * Update customer information
-   * TODO: Refactor this to use a GraphQL mutation.
+   * Update customer information via GraphQL Mutation
    */
-  async updateCustomer(customerId: string, updates: Partial<Customer>): Promise<Customer> {
-    const response = await this.makeAPICall<Customer>( // Still uses old makeAPICall
-      `/api/v1/customers/${customerId}`,
-      'PUT',
-      updates,
-    );
+  async updateCustomer(customerId: string, updates: Partial<Omit<Customer, 'id'>>): Promise<Customer> {
+    const UPDATE_HVAC_CUSTOMER_MUTATION = `
+      mutation UpdateHvacCustomer($input: UpdateHvacCustomerInput!) {
+        updateHvacCustomer(input: $input) {
+          id
+          name
+          email
+          phone
+          status
+          # Include all fields that are part of HvacCustomerType and might be updated/returned
+        }
+      }
+    `;
+    try {
+      // The input for the mutation is UpdateHvacCustomerInput, which requires 'id'
+      const inputForMutation = { id: customerId, ...updates };
+      const response = await this.fetchGraphQL<{ updateHvacCustomer: Customer }>(
+        UPDATE_HVAC_CUSTOMER_MUTATION, { input: inputForMutation }
+      );
 
-    // Invalidate cache for GraphQL queries
-    this.invalidateCustomerCache(customerId); // This might need adjustment for GraphQL cache
+      // Invalidate cache for this customer and potentially lists
+      this.invalidateCustomerCache(customerId);
+      this.invalidateCustomerCache('hvacCustomers'); // General list
 
-    return response.data;
+      trackHVACUserAction('update_customer_graphql_success', 'API_SUCCESS', { customerId });
+      return response.updateHvacCustomer;
+    } catch (error) {
+      trackHVACUserAction('update_customer_graphql_error', 'API_ERROR', {
+        customerId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
   }
 
   /**

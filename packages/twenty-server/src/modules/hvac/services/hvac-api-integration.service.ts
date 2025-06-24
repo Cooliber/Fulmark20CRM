@@ -13,6 +13,12 @@ import {
   HvacApiTimeoutError,
   HvacApiUnauthorizedError,
 } from '../exceptions/hvac-api.exceptions';
+import {
+  CreateHvacEquipmentInput,
+  HvacEquipmentFilterInput,
+  UpdateHvacEquipmentInput,
+  ScheduleHvacMaintenanceInput,
+} from '../graphql-types/hvac-equipment.types'; // Import input types
 
 import { HvacSentryService } from './hvac-sentry.service';
 
@@ -305,25 +311,17 @@ export class HvacApiIntegrationService {
 
   // Customer Management
   async getCustomers(limit = 50, offset = 0): Promise<HvacCustomer[]> {
-    try {
-      const result = await this.performOptimizedRequest<{
-        customers: HvacCustomer[];
-      }>('GET', '/customers', undefined, { limit, offset });
-
-      this.logger.debug(
-        `Fetched ${result.data.customers?.length || 0} customers`,
-        {
-          metrics: result.metrics,
-          limit,
-          offset,
-        },
-      );
-
-      return result.data.customers || [];
-    } catch (error) {
-      this.logger.error('Failed to fetch customers from HVAC API', error);
-      throw new Error('Failed to fetch customers');
-    }
+    const result = await this.performOptimizedRequest<{ customers: HvacCustomer[] }>(
+      'GET',
+      '/customers',
+      undefined,
+      { limit, offset }
+    );
+    this.logger.debug(
+      `Fetched ${result.data.customers?.length || 0} customers`,
+      { metrics: result.metrics, limit, offset },
+    );
+    return result.data.customers || [];
   }
 
   async getCustomerById(customerId: string): Promise<HvacCustomer | null> {
