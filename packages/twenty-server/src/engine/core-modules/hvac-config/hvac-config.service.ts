@@ -226,21 +226,53 @@ export class HvacConfigService {
   // Validation methods
   validateHvacConfiguration(): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
+    const urlPattern = /^(http|https):\/\/[^ "]+$/;
 
     // Validate HVAC API configuration
     const hvacApi = this.getHvacApiConfig();
     if (!hvacApi.url) {
-      errors.push('HVAC_API_URL is required');
+      errors.push('HVAC_API_URL is required.');
+    } else if (!urlPattern.test(hvacApi.url)) {
+      errors.push('HVAC_API_URL is not a valid URL.');
     }
     if (!hvacApi.apiKey) {
-      errors.push('HVAC_API_KEY is required');
+      errors.push('HVAC_API_KEY is required.');
+    }
+    if (hvacApi.timeout <= 0) {
+      errors.push('HVAC_API_TIMEOUT must be a positive number.');
     }
 
     // Validate Weaviate configuration
     const weaviate = this.getWeaviateConfig();
     if (!weaviate.host) {
-      errors.push('WEAVIATE_HOST is required');
+      errors.push('WEAVIATE_HOST is required.');
     }
+    if (weaviate.port <= 0 || weaviate.port > 65535) {
+      errors.push('WEAVIATE_PORT must be a valid port number (1-65535).');
+    }
+    if (weaviate.grpcPort <= 0 || weaviate.grpcPort > 65535) {
+      errors.push('WEAVIATE_GRPC_PORT must be a valid port number (1-65535).');
+    }
+    if (weaviate.scheme !== 'http' && weaviate.scheme !== 'https') {
+      errors.push('WEAVIATE_SCHEME must be "http" or "https".');
+    }
+
+
+    // Validate Bielik configuration (if enabled or fields are present)
+    const bielik = this.getBielikConfig();
+    // Assuming Bielik might be optional, so validate only if key parts are set or if a feature flag indicates it's required
+    if (bielik.apiKey || bielik.host !== 'localhost') { // Example condition to check if Bielik is actively configured
+        if (!bielik.host) {
+            errors.push('BIELIK_HOST is required if Bielik integration is configured.');
+        }
+        if (bielik.port <=0 || bielik.port > 65535) {
+            errors.push('BIELIK_PORT must be a valid port number (1-65535).');
+        }
+        if (!bielik.apiKey) {
+            errors.push('BIELIK_API_KEY is required if Bielik integration is configured.');
+        }
+    }
+
 
     // Validate business configuration
     const business = this.getHvacBusinessConfig();
@@ -248,8 +280,12 @@ export class HvacConfigService {
       errors.push('COMPANY_NAME is required');
     }
     if (!business.companyEmail) {
-      errors.push('COMPANY_EMAIL is required');
+      errors.push('COMPANY_EMAIL is required.');
     }
+    if (business.companyNip && !/^\d{10}$/.test(business.companyNip.replace(/-/g, ''))) {
+      errors.push('COMPANY_NIP (if provided) must be a 10-digit number.');
+    }
+    // Add more specific validations for REGON, timezone, locale, currency if needed
 
     return {
       isValid: errors.length === 0,
@@ -258,27 +294,68 @@ export class HvacConfigService {
   }
 
   // Health check method
-  async checkHvacServicesHealth(): Promise<{ [service: string]: boolean }> {
-    const results: { [service: string]: boolean } = {};
+  // This method could be expanded to use the HttpService to make actual health check calls
+  async checkHvacServicesHealth(): Promise<{ [service: string]: { healthy: boolean; message?: string } }> {
+    const results: { [service: string]: { healthy: boolean; message?: string } } = {};
+    const hvacApiConfig = this.getHvacApiConfig();
+    const weaviateConfig = this.getWeaviateConfig();
+    const bielikConfig = this.getBielikConfig();
 
+    // Placeholder for actual health check logic (e.g., using HttpService)
+    // Example for HVAC API:
     try {
-      // Check HVAC API health
-      const hvacApi = this.getHvacApiConfig();
-      // Implementation would make actual HTTP calls to check service health
-      results.hvacApi = true; // Placeholder
-
-      // Check Weaviate health
-      const weaviate = this.getWeaviateConfig();
-      results.weaviate = true; // Placeholder
-
-      // Check Bielik health
-      const bielik = this.getBielikConfig();
-      results.bielik = true; // Placeholder
-
-    } catch (error) {
-      console.error('Error checking HVAC services health:', error);
+      // const response = await firstValueFrom(this.httpService.get(`${hvacApiConfig.url}/health`));
+      // results.hvacApi = { healthy: response.status === 200 };
+      results.hvacApi = { healthy: true, message: 'Placeholder: Health check not implemented' };
+    } catch (e) {
+      results.hvacApi = { healthy: false, message: e.message };
     }
 
+    // Example for Weaviate:
+    try {
+      // const response = await firstValueFrom(this.httpService.get(`${weaviateConfig.scheme}://${weaviateConfig.host}:${weaviateConfig.port}/v1/.well-known/ready`));
+      // results.weaviate = { healthy: response.status === 200 };
+      results.weaviate = { healthy: true, message: 'Placeholder: Health check not implemented' };
+    } catch (e) {
+      results.weaviate = { healthy: false, message: e.message };
+    }
+
+    // Example for Bielik:
+    try {
+      // const response = await firstValueFrom(this.httpService.get(`${bielikConfig.host}:${bielikConfig.port}/health`));
+      // results.bielik = { healthy: response.status === 200 };
+      results.bielik = { healthy: true, message: 'Placeholder: Health check not implemented' };
+    } catch (e) {
+      results.bielik = { healthy: false, message: e.message };
+    }
+
+    this.logger.log('Performed HVAC services health check (placeholders).', results);
     return results;
   }
+
+  /**
+   * Suggestion: This validation logic can be called during application startup,
+   * for example, in the onModuleInit() lifecycle hook of the HvacModule or AppModule.
+   *
+   * Example in HvacModule:
+   *
+   * import { Module, OnModuleInit } from '@nestjs/common';
+   * import { HvacConfigService } from './hvac-config.service'; // Adjust path
+   *
+   * @Module({ ... providers: [HvacConfigService, ...], ... })
+   * export class HvacModule implements OnModuleInit {
+   *   constructor(private readonly hvacConfigService: HvacConfigService) {}
+   *
+   *   onModuleInit() {
+   *     const { isValid, errors } = this.hvacConfigService.validateHvacConfiguration();
+   *     if (!isValid) {
+   *       errors.forEach(err => this.logger.error(`HVAC Configuration Error: ${err}`));
+   *       // Consider throwing an error to prevent application startup with invalid config
+   *       throw new Error('Invalid HVAC module configuration. Application startup aborted.');
+   *     } else {
+   *       this.logger.log('HVAC configuration validated successfully.');
+   *     }
+   *   }
+   * }
+   */
 }

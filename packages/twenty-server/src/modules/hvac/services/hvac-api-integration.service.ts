@@ -1,10 +1,18 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
-
-import { AxiosResponse } from 'axios';
+import { AxiosError, AxiosResponse } from 'axios'; // Added AxiosError
 import { firstValueFrom } from 'rxjs';
 
 import { HvacConfigService } from 'src/engine/core-modules/hvac-config/hvac-config.service';
+import {
+  HvacApiBadRequestError,
+  HvacApiForbiddenError,
+  HvacApiNetworkError,
+  HvacApiNotFoundError,
+  HvacApiServerError,
+  HvacApiTimeoutError,
+  HvacApiUnauthorizedError,
+} from '../exceptions/hvac-api.exceptions';
 
 import { HvacSentryService } from './hvac-sentry.service';
 
@@ -225,14 +233,49 @@ export class HvacApiIntegrationService {
             };
           } catch (error) {
             retryCount++;
+            const errorDetails = error instanceof AxiosError ? error.response?.data : error.message;
+
             if (retryCount > this.MAX_RETRIES) {
               this.logger.error(
-                `Failed to ${method} ${endpoint} after ${retryCount} retries`,
-                error,
+                `Failed to ${method} ${endpoint} after ${retryCount} retries. Last error: ${error.message}`,
+                error.stack,
+                errorDetails,
               );
-              throw error;
+              // Throw specific error based on last attempt's error
+              if (error instanceof AxiosError) {
+                if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+                  throw new HvacApiTimeoutError(errorDetails);
+                }
+                if (error.response) {
+                  switch (error.response.status) {
+                    case 400:
+                      throw new HvacApiBadRequestError(error.response.data?.message || 'Bad request', errorDetails);
+                    case 401:
+                      throw new HvacApiUnauthorizedError(errorDetails);
+                    case 403:
+                      throw new HvacApiForbiddenError(errorDetails);
+                    case 404:
+                      throw new HvacApiNotFoundError(endpoint, errorDetails);
+                    default:
+                      throw new HvacApiServerError(
+                        error.response.data?.message || `HVAC API request failed with status ${error.response.status}`,
+                        error.response.status,
+                        errorDetails
+                      );
+                  }
+                } else if (error.request) {
+                  // The request was made but no response was received
+                  throw new HvacApiNetworkError(`No response received from HVAC API for ${endpoint}`, errorDetails);
+                }
+              }
+              // Fallback for non-Axios errors or unhandled Axios errors
+              throw new HvacApiNetworkError(`Failed to ${method} ${endpoint}: ${error.message}`, errorDetails);
             }
 
+            this.logger.warn(
+              `Attempt ${retryCount} failed for ${method} ${endpoint}. Retrying in ${Math.pow(2, retryCount)}s. Error: ${error.message}`,
+              errorDetails
+            );
             // Exponential backoff
             const delay = Math.pow(2, retryCount) * 1000;
 
@@ -240,7 +283,7 @@ export class HvacApiIntegrationService {
           }
         }
 
-        throw new Error(`Max retries exceeded for ${method} ${endpoint}`);
+        throw new HvacApiNetworkError(`Max retries exceeded for ${method} ${endpoint} after ${this.MAX_RETRIES} attempts.`);
       },
     );
   }
@@ -286,39 +329,40 @@ export class HvacApiIntegrationService {
   async getCustomerById(customerId: string): Promise<HvacCustomer | null> {
     try {
       const url = this.getApiUrl(`/customers/${customerId}`);
-      const response: AxiosResponse<HvacCustomer> = await firstValueFrom(
-        this.httpService.get(url, {
-          headers: this.getApiHeaders(),
-        }),
+      // This method now uses performOptimizedRequest, which handles errors and retries.
+      // The specific error handling for 404 (returning null) should be done in the calling service or resolver if needed.
+      const result = await this.performOptimizedRequest<HvacCustomer>(
+        'GET',
+        `/customers/${customerId}`,
       );
-
-      return response.data;
+      return result.data;
     } catch (error) {
+      // If performOptimizedRequest throws HvacApiNotFoundError, it will be propagated.
+      // Other errors will also be propagated as specific HvacApi exceptions.
       this.logger.error(
-        `Failed to fetch customer ${customerId} from HVAC API`,
-        error,
+        `Failed to fetch customer ${customerId} from HVAC API via performOptimizedRequest`,
+        error.stack,
+        error.details,
       );
-
-      return null;
+      if (error instanceof HvacApiNotFoundError) {
+        return null; // Specific handling for 404 to return null
+      }
+      throw error; // Re-throw other HVAC API errors
     }
   }
 
   async createCustomer(
     customerData: Partial<HvacCustomer>,
   ): Promise<HvacCustomer> {
-    try {
-      const url = this.getApiUrl('/customers');
-      const response: AxiosResponse<HvacCustomer> = await firstValueFrom(
-        this.httpService.post(url, customerData, {
-          headers: this.getApiHeaders(),
-        }),
-      );
-
-      return response.data;
-    } catch (error) {
-      this.logger.error('Failed to create customer in HVAC API', error);
-      throw new Error('Failed to create customer');
-    }
+    // This method now uses performOptimizedRequest
+    const result = await this.performOptimizedRequest<HvacCustomer>(
+      'POST',
+      '/customers',
+      customerData,
+    );
+    // TODO: Invalidate cache for getCustomers
+    this.clearCacheKeySubstring('/customers');
+    return result.data;
   }
 
   // Service Ticket Management
@@ -326,127 +370,93 @@ export class HvacApiIntegrationService {
     limit = 50,
     offset = 0,
   ): Promise<HvacServiceTicketData[]> {
-    try {
-      const url = this.getApiUrl('/tickets');
-      const response: AxiosResponse<{ tickets: HvacServiceTicketData[] }> =
-        await firstValueFrom(
-          this.httpService.get(url, {
-            headers: this.getApiHeaders(),
-            params: { limit, offset },
-          }),
-        );
-
-      return response.data.tickets || [];
-    } catch (error) {
-      this.logger.error('Failed to fetch service tickets from HVAC API', error);
-      throw new Error('Failed to fetch service tickets');
-    }
+    const result = await this.performOptimizedRequest<{ tickets: HvacServiceTicketData[] }>(
+      'GET',
+      '/tickets',
+      undefined,
+      { limit, offset },
+    );
+    return result.data.tickets || [];
   }
 
   async getServiceTicketById(
     ticketId: string,
   ): Promise<HvacServiceTicketData | null> {
     try {
-      const url = this.getApiUrl(`/tickets/${ticketId}`);
-      const response: AxiosResponse<HvacServiceTicketData> =
-        await firstValueFrom(
-          this.httpService.get(url, {
-            headers: this.getApiHeaders(),
-          }),
-        );
-
-      return response.data;
+      const result = await this.performOptimizedRequest<HvacServiceTicketData>(
+        'GET',
+        `/tickets/${ticketId}`,
+      );
+      return result.data;
     } catch (error) {
+      if (error instanceof HvacApiNotFoundError) {
+        return null;
+      }
       this.logger.error(
         `Failed to fetch service ticket ${ticketId} from HVAC API`,
-        error,
+        error.stack,
+        error.details,
       );
-
-      return null;
+      throw error;
     }
   }
 
   async createServiceTicket(
     ticketData: HvacServiceTicketData,
   ): Promise<HvacServiceTicketData> {
-    try {
-      const url = this.getApiUrl('/tickets');
-      const response: AxiosResponse<HvacServiceTicketData> =
-        await firstValueFrom(
-          this.httpService.post(url, ticketData, {
-            headers: this.getApiHeaders(),
-          }),
-        );
-
-      return response.data;
-    } catch (error) {
-      this.logger.error('Failed to create service ticket in HVAC API', error);
-      throw new Error('Failed to create service ticket');
-    }
+    const result = await this.performOptimizedRequest<HvacServiceTicketData>(
+      'POST',
+      '/tickets',
+      ticketData,
+    );
+    this.clearCacheKeySubstring('/tickets');
+    return result.data;
   }
 
   async updateServiceTicket(
     ticketId: string,
     ticketData: Partial<HvacServiceTicketData>,
   ): Promise<HvacServiceTicketData> {
-    try {
-      const url = this.getApiUrl(`/tickets/${ticketId}`);
-      const response: AxiosResponse<HvacServiceTicketData> =
-        await firstValueFrom(
-          this.httpService.put(url, ticketData, {
-            headers: this.getApiHeaders(),
-          }),
-        );
-
-      return response.data;
-    } catch (error) {
-      this.logger.error(
-        `Failed to update service ticket ${ticketId} in HVAC API`,
-        error,
-      );
-      throw new Error('Failed to update service ticket');
-    }
+    const result = await this.performOptimizedRequest<HvacServiceTicketData>(
+      'PUT',
+      `/tickets/${ticketId}`,
+      ticketData,
+    );
+    this.clearCacheKeySubstring(`/tickets/${ticketId}`);
+    this.clearCacheKeySubstring('/tickets'); // Also clear list if applicable
+    return result.data;
   }
 
   // Equipment Management
   async getEquipment(limit = 50, offset = 0): Promise<HvacEquipmentSummary[]> {
-    try {
-      const url = this.getApiUrl('/equipment');
-      const response: AxiosResponse<{ equipment: HvacEquipmentSummary[] }> =
-        await firstValueFrom(
-          this.httpService.get(url, {
-            headers: this.getApiHeaders(),
-            params: { limit, offset },
-          }),
-        );
-
-      return response.data.equipment || [];
-    } catch (error) {
-      this.logger.error('Failed to fetch equipment from HVAC API', error);
-      throw new Error('Failed to fetch equipment');
-    }
+    const result = await this.performOptimizedRequest<{ equipment: HvacEquipmentSummary[] }>(
+      'GET',
+      '/equipment',
+      undefined,
+      { limit, offset },
+    );
+    return result.data.equipment || [];
   }
 
   async getEquipmentById(
     equipmentId: string,
   ): Promise<HvacEquipmentSummary | null> {
     try {
-      const url = this.getApiUrl(`/equipment/${equipmentId}`);
-      const response: AxiosResponse<HvacEquipmentSummary> =
-        await firstValueFrom(
-          this.httpService.get(url, {
-            headers: this.getApiHeaders(),
-          }),
-        );
-
-      return response.data;
+      const result = await this.performOptimizedRequest<HvacEquipmentSummary>(
+        'GET',
+        `/equipment/${equipmentId}`,
+      );
+      return result.data;
     } catch (error) {
+      if (error instanceof HvacApiNotFoundError) {
+        return null;
+      }
       this.logger.error(
         `Failed to fetch equipment ${equipmentId} from HVAC API`,
-        error,
+        error.stack,
+        error.details,
       );
-
-      return null;
+      throw error;
     }
   }
 
@@ -454,46 +464,34 @@ export class HvacApiIntegrationService {
   async performSemanticSearch(
     searchQuery: HvacSearchQuery,
   ): Promise<HvacSearchResult[]> {
-    try {
-      const url = this.getApiUrl('/search');
-      const response: AxiosResponse<{ results: HvacSearchResult[] }> =
-        await firstValueFrom(
-          this.httpService.post(url, searchQuery, {
-            headers: this.getApiHeaders(),
-          }),
-        );
-
-      return response.data.results || [];
-    } catch (error) {
-      this.logger.error('Failed to perform semantic search in HVAC API', error);
-      throw new Error('Failed to perform semantic search');
-    }
+    // Semantic search might not be suitable for standard caching if results are highly dynamic
+    // For now, using performOptimizedRequest but with useCache = false (or a very short TTL if implemented)
+    const result = await this.performOptimizedRequest<{ results: HvacSearchResult[] }>(
+      'POST',
+      '/search',
+      searchQuery,
+      undefined,
+      false, // Disable cache for search by default or use a very short TTL
+    );
+    return result.data.results || [];
   }
 
   // AI Insights Integration
   async getCustomerInsights(customerId: string): Promise<HvacCustomerInsights> {
-    try {
-      const result = await this.performOptimizedRequest<HvacCustomerInsights>(
-        'GET',
-        `/customers/${customerId}/insights`,
-        undefined,
-        undefined,
-        true, // Use cache for insights
-      );
+    // Insights might be good candidates for caching
+    const result = await this.performOptimizedRequest<HvacCustomerInsights>(
+      'GET',
+      `/customers/${customerId}/insights`,
+      undefined,
+      undefined,
+      true, // Enable cache for insights
+    );
 
-      this.logger.debug(`Fetched insights for customer ${customerId}`, {
-        metrics: result.metrics,
-        customerId,
-      });
-
-      return result.data;
-    } catch (error) {
-      this.logger.error(
-        `Failed to fetch customer insights for ${customerId} from HVAC API`,
-        error,
-      );
-      throw new Error('Failed to fetch customer insights');
-    }
+    this.logger.debug(`Fetched insights for customer ${customerId}`, {
+      metrics: result.metrics,
+      customerId,
+    });
+    return result.data;
   }
 
   // Health Check
@@ -521,6 +519,27 @@ export class HvacApiIntegrationService {
     this.cache.clear();
     this.logger.log('HVAC API cache cleared');
   }
+
+  clearCacheKey(cacheKey: string): void {
+    if (this.cache.has(cacheKey)) {
+      this.cache.delete(cacheKey);
+      this.logger.log(`HVAC API cache key cleared: ${cacheKey}`);
+    }
+  }
+
+  clearCacheKeySubstring(substring: string): void {
+    let clearedCount = 0;
+    for (const key of this.cache.keys()) {
+      if (key.includes(substring)) {
+        this.cache.delete(key);
+        clearedCount++;
+      }
+    }
+    if (clearedCount > 0) {
+      this.logger.log(`Cleared ${clearedCount} HVAC API cache keys containing: ${substring}`);
+    }
+  }
+
 
   getCacheStats(): { size: number; keys: string[] } {
     return {
