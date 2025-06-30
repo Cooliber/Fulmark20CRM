@@ -458,3 +458,72 @@ export class CreateHvacCommunicationInput {
   @IsEnum(HvacCommunicationPriorityEnum)
   priority?: HvacCommunicationPriorityEnum;
 }
+
+@InputType()
+export class UpdateHvacCommunicationInput {
+  @Field(() => ID)
+  @IsUUID()
+  @IsNotEmpty()
+  id: string;
+
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  customerId?: string;
+
+  @Field(() => HvacCommunicationTypeEnum, { nullable: true })
+  @IsOptional()
+  @IsEnum(HvacCommunicationTypeEnum)
+  type?: HvacCommunicationTypeEnum;
+
+  @Field(() => HvacCommunicationDirectionEnum, { nullable: true })
+  @IsOptional()
+  @IsEnum(HvacCommunicationDirectionEnum)
+  direction?: HvacCommunicationDirectionEnum;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  subject?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  content?: string;
+
+  @Field(() => [HvacParticipantInput], { nullable: 'itemsAndList' })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => HvacParticipantInput)
+  participants?: HvacParticipantInput[];
+
+  @Field(() => [HvacAttachmentInput], { nullable: 'itemsAndList' })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => HvacAttachmentInput)
+  attachments?: HvacAttachmentInput[];
+
+  @Field(() => HvacCommunicationMetadataInput, { nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => HvacCommunicationMetadataInput)
+  metadata?: HvacCommunicationMetadataInput;
+
+  @Field(() => [String], { nullable: 'itemsAndList' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @Field(() => HvacCommunicationPriorityEnum, { nullable: true })
+  @IsOptional()
+  @IsEnum(HvacCommunicationPriorityEnum)
+  priority?: HvacCommunicationPriorityEnum;
+
+  @Field(() => HvacCommunicationStatusEnum, { nullable: true }) // Allow status update here too
+  @IsOptional()
+  @IsEnum(HvacCommunicationStatusEnum)
+  status?: HvacCommunicationStatusEnum;
+}

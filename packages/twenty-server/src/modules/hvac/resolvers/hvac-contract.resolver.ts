@@ -45,9 +45,8 @@ export class HvacContractResolver {
     try {
       this.logger.debug(`Fetching HVAC contracts with filters: ${JSON.stringify(filters)}, page: ${page}, limit: ${limit}`);
       const result = await this.hvacApiService.getContractsList(filters, limit, (page - 1) * limit);
-      // Assuming result.contracts are compatible with HvacContractType or need mapping
       return {
-        contracts: result.contracts.map(c => this.mapContractDataToGqlType(c)),
+        contracts: result.contracts as HvacContractType[], // Assuming service returns compatible type
         total: result.total,
       };
     } catch (error) {
@@ -61,13 +60,14 @@ export class HvacContractResolver {
     this.checkFeatureEnabled();
     try {
       this.logger.debug(`Fetching HVAC contract by ID: ${id}`);
-      // Placeholder
-      this.logger.debug(`Fetching HVAC contract by ID: ${id}`);
       const contractData = await this.hvacApiService.getContractDetailsById(id);
-      if (!contractData) return null;
-      return this.mapContractDataToGqlType(contractData);
+      if (!contractData) {
+        return null;
+      }
+      return contractData as HvacContractType; // Assuming service returns compatible type
     } catch (error) {
-      this.logger.error(`Error fetching HVAC contract by ID ${id}:`, error.message, error.stack);
+      this.logger.error(`Error fetching HVAC contract by ID ${id}: ${error.message}`, error.stack);
+      if (error instanceof HvacApiNotFoundError) return null;
       throw error;
     }
   }
@@ -80,47 +80,43 @@ export class HvacContractResolver {
     this.checkFeatureEnabled();
     try {
       this.logger.log(`Attempting to create HVAC contract: ${JSON.stringify(input)}`);
-      // Placeholder
-      this.logger.log(`Attempting to create HVAC contract: ${JSON.stringify(input)}`);
       const newContractData = await this.hvacApiService.createActualContractRecord(input);
-      return this.mapContractDataToGqlType(newContractData);
+      return newContractData as HvacContractType; // Assuming service returns compatible type
     } catch (error) {
       this.logger.error(`Error creating HVAC contract:`, error.message, error.stack);
       throw error;
     }
   }
 
-  @Mutation(() => HvacContractType, { name: 'updateHvacContract' })
+  @Mutation(() => HvacContractType, { name: 'updateHvacContract', nullable: true })
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async updateHvacContract(
     @Args('input') input: UpdateHvacContractInput,
-  ): Promise<HvacContractType> {
+  ): Promise<HvacContractType | null> {
     this.checkFeatureEnabled();
     try {
       this.logger.log(`Attempting to update HVAC contract ID: ${input.id}`);
-      // Placeholder
-      this.logger.log(`Attempting to update HVAC contract ID: ${input.id}`);
       const { id, ...updateData } = input;
       const updatedContractData = await this.hvacApiService.updateActualContractRecord(id, updateData as UpdateHvacContractInput);
-      return this.mapContractDataToGqlType(updatedContractData);
+      return updatedContractData as HvacContractType; // Assuming service returns compatible type
     } catch (error) {
-      this.logger.error(`Error updating HVAC contract ${input.id}:`, error.message, error.stack);
+      this.logger.error(`Error updating HVAC contract ${input.id}: ${error.message}`, error.stack);
+      if (error instanceof HvacApiNotFoundError) return null;
       throw error;
     }
   }
 
-  @Mutation(() => Boolean, { name: 'deleteHvacContract' })
-  async deleteHvacContract(@Args('id', { type: () => ID }) id: string): Promise<boolean> {
+  @Mutation(() => Boolean, { name: 'deleteHvacContract', nullable: true })
+  async deleteHvacContract(@Args('id', { type: () => ID }) id: string): Promise<boolean | null> {
     this.checkFeatureEnabled();
     try {
       this.logger.log(`Attempting to delete HVAC contract ID: ${id}`);
-      // Placeholder
-      this.logger.log(`Attempting to delete HVAC contract ID: ${id}`);
-      await this.hvacApiService.deleteActualContractRecord(id);
-      return true;
+      const success = await this.hvacApiService.deleteActualContractRecord(id);
+      return success;
     } catch (error) {
-      this.logger.error(`Error deleting HVAC contract ${id}:`, error.message, error.stack);
-      throw error; // Or return false based on requirements
+      this.logger.error(`Error deleting HVAC contract ${id}: ${error.message}`, error.stack);
+      if (error instanceof HvacApiNotFoundError) return null;
+      throw error;
     }
   }
 
@@ -130,12 +126,16 @@ export class HvacContractResolver {
     this.logger.debug(`Resolving customer for contract ID: ${contract.id}, customer ID: ${contract.customerId}`);
     if (!contract.customerId) return null;
     try {
-      // Assuming HvacApiIntegrationService has a method to get customer by ID
-      // This might also call another resolver or service if customer data is managed within Twenty itself.
       const customer = await this.hvacApiService.getCustomerById(contract.customerId);
-      return customer as any; // Cast needed as HvacCustomer might differ from HvacCustomerType
+      return customer as HvacCustomerType; // Assuming service returns HvacCustomer compatible with HvacCustomerType
     } catch (error) {
       this.logger.error(`Error resolving customer for contract ${contract.id}: ${error.message}`);
+      // Do not throw an error from a field resolver if the field is nullable.
+      // If customer not found (HvacApiNotFoundError from getCustomerById), it will return null.
+      if (error instanceof HvacApiNotFoundError) return null;
+      // For other errors, it might be appropriate to let them propagate if they are unexpected
+      // or return null if partial data is acceptable.
+      // For now, returning null for any error during field resolution.
       return null;
     }
   }

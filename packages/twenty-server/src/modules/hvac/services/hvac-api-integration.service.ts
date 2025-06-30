@@ -28,7 +28,24 @@ import {
   CreateHvacContractInput,
   UpdateHvacContractInput,
   HvacContractFilterInput,
-} from '../graphql-types/hvac-contract.types'; // Import for Contract
+  HvacContractType, // Assuming this is the main object type for a contract
+} from '../graphql-types/hvac-contract.types';
+
+import {
+  HvacCommunicationType,
+  CreateHvacCommunicationInput,
+  // UpdateHvacCommunicationInput, // Assuming an update input type exists
+  HvacCommunicationFilterInput,
+  HvacCommunicationStatsType,
+  HvacAIInsightsType,
+} from '../graphql-types/hvac-communication.types';
+
+import {
+  HvacQuote,
+  CreateHvacQuoteInput,
+  UpdateHvacQuoteInput,
+  HvacQuoteFilterInput,
+} from '../graphql-types/hvac-quote.types';
 
 import { HvacSentryService } from './hvac-sentry.service';
 
@@ -151,10 +168,17 @@ export interface HvacApiPerformanceMetrics {
 @Injectable()
 export class HvacApiIntegrationService {
   private readonly logger = new Logger(HvacApiIntegrationService.name);
-  private readonly cache = new Map<string, { data: any; timestamp: number }>();
+  private readonly cache = new Map<string, { data: unknown; timestamp: number }>();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
   private readonly MAX_RETRIES = 3;
   private readonly REQUEST_TIMEOUT = 10000; // 10 seconds
+
+  // Metrics Collection
+  private totalApiRequests = 0;
+  private totalCacheHits = 0;
+  private totalApiErrors = 0;
+  private apiResponseTimes: number[] = [];
+
 
   constructor(
     private readonly httpService: HttpService,
@@ -195,16 +219,20 @@ export class HvacApiIntegrationService {
     const startTime = Date.now();
     const cacheKey = this.getCacheKey(endpoint, { ...params, data });
     let retryCount = 0;
+    this.totalApiRequests++;
 
     // Check cache first for GET requests
     if (method === 'GET' && useCache) {
       const cachedData = this.getCachedData<T>(cacheKey);
 
       if (cachedData) {
+        this.totalCacheHits++;
+        const responseTime = Date.now() - startTime;
+        // this.apiResponseTimes.push(responseTime); // Cache hits are also responses
         return {
           data: cachedData,
           metrics: {
-            responseTime: Date.now() - startTime,
+            responseTime,
             cacheHit: true,
             retryCount: 0,
             endpoint,
@@ -219,6 +247,7 @@ export class HvacApiIntegrationService {
       async () => {
         while (retryCount <= this.MAX_RETRIES) {
           try {
+            const requestStartTime = Date.now(); // For measuring actual API call time
             const url = this.getApiUrl(endpoint);
             const config = {
               headers: this.getApiHeaders(),
@@ -255,11 +284,13 @@ export class HvacApiIntegrationService {
             if (method === 'GET' && useCache) {
               this.setCachedData(cacheKey, response.data);
             }
+            const responseTime = Date.now() - requestStartTime;
+            this.apiResponseTimes.push(responseTime);
 
             return {
               data: response.data,
               metrics: {
-                responseTime: Date.now() - startTime,
+                responseTime: Date.now() - startTime, // Overall time including cache check
                 cacheHit: false,
                 retryCount,
                 endpoint,
@@ -270,6 +301,7 @@ export class HvacApiIntegrationService {
             const errorDetails = error instanceof AxiosError ? error.response?.data : error.message;
 
             if (retryCount > this.MAX_RETRIES) {
+              this.totalApiErrors++;
               this.logger.error(
                 `Failed to ${method} ${endpoint} after ${retryCount} retries. Last error: ${error.message}`,
                 error.stack,
@@ -386,9 +418,34 @@ export class HvacApiIntegrationService {
       '/customers',
       customerData,
     );
-    // TODO: Invalidate cache for getCustomers
-    this.clearCacheKeySubstring('/customers');
+    this.clearCacheKeySubstring('/customers'); // Clears any list like /customers?limit=x&offset=y
+    // No need to clear individual customer cache as this is a create operation
     return result.data;
+  }
+
+  async updateActualCustomer(customerId: string, customerData: Partial<HvacCustomer>): Promise<HvacCustomer> {
+    this.logger.log(`Updating customer ID ${customerId} in HVAC API with data: ${JSON.stringify(customerData)}`);
+    const result = await this.performOptimizedRequest<HvacCustomer>(
+      'PUT',
+      `/customers/${customerId}`,
+      customerData,
+    );
+    this.clearCacheKeySubstring(`/customers/${customerId}`); // Clear specific customer cache
+    this.clearCacheKeySubstring('/customers'); // Clear list cache
+    this.logger.log(`Successfully updated customer, ID: ${result.data.id}`);
+    return result.data;
+  }
+
+  async deleteActualCustomer(customerId: string): Promise<boolean> {
+    this.logger.log(`Deleting customer ID ${customerId} from HVAC API.`);
+    await this.performOptimizedRequest(
+      'DELETE',
+      `/customers/${customerId}`,
+    );
+    this.clearCacheKeySubstring(`/customers/${customerId}`); // Clear specific customer cache
+    this.clearCacheKeySubstring('/customers'); // Clear list cache
+    this.logger.log(`Successfully deleted customer ID: ${customerId}`);
+    return true;
   }
 
   // Service Ticket Management
@@ -435,7 +492,11 @@ export class HvacApiIntegrationService {
       '/tickets',
       ticketData,
     );
-    this.clearCacheKeySubstring('/tickets');
+    this.clearCacheKeySubstring('/tickets'); // Clears any list like /tickets?filter=x
+    // If tickets are cached by customerId, clear that too if customerId is in ticketData
+    if (ticketData.customerId) {
+      this.clearCacheKeySubstring(`/customers/${ticketData.customerId}/tickets`);
+    }
     return result.data;
   }
 
@@ -448,10 +509,27 @@ export class HvacApiIntegrationService {
       `/tickets/${ticketId}`,
       ticketData,
     );
-    this.clearCacheKeySubstring(`/tickets/${ticketId}`);
-    this.clearCacheKeySubstring('/tickets'); // Also clear list if applicable
+    this.clearCacheKeySubstring(`/tickets/${ticketId}`); // Clear specific ticket
+    this.clearCacheKeySubstring('/tickets'); // Clear list
+    // If tickets are cached by customerId, clear that too
+    if (ticketData.customerId || result.data.customerId) {
+      const customerId = ticketData.customerId || result.data.customerId;
+      this.clearCacheKeySubstring(`/customers/${customerId}/tickets`);
+    }
     return result.data;
   }
+
+  // deleteServiceTicket is missing, but if added, should follow similar cache clearing.
+  // async deleteServiceTicket(ticketId: string): Promise<boolean> {
+  //   const ticket = await this.getServiceTicketById(ticketId); // Fetch to get customerId if needed for cache
+  //   await this.performOptimizedRequest('DELETE', `/tickets/${ticketId}`);
+  //   this.clearCacheKeySubstring(`/tickets/${ticketId}`);
+  //   this.clearCacheKeySubstring('/tickets');
+  //   if (ticket?.customerId) {
+  //     this.clearCacheKeySubstring(`/customers/${ticket.customerId}/tickets`);
+  //   }
+  //   return true;
+  // }
 
   // Equipment Management
   async getEquipment(
@@ -559,7 +637,11 @@ export class HvacApiIntegrationService {
       '/equipment',
       input,
     );
-    this.clearCacheKeySubstring('/equipment');
+    this.clearCacheKeySubstring('/equipment'); // Clears list caches like /equipment?filter=x
+    // If equipment is cached by customerId, clear that too
+    if (input.customerId) {
+        this.clearCacheKeySubstring(`/customers/${input.customerId}/equipment`);
+    }
     this.logger.log(`Successfully created equipment, ID: ${result.data.id}`);
     return result.data;
   }
@@ -575,20 +657,31 @@ export class HvacApiIntegrationService {
       `/equipment/${id}`,
       payload,
     );
-    this.clearCacheKeySubstring(`/equipment/${id}`);
-    this.clearCacheKeySubstring('/equipment');
+    this.clearCacheKeySubstring(`/equipment/${id}`); // Clear specific equipment
+    this.clearCacheKeySubstring('/equipment'); // Clear list
+    // If equipment is cached by customerId, clear that too
+    // This might need fetching the equipment first if customerId is not in payload
+    if (input.customerId || result.data.customerId) {
+        const customerId = input.customerId || result.data.customerId;
+        this.clearCacheKeySubstring(`/customers/${customerId}/equipment`);
+    }
     this.logger.log(`Successfully updated equipment, ID: ${result.data.id}`);
     return result.data;
   }
 
   async deleteActualEquipment(id: string): Promise<boolean> {
     this.logger.log(`Deleting equipment ID ${id} from HVAC API.`);
+    const equipment = await this.getEquipmentById(id); // Fetch to get customerId if needed for cache
+
     await this.performOptimizedRequest(
       'DELETE',
       `/equipment/${id}`,
     );
     this.clearCacheKeySubstring(`/equipment/${id}`);
     this.clearCacheKeySubstring('/equipment');
+    if (equipment?.customerId) { // Assuming HvacEquipmentSummary has customerId
+        this.clearCacheKeySubstring(`/customers/${equipment.customerId}/equipment`);
+    }
     this.logger.log(`Successfully deleted equipment ID: ${id}`);
     return true;
   }
@@ -607,11 +700,18 @@ export class HvacApiIntegrationService {
     this.logger.log(`Scheduling maintenance in HVAC API with data: ${JSON.stringify(input)}`);
     const result = await this.performOptimizedRequest<MaintenanceRecord>(
       'POST',
-      '/maintenance/schedule',
+      '/maintenance/schedule', // Assuming this creates a new maintenance record
       input,
     );
+    // Clear maintenance history for the specific equipment
     this.clearCacheKeySubstring(`/equipment/${input.equipmentId}/maintenance`);
+    // Potentially clear cache for the equipment itself if its status or next maintenance date changes
     this.clearCacheKeySubstring(`/equipment/${input.equipmentId}`);
+    // Potentially clear list of equipment if this action affects list views (e.g. needs-service)
+    this.clearCacheKeySubstring('/equipment/needs-service');
+    this.clearCacheKeySubstring('/equipment');
+
+
     this.logger.log(`Successfully scheduled maintenance, ID: ${result.data.id}`);
     return result.data;
   }
@@ -674,18 +774,24 @@ export class HvacApiIntegrationService {
   async checkApiHealth(): Promise<boolean> {
     try {
       const config = this.hvacConfigService.getHvacApiConfig();
-      const url = `${config.url}/health`;
+      const url = `${config.url}/health`; // Ensure this is the correct health endpoint for the external HVAC API
       const response = await firstValueFrom(
         this.httpService.get(url, {
-          headers: this.getApiHeaders(),
-          timeout: 5000,
+          // headers: this.getApiHeaders(), // Health checks might not require auth, depends on the API
+          timeout: 5000, // Keep a reasonable timeout for health checks
         }),
       );
-
       return response.status === 200;
     } catch (error) {
-      this.logger.error('HVAC API health check failed', error);
-
+      // Log the error for diagnostics but return false to indicate unhealthy
+      if (error instanceof AxiosError) {
+        this.logger.error(
+            `HVAC API health check failed: ${error.message}`,
+            { status: error.response?.status, data: error.response?.data, code: error.code }
+        );
+      } else {
+        this.logger.error(`HVAC API health check failed: ${error.message}`, error.stack);
+      }
       return false;
     }
   }
@@ -731,38 +837,47 @@ export class HvacApiIntegrationService {
     totalRequests: number;
     errorRate: number;
   }> {
-    // This would be implemented with actual metrics collection
-    // For now, return placeholder data
+    const totalRequests = this.totalApiRequests;
+    const cacheHitRate = totalRequests > 0 ? this.totalCacheHits / totalRequests : 0;
+    const errorRate = totalRequests > 0 ? this.totalApiErrors / totalRequests : 0;
+
+    let averageResponseTime = 0;
+    if (this.apiResponseTimes.length > 0) {
+      averageResponseTime = this.apiResponseTimes.reduce((sum, time) => sum + time, 0) / this.apiResponseTimes.length;
+    }
+
+    // Optionally, cap the size of apiResponseTimes to avoid memory issues over long periods
+    if (this.apiResponseTimes.length > 10000) { // Keep last 10k response times
+        this.apiResponseTimes = this.apiResponseTimes.slice(this.apiResponseTimes.length - 10000);
+    }
+
     return {
-      cacheHitRate: 0.75, // 75% cache hit rate
-      averageResponseTime: 150, // 150ms average
-      totalRequests: 1000,
-      errorRate: 0.02, // 2% error rate
+      cacheHitRate,
+      averageResponseTime,
+      totalRequests,
+      errorRate,
     };
   }
 
-  // Communication Management - Methods to be implemented based on CommunicationAPIService.ts on frontend
-
-  // Corresponds to getCommunications in frontend
+  // Communication Management
   async getCommunicationsList(
-    filters?: any, // TODO: Define HvacCommunicationFilterInput or use from GraphQL types
+    filters?: HvacCommunicationFilterInput,
     limit = 50,
     offset = 0,
-  ): Promise<{ communications: any[]; total: number }> { // TODO: Use HvacCommunication type
-    const queryParams: Record<string, string | number | boolean> = { limit, offset };
+  ): Promise<{ communications: HvacCommunicationType[]; total: number }> {
+    const queryParams: Record<string, string | number | boolean | string[]> = { limit, offset };
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          queryParams[key] = String(value);
+          queryParams[key] = Array.isArray(value) ? value.join(',') : String(value);
         }
       });
     }
     this.logger.debug(`Fetching communications list with query params: ${JSON.stringify(queryParams)}`);
-    // Define expected response structure from HVAC API for communications list
+
     interface HvacApiCommunicationListResponse {
-      data?: any[]; // Replace 'any' with a specific Communication interface for HVAC API
+      data?: HvacCommunicationType[];
       totalCount?: number;
-      // Add other possible structures for total count
     }
     const result = await this.performOptimizedRequest<HvacApiCommunicationListResponse>(
       'GET',
@@ -776,11 +891,10 @@ export class HvacApiIntegrationService {
     return { communications: commList, total };
   }
 
-  // Corresponds to getCommunicationById
-  async getCommunicationDetailsById(id: string): Promise<any | null> { // TODO: Use HvacCommunication type
+  async getCommunicationDetailsById(id: string): Promise<HvacCommunicationType | null> {
     this.logger.debug(`Fetching communication details for ID: ${id}`);
     try {
-      const result = await this.performOptimizedRequest<any>( // Replace 'any'
+      const result = await this.performOptimizedRequest<HvacCommunicationType>(
         'GET',
         `/communications/${id}`,
       );
@@ -794,36 +908,73 @@ export class HvacApiIntegrationService {
     }
   }
 
-  // Corresponds to createCommunication
-  async createActualCommunicationRecord(input: any): Promise<any> { // TODO: Use CreateHvacCommunicationInput and return HvacCommunication
+  async createActualCommunicationRecord(input: CreateHvacCommunicationInput): Promise<HvacCommunicationType> {
     this.logger.log(`Creating new communication in HVAC API with data: ${JSON.stringify(input)}`);
-    const result = await this.performOptimizedRequest<any>( // Replace 'any'
+    const result = await this.performOptimizedRequest<HvacCommunicationType>(
       'POST',
       '/communications',
       input,
     );
-    this.clearCacheKeySubstring('/communications');
-    // Also consider invalidating customer-specific communication caches if applicable
+    this.clearCacheKeySubstring('/communications'); // Clears general list
     if (input.customerId) {
-        this.clearCacheKeySubstring(`/customers/${input.customerId}/communications`); // Example
+        this.clearCacheKeySubstring(`/customers/${input.customerId}/communications`); // Clears customer specific list
+        this.clearCacheKeySubstring(`/communications/timeline/${input.customerId}`); // Clears timeline for customer
+        this.clearCacheKeySubstring(`/communications/stats/${input.customerId}`); // Clears stats for customer
     }
     this.logger.log(`Successfully created communication, ID: ${result.data.id}`);
     return result.data;
   }
 
-  // Corresponds to getCommunicationStats
-  async getCommunicationStatistics(customerId: string): Promise<any | null> { // TODO: Use HvacCommunicationStats type
+  // Assuming UpdateHvacCommunicationInput exists and is similar to CreateHvacCommunicationInput but with ID
+  async updateActualCommunicationRecord(id: string, input: Partial<CreateHvacCommunicationInput>): Promise<HvacCommunicationType> {
+    this.logger.log(`Updating communication ID ${id} in HVAC API with data: ${JSON.stringify(input)}`);
+    // Fetch existing record if customerId might change or is needed for cache invalidation and not in input
+    const existingComm = await this.getCommunicationDetailsById(id);
+
+    const result = await this.performOptimizedRequest<HvacCommunicationType>(
+      'PUT', // Or PATCH
+      `/communications/${id}`,
+      input,
+    );
+    this.clearCacheKeySubstring(`/communications/${id}`); // Clear specific item
+    this.clearCacheKeySubstring('/communications'); // Clear general list
+
+    const customerId = input.customerId || existingComm?.customerId || result.data.customerId;
+    if (customerId) {
+        this.clearCacheKeySubstring(`/customers/${customerId}/communications`);
+        this.clearCacheKeySubstring(`/communications/timeline/${customerId}`);
+        this.clearCacheKeySubstring(`/communications/stats/${customerId}`);
+    }
+    this.logger.log(`Successfully updated communication, ID: ${result.data.id}`);
+    return result.data;
+  }
+
+  async deleteActualCommunicationRecord(id: string): Promise<boolean> {
+    this.logger.log(`Deleting communication ID ${id} from HVAC API.`);
+    const comm = await this.getCommunicationDetailsById(id); // Fetch to get customerId for cache
+    await this.performOptimizedRequest(
+      'DELETE',
+      `/communications/${id}`,
+    );
+    this.clearCacheKeySubstring(`/communications/${id}`);
+    this.clearCacheKeySubstring('/communications');
+    if (comm?.customerId) {
+        this.clearCacheKeySubstring(`/customers/${comm.customerId}/communications`);
+        this.clearCacheKeySubstring(`/communications/timeline/${comm.customerId}`);
+        this.clearCacheKeySubstring(`/communications/stats/${comm.customerId}`);
+    }
+    this.logger.log(`Successfully deleted communication ID: ${id}`);
+    return true;
+  }
+
+
+  async getCommunicationStatistics(customerId: string): Promise<HvacCommunicationStatsType | null> {
       this.logger.debug(`Fetching communication statistics for customer ID: ${customerId}`);
-      // Define expected response structure from HVAC API for stats
-      interface HvacApiCommunicationStatsResponse {
-          // Define fields based on HvacCommunicationStatsType
-          total?: number;
-          // ... other stats fields
-      }
       try {
-        const result = await this.performOptimizedRequest<HvacApiCommunicationStatsResponse>(
+        // Assuming the API response structure matches HvacCommunicationStatsType
+        const result = await this.performOptimizedRequest<HvacCommunicationStatsType>(
             'GET',
-            `/communications/stats/${customerId}`, // Assuming this endpoint exists
+            `/communications/stats/${customerId}`,
         );
         return result.data;
       } catch (error) {
@@ -833,20 +984,14 @@ export class HvacApiIntegrationService {
       }
   }
 
-  // Corresponds to processEmailWithAI
-  async processEmailContentWithAI(emailContent: string, customerId: string): Promise<any | null> { // TODO: Use HvacAIInsights type
+  async processEmailContentWithAI(emailContent: string, customerId: string): Promise<HvacAIInsightsType | null> {
       this.logger.log(`Processing email with AI for customer ID: ${customerId}`);
-      // Define expected response structure from HVAC API for AI insights
-      interface HvacApiAIInsightsResponse {
-          // Define fields based on HvacAIInsightsType
-          sentiment?: string;
-          // ... other insights fields
-      }
       try {
-        const result = await this.performOptimizedRequest<HvacApiAIInsightsResponse>(
+        // Assuming the API response structure matches HvacAIInsightsType
+        const result = await this.performOptimizedRequest<HvacAIInsightsType>(
             'POST',
-            '/communications/ai-process', // Assuming this endpoint exists
-            { content: emailContent, customerId, language: 'pl' } // Body for the request
+            '/communications/ai-process',
+            { content: emailContent, customerId, language: 'pl' }
         );
         return result.data;
       } catch (error) {
@@ -855,11 +1000,10 @@ export class HvacApiIntegrationService {
       }
   }
 
-  // Corresponds to getCommunicationTimeline
-  async getCommunicationTimelineForCustomer(customerId: string, limit = 50): Promise<any[]> { // TODO: Use HvacCommunication[]
+  async getCommunicationTimelineForCustomer(customerId: string, limit = 50): Promise<HvacCommunicationType[]> {
       this.logger.debug(`Fetching communication timeline for customer ID: ${customerId}, limit: ${limit}`);
       interface HvacApiCommunicationTimelineResponse {
-          data?: any[]; // Replace 'any' with specific Communication interface
+          data?: HvacCommunicationType[];
       }
       try {
         const result = await this.performOptimizedRequest<HvacApiCommunicationTimelineResponse>(
@@ -875,11 +1019,10 @@ export class HvacApiIntegrationService {
       }
   }
 
-  // Corresponds to searchCommunications
-  async searchCustomerCommunications(query: string, customerId?: string, limit = 20): Promise<any[]> { // TODO: Use HvacCommunication[]
+  async searchCustomerCommunications(query: string, customerId?: string, limit = 20): Promise<HvacCommunicationType[]> {
       this.logger.debug(`Searching communications with query "${query}", customerId: ${customerId}, limit: ${limit}`);
       interface HvacApiCommunicationSearchResponse {
-          results?: any[]; // Replace 'any' with specific Communication interface
+          results?: HvacCommunicationType[];
       }
       try {
         const queryParams: Record<string, string | number> = { q: query, limit };
@@ -898,17 +1041,27 @@ export class HvacApiIntegrationService {
       }
   }
 
-  // Corresponds to updateCommunicationStatus
-  async updateStatusForCommunication(id: string, status: string): Promise<any | null> { // TODO: Use HvacCommunication type and HvacCommunicationStatusEnum
+  async updateStatusForCommunication(id: string, status: string /* Consider HvacCommunicationStatusEnum */): Promise<HvacCommunicationType | null> {
       this.logger.log(`Updating status for communication ID: ${id} to ${status}`);
       try {
-        const result = await this.performOptimizedRequest<any>( // Replace 'any'
-            'PATCH', // Or PUT, depending on API design
+        const result = await this.performOptimizedRequest<HvacCommunicationType>(
+            'PATCH',
             `/communications/${id}/status`,
-            { status } // Body for the request
+            { status }
         );
         this.clearCacheKeySubstring(`/communications/${id}`);
-        this.clearCacheKeySubstring('/communications'); // Invalidate list
+        this.clearCacheKeySubstring('/communications');
+        // Also need to clear customer specific communication caches
+        const comm = await this.getCommunicationDetailsById(id); // Re-fetch or use result.data if it's the full object
+        if (result.data.customerId) { // Assuming status update returns the full object with customerId
+             this.clearCacheKeySubstring(`/customers/${result.data.customerId}/communications`);
+             this.clearCacheKeySubstring(`/communications/timeline/${result.data.customerId}`);
+             this.clearCacheKeySubstring(`/communications/stats/${result.data.customerId}`);
+        } else if (comm?.customerId) {
+            this.clearCacheKeySubstring(`/customers/${comm.customerId}/communications`);
+            this.clearCacheKeySubstring(`/communications/timeline/${comm.customerId}`);
+            this.clearCacheKeySubstring(`/communications/stats/${comm.customerId}`);
+        }
         return result.data;
       } catch (error) {
         this.logger.error(`Error updating status for communication ${id}:`, error.message);
@@ -917,8 +1070,7 @@ export class HvacApiIntegrationService {
       }
   }
 
-  // ServiceTicket Management - Methods to be implemented
-
+  // ServiceTicket Management
   async getServiceTicketsList(
     filters?: HvacServiceTicketFilterInput,
     limit = 50,
@@ -983,7 +1135,11 @@ export class HvacApiIntegrationService {
     );
     this.clearCacheKeySubstring('/tickets');
     if (input.customerId) {
-      this.clearCacheKeySubstring(`/customers/${input.customerId}/tickets`); // Example specific invalidation
+      this.clearCacheKeySubstring(`/customers/${input.customerId}/tickets`);
+    }
+    // If there's a view for tickets by equipment, clear that too
+    if (input.equipmentIds && input.equipmentIds.length > 0) {
+        input.equipmentIds.forEach(eqId => this.clearCacheKeySubstring(`/equipment/${eqId}/tickets`));
     }
     this.logger.log(`Successfully created service ticket, ID: ${result.data.id}`);
     return result.data;
@@ -991,44 +1147,62 @@ export class HvacApiIntegrationService {
 
   async updateActualServiceTicketRecord(id: string, input: UpdateHvacServiceTicketInput): Promise<HvacServiceTicketData> {
     this.logger.log(`Updating service ticket ID ${id} in HVAC API with data: ${JSON.stringify(input)}`);
+    const existingTicket = await this.getServiceTicketDetailsById(id); // For cache invalidation if IDs change or are not in input
     const payload = { ...input };
-    delete payload.id; // ID is in URL
+    delete payload.id;
 
     const result = await this.performOptimizedRequest<HvacServiceTicketData>(
-      'PUT', // Or PATCH
+      'PUT',
       `/tickets/${id}`,
       payload,
     );
     this.clearCacheKeySubstring(`/tickets/${id}`);
     this.clearCacheKeySubstring('/tickets');
+
+    const customerId = input.customerId || existingTicket?.customerId || result.data.customerId;
+    if (customerId) {
+      this.clearCacheKeySubstring(`/customers/${customerId}/tickets`);
+    }
+    const equipmentIds = input.equipmentIds || existingTicket?.equipmentIds || result.data.equipmentIds;
+    if (equipmentIds && equipmentIds.length > 0) {
+        equipmentIds.forEach(eqId => this.clearCacheKeySubstring(`/equipment/${eqId}/tickets`));
+    }
+    // If status change affects other aggregate views (e.g. "open tickets"), clear those too.
     this.logger.log(`Successfully updated service ticket, ID: ${result.data.id}`);
     return result.data;
   }
 
   async deleteActualServiceTicketRecord(id: string): Promise<boolean> {
     this.logger.log(`Deleting service ticket ID ${id} from HVAC API.`);
+    const ticket = await this.getServiceTicketDetailsById(id); // Fetch for cache invalidation details
     await this.performOptimizedRequest(
       'DELETE',
       `/tickets/${id}`,
     );
     this.clearCacheKeySubstring(`/tickets/${id}`);
     this.clearCacheKeySubstring('/tickets');
+    if (ticket?.customerId) {
+      this.clearCacheKeySubstring(`/customers/${ticket.customerId}/tickets`);
+    }
+    if (ticket?.equipmentIds && ticket.equipmentIds.length > 0) {
+        ticket.equipmentIds.forEach(eqId => this.clearCacheKeySubstring(`/equipment/${eqId}/tickets`));
+    }
     this.logger.log(`Successfully deleted service ticket ID: ${id}`);
     return true;
   }
 
-  // Contract Management - Methods to be implemented
+  // Contract Management
 
   async getContractsList(
     filters?: HvacContractFilterInput,
     limit = 50,
     offset = 0,
-  ): Promise<{ contracts: any[]; total: number }> { // TODO: Replace 'any' with HvacContractData or similar interface
-    const queryParams: Record<string, string | number | boolean> = { limit, offset };
+  ): Promise<{ contracts: HvacContractType[]; total: number }> {
+    const queryParams: Record<string, string | number | boolean | string[]> = { limit, offset };
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          if (Array.isArray(value)) {
+           if (Array.isArray(value)) {
             queryParams[key] = value.join(',');
           } else if (value instanceof Date) {
             queryParams[key] = value.toISOString();
@@ -1040,13 +1214,13 @@ export class HvacApiIntegrationService {
     }
     this.logger.debug(`Fetching contracts list with query params: ${JSON.stringify(queryParams)}`);
 
-    interface HvacApiContractListResponse { // Define expected response structure
-      data?: any[]; // TODO: Replace 'any' with specific Contract interface for HVAC API
+    interface HvacApiContractListResponse {
+      data?: HvacContractType[];
       totalCount?: number;
     }
     const result = await this.performOptimizedRequest<HvacApiContractListResponse>(
       'GET',
-      '/contracts', // Assuming endpoint for contracts
+      '/contracts',
       undefined,
       queryParams,
     );
@@ -1056,10 +1230,10 @@ export class HvacApiIntegrationService {
     return { contracts: contractList, total };
   }
 
-  async getContractDetailsById(id: string): Promise<any | null> { // TODO: Replace 'any'
+  async getContractDetailsById(id: string): Promise<HvacContractType | null> {
     this.logger.debug(`Fetching contract details for ID: ${id}`);
     try {
-      const result = await this.performOptimizedRequest<any>( // Replace 'any'
+      const result = await this.performOptimizedRequest<HvacContractType>(
         'GET',
         `/contracts/${id}`,
       );
@@ -1073,9 +1247,9 @@ export class HvacApiIntegrationService {
     }
   }
 
-  async createActualContractRecord(input: CreateHvacContractInput): Promise<any> { // TODO: Replace 'any'
+  async createActualContractRecord(input: CreateHvacContractInput): Promise<HvacContractType> {
     this.logger.log(`Creating new contract in HVAC API with data: ${JSON.stringify(input)}`);
-    const result = await this.performOptimizedRequest<any>( // Replace 'any'
+    const result = await this.performOptimizedRequest<HvacContractType>(
       'POST',
       '/contracts',
       input,
@@ -1088,31 +1262,139 @@ export class HvacApiIntegrationService {
     return result.data;
   }
 
-  async updateActualContractRecord(id: string, input: UpdateHvacContractInput): Promise<any> { // TODO: Replace 'any'
+  async updateActualContractRecord(id: string, input: UpdateHvacContractInput): Promise<HvacContractType> {
     this.logger.log(`Updating contract ID ${id} in HVAC API with data: ${JSON.stringify(input)}`);
+    const existingContract = await this.getContractDetailsById(id); // For cache invalidation if customerId changes
     const payload = { ...input };
-    delete payload.id;
 
-    const result = await this.performOptimizedRequest<any>( // Replace 'any'
+    const result = await this.performOptimizedRequest<HvacContractType>(
       'PUT',
       `/contracts/${id}`,
       payload,
     );
     this.clearCacheKeySubstring(`/contracts/${id}`);
     this.clearCacheKeySubstring('/contracts');
+    const customerId = input.customerId || existingContract?.customerId || result.data.customerId;
+    if (customerId) {
+      this.clearCacheKeySubstring(`/customers/${customerId}/contracts`);
+    }
     this.logger.log(`Successfully updated contract, ID: ${result.data.id}`);
     return result.data;
   }
 
   async deleteActualContractRecord(id: string): Promise<boolean> {
     this.logger.log(`Deleting contract ID ${id} from HVAC API.`);
+    const contract = await this.getContractDetailsById(id); // Fetch for customerId
     await this.performOptimizedRequest(
       'DELETE',
       `/contracts/${id}`,
     );
     this.clearCacheKeySubstring(`/contracts/${id}`);
     this.clearCacheKeySubstring('/contracts');
+    if (contract?.customerId) {
+      this.clearCacheKeySubstring(`/customers/${contract.customerId}/contracts`);
+    }
     this.logger.log(`Successfully deleted contract ID: ${id}`);
+    return true;
+  }
+
+  // Quote Management
+  async getQuotesList(
+    filters?: HvacQuoteFilterInput,
+    limit = 50,
+    offset = 0,
+  ): Promise<{ quotes: HvacQuote[]; total: number }> {
+    const queryParams: Record<string, string | number | boolean | string[]> = { limit, offset };
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams[key] = Array.isArray(value) ? value.join(',') : String(value);
+        }
+      });
+    }
+    this.logger.debug(`Fetching quotes list with query params: ${JSON.stringify(queryParams)}`);
+
+    interface HvacApiQuoteListResponse {
+      data?: HvacQuote[];
+      totalCount?: number;
+    }
+    const result = await this.performOptimizedRequest<HvacApiQuoteListResponse>(
+      'GET',
+      '/quotes', // Assuming endpoint for quotes
+      undefined,
+      queryParams,
+    );
+    const quoteList = result.data.data || [];
+    const total = result.data.totalCount ?? quoteList.length;
+    this.logger.debug(`Fetched ${quoteList.length} quotes, total available: ${total}`);
+    return { quotes: quoteList, total };
+  }
+
+  async getQuoteDetailsById(id: string): Promise<HvacQuote | null> {
+    this.logger.debug(`Fetching quote details for ID: ${id}`);
+    try {
+      const result = await this.performOptimizedRequest<HvacQuote>(
+        'GET',
+        `/quotes/${id}`,
+      );
+      return result.data;
+    } catch (error) {
+      if (error instanceof HvacApiNotFoundError) {
+        this.logger.warn(`Quote with ID ${id} not found in HVAC API.`);
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async createActualQuoteRecord(input: CreateHvacQuoteInput): Promise<HvacQuote> {
+    this.logger.log(`Creating new quote in HVAC API with data: ${JSON.stringify(input)}`);
+    const result = await this.performOptimizedRequest<HvacQuote>(
+      'POST',
+      '/quotes',
+      input,
+    );
+    this.clearCacheKeySubstring('/quotes'); // Clear general list of quotes
+    if (input.customerId) {
+      this.clearCacheKeySubstring(`/customers/${input.customerId}/quotes`); // Clear customer-specific quotes
+    }
+    this.logger.log(`Successfully created quote, ID: ${result.data.id}`);
+    return result.data;
+  }
+
+  async updateActualQuoteRecord(id: string, input: UpdateHvacQuoteInput): Promise<HvacQuote> {
+    this.logger.log(`Updating quote ID ${id} in HVAC API with data: ${JSON.stringify(input)}`);
+    const existingQuote = await this.getQuoteDetailsById(id); // For cache invalidation if customerId changes
+    const payload = { ...input };
+
+    const result = await this.performOptimizedRequest<HvacQuote>(
+      'PUT',
+      `/quotes/${id}`,
+      payload,
+    );
+    this.clearCacheKeySubstring(`/quotes/${id}`); // Clear specific quote
+    this.clearCacheKeySubstring('/quotes'); // Clear general list
+    const customerId = input.customerId || existingQuote?.customerId || result.data.customerId;
+    if (customerId) {
+      this.clearCacheKeySubstring(`/customers/${customerId}/quotes`);
+    }
+    this.logger.log(`Successfully updated quote, ID: ${result.data.id}`);
+    return result.data;
+  }
+
+  async deleteActualQuoteRecord(id: string): Promise<boolean> {
+    this.logger.log(`Deleting quote ID ${id} from HVAC API.`);
+    const quote = await this.getQuoteDetailsById(id); // Fetch for customerId
+    await this.performOptimizedRequest(
+      'DELETE',
+      `/quotes/${id}`,
+    );
+    this.clearCacheKeySubstring(`/quotes/${id}`);
+    this.clearCacheKeySubstring('/quotes');
+    if (quote?.customerId) {
+      this.clearCacheKeySubstring(`/customers/${quote.customerId}/quotes`);
+    }
+    this.logger.log(`Successfully deleted quote ID: ${id}`);
     return true;
   }
 }

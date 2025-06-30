@@ -74,3 +74,18 @@ export class HvacCustomerType {
   @Field(() => [HvacPropertyType], { nullable: 'itemsAndList' })
   properties?: HvacPropertyType[];
 }
+
+@ObjectType('HvacCustomerListResponse')
+export class HvacCustomerListResponse {
+  @Field(() => [HvacCustomerType])
+  customers: HvacCustomerType[];
+
+  @Field(() => Number)
+  total: number;
+
+  @Field(() => Number)
+  page: number;
+
+  @Field(() => Number)
+  limit: number;
+}
