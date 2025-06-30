@@ -10,14 +10,15 @@
  * - LazyKanbanBoard: ~200KB (Drag-and-drop libraries)
  * - LazyMaintenanceDashboard: ~300KB (Calendar + Chart dependencies)
  * - LazyCustomer360: ~400KB (Complex data visualization)
- * 
- * Total estimated savings: ~1.4MB from main bundle
+ * - HvacLazyChart: ~300KB (Chart.js dependencies)
+ * - HvacLazyCalendar: ~150KB (Date manipulation libraries)
+ * - HvacLazyDataTable: ~200KB (Virtual scrolling and filtering)
+ *
+ * Total estimated savings: ~2.05MB from main bundle
  */
 
 // Core lazy components
-export { LazyCustomer360 } from './LazyCustomer360';
-export { LazyCustomer360CommunicationTab } from './LazyCustomer360';
-export { LazyCustomer360EquipmentTab } from './LazyCustomer360';
+export { LazyCustomer360, LazyCustomer360CommunicationTab, LazyCustomer360EquipmentTab } from './LazyCustomer360';
 
 // Dashboard lazy components
 export { LazyAnalyticsDashboard } from './LazyAnalyticsDashboard';
@@ -25,6 +26,13 @@ export { LazyMaintenanceDashboard } from './LazyMaintenanceDashboard';
 
 // Interactive components
 export { LazyKanbanBoard } from './LazyKanbanBoard';
+
+// Enhanced PrimeReact Lazy Components
+export {
+    HvacLazyCalendar, HvacLazyChart, HvacLazyDataTable,
+    PRIMEREACT_BUNDLE_SAVINGS,
+    preloadCriticalPrimeReactComponents
+} from './LazyPrimeReactComponents';
 
 // Type definitions for lazy components
 export interface LazyComponentProps {

@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+
 import { HvacConfigService } from 'src/engine/core-modules/hvac-config/hvac-config.service';
-import { HvacSentryService, HVACErrorContext } from './hvac-sentry.service';
+
+import { HVACErrorContext, HvacSentryService } from './hvac-sentry.service';
 
 export interface AlertRule {
   id: string;
@@ -100,7 +102,9 @@ export class HvacAlertNotificationService {
         notificationChannels: [
           {
             type: 'email',
-            config: { recipients: ['admin@hvac-company.com', 'tech@hvac-company.com'] },
+            config: {
+              recipients: ['admin@hvac-company.com', 'tech@hvac-company.com'],
+            },
             enabled: true,
           },
         ],
@@ -165,7 +169,7 @@ export class HvacAlertNotificationService {
       },
     ];
 
-    defaultRules.forEach(rule => {
+    defaultRules.forEach((rule) => {
       this.alertRules.set(rule.id, rule);
     });
 
@@ -178,7 +182,7 @@ export class HvacAlertNotificationService {
 
       try {
         const shouldAlert = this.evaluateCondition(rule.condition, metrics);
-        
+
         if (shouldAlert) {
           await this.triggerAlert(rule, metrics);
         } else {
@@ -194,15 +198,18 @@ export class HvacAlertNotificationService {
             operation: 'evaluate_alert_rule',
             additionalData: { ruleId, ruleName: rule.name },
           },
-          'error'
+          'error',
         );
       }
     }
   }
 
-  private evaluateCondition(condition: AlertCondition, metrics: Record<string, any>): boolean {
+  private evaluateCondition(
+    condition: AlertCondition,
+    metrics: Record<string, any>,
+  ): boolean {
     const value = this.getMetricValue(condition.metric, metrics);
-    
+
     if (value === undefined || value === null) {
       return false;
     }
@@ -225,10 +232,13 @@ export class HvacAlertNotificationService {
     }
   }
 
-  private getMetricValue(metricPath: string, metrics: Record<string, any>): any {
+  private getMetricValue(
+    metricPath: string,
+    metrics: Record<string, any>,
+  ): any {
     const parts = metricPath.split('.');
     let value = metrics;
-    
+
     for (const part of parts) {
       if (value && typeof value === 'object' && part in value) {
         value = value[part];
@@ -236,19 +246,25 @@ export class HvacAlertNotificationService {
         return undefined;
       }
     }
-    
+
     return value;
   }
 
-  private async triggerAlert(rule: AlertRule, metrics: Record<string, any>): Promise<void> {
+  private async triggerAlert(
+    rule: AlertRule,
+    metrics: Record<string, any>,
+  ): Promise<void> {
     const alertId = `${rule.id}-${Date.now()}`;
-    
+
     // Check cooldown
     const lastNotification = this.lastNotificationTime.get(rule.id);
+
     if (lastNotification) {
       const cooldownMs = rule.cooldownMinutes * 60 * 1000;
+
       if (Date.now() - lastNotification.getTime() < cooldownMs) {
         this.logger.debug(`Alert rule ${rule.id} is in cooldown period`);
+
         return;
       }
     }
@@ -297,47 +313,66 @@ export class HvacAlertNotificationService {
             severity: rule.severity,
           },
         },
-        'error'
+        'error',
       );
     }
   }
 
-  private generateAlertMessage(rule: AlertRule, metrics: Record<string, any>): string {
+  private generateAlertMessage(
+    rule: AlertRule,
+    metrics: Record<string, any>,
+  ): string {
     const value = this.getMetricValue(rule.condition.metric, metrics);
+
     return `${rule.name}: ${rule.condition.metric} is ${value} (threshold: ${rule.condition.operator} ${rule.condition.threshold})`;
   }
 
-  private getRelevantMetrics(metricPath: string, metrics: Record<string, any>): Record<string, any> {
+  private getRelevantMetrics(
+    metricPath: string,
+    metrics: Record<string, any>,
+  ): Record<string, any> {
     // Extract relevant metrics for the alert context
     const parts = metricPath.split('.');
     const category = parts[0];
-    
+
     if (metrics[category]) {
       return { [category]: metrics[category] };
     }
-    
+
     return { [metricPath]: this.getMetricValue(metricPath, metrics) };
   }
 
-  private async sendNotifications(alert: Alert, channels: NotificationChannel[]): Promise<void> {
+  private async sendNotifications(
+    alert: Alert,
+    channels: NotificationChannel[],
+  ): Promise<void> {
     const notificationPromises = channels
-      .filter(channel => channel.enabled)
-      .map(channel => this.sendNotification(alert, channel));
+      .filter((channel) => channel.enabled)
+      .map((channel) => this.sendNotification(alert, channel));
 
     const results = await Promise.allSettled(notificationPromises);
-    
+
     results.forEach((result, index) => {
       const channel = channels[index];
+
       if (result.status === 'fulfilled') {
         alert.notificationsSent.push(channel.type);
-        this.logger.log(`Notification sent via ${channel.type} for alert ${alert.id}`);
+        this.logger.log(
+          `Notification sent via ${channel.type} for alert ${alert.id}`,
+        );
       } else {
-        this.logger.error(`Failed to send notification via ${channel.type}`, result.reason);
+        this.logger.error(
+          `Failed to send notification via ${channel.type}`,
+          result.reason,
+        );
       }
     });
   }
 
-  private async sendNotification(alert: Alert, channel: NotificationChannel): Promise<void> {
+  private async sendNotification(
+    alert: Alert,
+    channel: NotificationChannel,
+  ): Promise<void> {
     switch (channel.type) {
       case 'email':
         await this.sendEmailNotification(alert, channel.config);
@@ -356,7 +391,10 @@ export class HvacAlertNotificationService {
     }
   }
 
-  private async sendEmailNotification(alert: Alert, config: any): Promise<void> {
+  private async sendEmailNotification(
+    alert: Alert,
+    config: any,
+  ): Promise<void> {
     // In production, this would integrate with an email service
     this.logger.log(`[EMAIL] Alert: ${alert.message}`, {
       recipients: config.recipients,
@@ -364,7 +402,10 @@ export class HvacAlertNotificationService {
     });
   }
 
-  private async sendSlackNotification(alert: Alert, config: any): Promise<void> {
+  private async sendSlackNotification(
+    alert: Alert,
+    config: any,
+  ): Promise<void> {
     // In production, this would integrate with Slack API
     this.logger.log(`[SLACK] Alert: ${alert.message}`, {
       channel: config.channel,
@@ -372,7 +413,10 @@ export class HvacAlertNotificationService {
     });
   }
 
-  private async sendWebhookNotification(alert: Alert, config: any): Promise<void> {
+  private async sendWebhookNotification(
+    alert: Alert,
+    config: any,
+  ): Promise<void> {
     // In production, this would make HTTP requests to webhook URLs
     this.logger.log(`[WEBHOOK] Alert: ${alert.message}`, {
       url: config.url,
@@ -389,14 +433,15 @@ export class HvacAlertNotificationService {
   }
 
   private async checkForResolution(ruleId: string): Promise<void> {
-    const activeAlerts = Array.from(this.alerts.values())
-      .filter(alert => alert.ruleId === ruleId && !alert.resolved);
+    const activeAlerts = Array.from(this.alerts.values()).filter(
+      (alert) => alert.ruleId === ruleId && !alert.resolved,
+    );
 
     for (const alert of activeAlerts) {
       alert.resolved = true;
       alert.resolvedAt = new Date();
-      
-      this.logger.info(`Alert resolved: ${alert.message}`, {
+
+      this.logger.log(`Alert resolved: ${alert.message}`, {
         alertId: alert.id,
         duration: alert.resolvedAt.getTime() - alert.timestamp.getTime(),
       });
@@ -407,7 +452,7 @@ export class HvacAlertNotificationService {
 
   // Public API
   getActiveAlerts(): Alert[] {
-    return Array.from(this.alerts.values()).filter(alert => !alert.resolved);
+    return Array.from(this.alerts.values()).filter((alert) => !alert.resolved);
   }
 
   getAllAlerts(): Alert[] {
@@ -417,30 +462,42 @@ export class HvacAlertNotificationService {
   getAlertingMetrics(): AlertingMetrics {
     const allAlerts = this.getAllAlerts();
     const activeAlerts = this.getActiveAlerts();
-    const resolvedAlerts = allAlerts.filter(alert => alert.resolved);
+    const resolvedAlerts = allAlerts.filter((alert) => alert.resolved);
 
-    const alertsBySerity = allAlerts.reduce((acc, alert) => {
-      acc[alert.severity] = (acc[alert.severity] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const alertsByseverity = allAlerts.reduce(
+      (acc, alert) => {
+        acc[alert.severity] = (acc[alert.severity] || 0) + 1;
 
-    const averageResolutionTime = resolvedAlerts.length > 0
-      ? resolvedAlerts.reduce((sum, alert) => {
-          if (alert.resolvedAt) {
-            return sum + (alert.resolvedAt.getTime() - alert.timestamp.getTime());
-          }
-          return sum;
-        }, 0) / resolvedAlerts.length
-      : 0;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
-    const totalNotifications = allAlerts.reduce((sum, alert) => sum + alert.notificationsSent.length, 0);
-    const notificationSuccessRate = totalNotifications > 0 ? totalNotifications / (allAlerts.length * 2) : 1; // Assuming 2 channels per alert
+    const averageResolutionTime =
+      resolvedAlerts.length > 0
+        ? resolvedAlerts.reduce((sum, alert) => {
+            if (alert.resolvedAt) {
+              return (
+                sum + (alert.resolvedAt.getTime() - alert.timestamp.getTime())
+              );
+            }
+
+            return sum;
+          }, 0) / resolvedAlerts.length
+        : 0;
+
+    const totalNotifications = allAlerts.reduce(
+      (sum, alert) => sum + alert.notificationsSent.length,
+      0,
+    );
+    const notificationSuccessRate =
+      totalNotifications > 0 ? totalNotifications / (allAlerts.length * 2) : 1; // Assuming 2 channels per alert
 
     return {
       totalAlerts: allAlerts.length,
       activeAlerts: activeAlerts.length,
       resolvedAlerts: resolvedAlerts.length,
-      alertsBySerity,
+      alertsByseverity,
       averageResolutionTime,
       notificationSuccessRate,
     };
@@ -453,8 +510,10 @@ export class HvacAlertNotificationService {
 
   updateAlertRule(ruleId: string, updates: Partial<AlertRule>): void {
     const existingRule = this.alertRules.get(ruleId);
+
     if (existingRule) {
       const updatedRule = { ...existingRule, ...updates };
+
       this.alertRules.set(ruleId, updatedRule);
       this.logger.log(`Updated alert rule: ${updatedRule.name}`);
     }

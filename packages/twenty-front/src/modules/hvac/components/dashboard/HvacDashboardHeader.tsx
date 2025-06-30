@@ -14,8 +14,8 @@ import { Button } from 'primereact/button';
 import React from 'react';
 import { IconGauge as IconChartBar, IconSearch, IconTag as IconTicket, IconTool } from 'twenty-ui/display';
 
-// Types
-export type TabType = 'overview' | 'search' | 'tickets' | 'equipment' | 'analytics';
+// Types - Updated to match HVAC state management
+export type TabType = 'overview' | 'search' | 'tickets' | 'equipment' | 'maintenance' | 'analytics';
 
 interface Tab {
   id: TabType;
@@ -34,6 +34,7 @@ const tabs: Tab[] = [
   { id: 'search', label: 'Wyszukiwanie', icon: IconSearch },
   { id: 'tickets', label: 'Zgłoszenia', icon: IconTicket },
   { id: 'equipment', label: 'Sprzęt', icon: IconTool },
+  { id: 'maintenance', label: 'Konserwacja', icon: IconTool },
   { id: 'analytics', label: 'Analityka', icon: IconChartBar },
 ];
 

@@ -51,6 +51,21 @@ interface HVACPerformanceMonitoring {
     metadata?: Record<string, any>
   ) => T;
   addPerformanceBreadcrumb: (message: string, data?: Record<string, any>) => void;
+  // Core Web Vitals integration
+  recordSearchPerformance: (
+    query: string,
+    searchType: 'semantic' | 'filter' | 'autocomplete',
+    startTime: number,
+    resultCount: number,
+    cacheHit?: boolean
+  ) => void;
+  recordComponentPerformance: (
+    componentName: string,
+    renderTime: number,
+    mountTime?: number,
+    updateTime?: number
+  ) => void;
+  getPerformanceSummary: () => any;
 }
 
 // Active operations tracking
@@ -265,12 +280,70 @@ export const useHVACPerformanceMonitoring = (): HVACPerformanceMonitoring => {
     addHVACBreadcrumb(message, 'performance', 'info', data);
   }, []);
 
+  // Record search performance with Core Web Vitals integration
+  const recordSearchPerformance = useCallback((
+    query: string,
+    searchType: 'semantic' | 'filter' | 'autocomplete',
+    startTime: number,
+    resultCount: number,
+    cacheHit: boolean = false
+  ): void => {
+    performanceMonitoringService.recordSearchPerformance(
+      query,
+      searchType,
+      startTime,
+      resultCount,
+      cacheHit
+    );
+
+    // Also add breadcrumb for tracking
+    const responseTime = performance.now() - startTime;
+    addPerformanceBreadcrumb(`Search completed: ${searchType}`, {
+      query: query.substring(0, 50),
+      responseTime,
+      resultCount,
+      cacheHit,
+    });
+  }, [addPerformanceBreadcrumb]);
+
+  // Record component performance
+  const recordComponentPerformance = useCallback((
+    componentName: string,
+    renderTime: number,
+    mountTime: number = 0,
+    updateTime: number = 0
+  ): void => {
+    performanceMonitoringService.recordComponentPerformance(
+      componentName,
+      renderTime,
+      mountTime,
+      updateTime
+    );
+
+    // Add breadcrumb for slow components
+    if (renderTime > PERFORMANCE_THRESHOLDS.ACCEPTABLE) {
+      addPerformanceBreadcrumb(`Slow component render: ${componentName}`, {
+        renderTime,
+        mountTime,
+        updateTime,
+      });
+    }
+  }, [addPerformanceBreadcrumb]);
+
+  // Get performance summary
+  const getPerformanceSummary = useCallback(() => {
+    return performanceMonitoringService.getPerformanceSummary();
+  }, []);
+
   return {
     startOperation,
     endOperation,
     measureAsync,
     measureSync,
     addPerformanceBreadcrumb,
+    recordSearchPerformance,
+    recordComponentPerformance,
+    getPerformanceSummary,
   };
 };
 

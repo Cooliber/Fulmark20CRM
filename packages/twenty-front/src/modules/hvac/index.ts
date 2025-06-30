@@ -1,6 +1,9 @@
 // HVAC Module Exports
 // "Pasja rodzi profesjonalizm" - Fulmark HVAC Professional CRM
 
+// State Management - Following Twenty CRM cursor rules
+export * from './states';
+
 // Components
 export { HvacDashboard } from './components/HvacDashboard';
 export { HvacSemanticSearch } from './components/HvacSemanticSearch';
@@ -11,14 +14,59 @@ export { Customer360CommunicationTabEnhanced } from './components/customer360/Cu
 
 // Lazy Loading Components - Bundle Size Optimization
 export {
-    LazyAnalyticsDashboard, LazyCustomer360,
+    HvacLazyCalendar, HvacLazyChart, HvacLazyDataTable, LazyAnalyticsDashboard, LazyCustomer360,
     LazyCustomer360CommunicationTab,
     LazyCustomer360EquipmentTab, LazyKanbanBoard,
-    LazyMaintenanceDashboard, createLoadingTracker, preloadHeavyComponents
+    LazyMaintenanceDashboard, PRIMEREACT_BUNDLE_SAVINGS, createLoadingTracker, preloadCriticalPrimeReactComponents, preloadHeavyComponents
 } from './components/lazy';
 
-// Performance Components
-export { PerformanceMonitor } from './components/performance/PerformanceMonitor';
+// Bundle Optimization Services
+export {
+    BUNDLE_SIZE_ESTIMATES, BundleOptimizationService, bundleOptimizationService, type BundleMetrics, type ComponentType,
+    type LoadingStrategy, type OptimizationConfig
+} from './services/BundleOptimizationService';
+
+// Advanced Lazy Loading Hooks
+export {
+    useIdlePreload, useLazyComponent,
+    useLazyIntersectionObserver, type LazyComponentState,
+    type UseLazyComponentOptions,
+    type UseLazyComponentReturn
+} from './hooks/useLazyComponent';
+
+// Performance Monitoring Services
+export {
+    PERFORMANCE_THRESHOLDS as CORE_WEB_VITALS_THRESHOLDS, PerformanceMonitoringService, performanceMonitoringService, type ComponentPerformanceMetric, type CoreWebVitalMetric,
+    type PerformanceMetric,
+    type SearchPerformanceMetric
+} from './services/PerformanceMonitoringService';
+
+// Performance Monitoring Components
+export { PerformanceMonitor } from './components/monitoring/PerformanceMonitor';
+
+// Search Components - Refactored for cursor rules compliance
+export { SearchHeader, SearchResults, SearchStats } from './components/search';
+
+// Error Handling and Fault Tolerance
+export { HvacErrorBoundary } from './components/error-handling';
+export {
+    useFaultTolerance,
+    useFaultToleranceHealth,
+    useFaultTolerantApi,
+    useFaultTolerantSearch,
+    type FaultToleranceConfig,
+    type FaultToleranceResult,
+    type ServiceType
+} from './hooks/useFaultTolerance';
+export {
+    CircuitBreakerService,
+    hvacApiCircuitBreaker, searchCircuitBreaker, weaviateCircuitBreaker, type CircuitBreakerConfig,
+    type CircuitBreakerMetrics, type CircuitBreakerState
+} from './services/CircuitBreakerService';
+export {
+    RetryService, apiRetryService, criticalRetryService, networkRetryService, searchRetryService, type RetryConfig,
+    type RetryResult, type RetryStrategy
+} from './services/RetryService';
 
 // Kanban Components - Use lazy versions for bundle optimization
 export { CreateCardDialog } from './components/kanban/CreateCardDialog';

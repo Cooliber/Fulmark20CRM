@@ -1,21 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { Card } from 'primereact/card';
 import { motion } from 'framer-motion';
+import { Card } from 'primereact/card';
+import React, { useCallback, useEffect } from 'react';
+import { useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil';
 
 // HVAC Dashboard Components
 import {
-  HvacDashboardHeader,
-  HvacDashboardContent,
-  type TabType,
+    HvacDashboardContent,
+    HvacDashboardHeader,
+    type TabType,
 } from './dashboard';
+
+// HVAC State Management - Following Twenty CRM cursor rules
+import {
+    hvacDashboardActiveTabState,
+    hvacDashboardErrorState,
+    hvacDashboardIsHealthySelector,
+    hvacDashboardLastRefreshState,
+    hvacDashboardLoadingState,
+    type HvacDashboardTab,
+} from '../states';
 
 // HVAC Error Handling & Monitoring
 import {
-  HVACErrorBoundary,
-  useHVACErrorReporting,
-  trackHVACUserAction,
-  trackHVACNavigation,
-  initializeHVACSentry,
+    HVACErrorBoundary,
+    initializeHVACSentry,
+    trackHVACNavigation,
+    trackHVACUserAction,
+    useHVACErrorReporting,
 } from '../index';
 
 // PrimeReact/PrimeFlex styling classes
@@ -31,7 +42,12 @@ interface HvacDashboardProps {
 export const HvacDashboard: React.FC<HvacDashboardProps> = ({
   defaultTab = 'overview',
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
+  // Recoil State Management - Following Twenty CRM cursor rules
+  const [activeTab, setActiveTab] = useRecoilState(hvacDashboardActiveTabState);
+  const isLoading = useRecoilValue(hvacDashboardLoadingState);
+  const error = useRecoilValue(hvacDashboardErrorState);
+  const isHealthy = useRecoilValue(hvacDashboardIsHealthySelector);
+  const setLastRefresh = useSetRecoilState(hvacDashboardLastRefreshState);
 
   // HVAC Error Reporting & Performance Monitoring
   const { reportError, addBreadcrumb } = useHVACErrorReporting();
@@ -58,8 +74,8 @@ export const HvacDashboard: React.FC<HvacDashboardProps> = ({
     initializeSentry();
   }, [addBreadcrumb]);
 
-  // Handle tab change with tracking
-  const handleTabChange = (newTab: TabType) => {
+  // Event handlers - Following Twenty CRM cursor rules (event handlers over useEffect)
+  const handleTabChange = useCallback((newTab: TabType) => {
     try {
       // Track navigation
       trackHVACNavigation(activeTab, newTab, {
@@ -75,6 +91,7 @@ export const HvacDashboard: React.FC<HvacDashboardProps> = ({
       );
 
       setActiveTab(newTab);
+      setLastRefresh(new Date());
       addBreadcrumb(`Tab changed to: ${newTab}`, 'navigation');
     } catch (error) {
       reportError(
@@ -83,7 +100,14 @@ export const HvacDashboard: React.FC<HvacDashboardProps> = ({
         { fromTab: activeTab, toTab: newTab }
       );
     }
-  };
+  }, [activeTab, setActiveTab, setLastRefresh, addBreadcrumb, reportError]);
+
+  // Initialize default tab on mount
+  useEffect(() => {
+    if (defaultTab && defaultTab !== activeTab) {
+      handleTabChange(defaultTab);
+    }
+  }, [defaultTab, activeTab, handleTabChange]);
 
 
 

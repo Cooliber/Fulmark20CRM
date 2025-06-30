@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+
 import { HvacConfigService } from 'src/engine/core-modules/hvac-config/hvac-config.service';
+
+import { HvacAlertNotificationService } from './hvac-alert-notification.service';
 import { HvacApiIntegrationService } from './hvac-api-integration.service';
 import { HVACErrorContext, HvacSentryService } from './hvac-sentry.service';
 import { HvacWeaviateService } from './hvac-weaviate.service';
@@ -99,12 +102,12 @@ export class HvacProductionMonitoringService {
     };
   }
 
-  // Run health checks every 2 minutes
-  @Cron(CronExpression.EVERY_2_MINUTES)
+  // Run health checks every 5 minutes
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async performHealthChecks(): Promise<void> {
     try {
       this.logger.debug('Starting comprehensive health checks');
-      
+
       await Promise.all([
         this.checkHvacApiHealth(),
         this.checkWeaviateHealth(),
@@ -123,7 +126,9 @@ export class HvacProductionMonitoringService {
       this.healthMetrics.timestamp = new Date().toISOString();
       this.healthMetrics.uptime = Date.now() - this.startTime;
 
-      this.logger.debug(`Health check completed. Overall status: ${this.healthMetrics.overall}`);
+      this.logger.debug(
+        `Health check completed. Overall status: ${this.healthMetrics.overall}`,
+      );
     } catch (error) {
       this.logger.error('Health check failed', error);
       this.hvacSentryService.reportHVACError(
@@ -132,13 +137,14 @@ export class HvacProductionMonitoringService {
           context: HVACErrorContext.HEALTH_CHECK,
           operation: 'comprehensive_health_check',
         },
-        'error'
+        'error',
       );
     }
   }
 
   private async checkHvacApiHealth(): Promise<void> {
     const startTime = Date.now();
+
     try {
       const isHealthy = await this.hvacApiService.checkApiHealth();
       const responseTime = Date.now() - startTime;
@@ -147,24 +153,35 @@ export class HvacProductionMonitoringService {
         status: isHealthy ? 'up' : 'down',
         responseTime,
         lastChecked: new Date().toISOString(),
-        errorCount: isHealthy ? 0 : this.healthMetrics.services.hvacApi.errorCount + 1,
+        errorCount: isHealthy
+          ? 0
+          : this.healthMetrics.services.hvacApi.errorCount + 1,
         uptime: isHealthy ? 100 : 0,
       };
 
       if (!isHealthy) {
         this.addAlert('critical', 'hvacApi', 'HVAC API is not responding');
       } else if (responseTime > 5000) {
-        this.addAlert('warning', 'hvacApi', `HVAC API response time is high: ${responseTime}ms`);
+        this.addAlert(
+          'warning',
+          'hvacApi',
+          `HVAC API response time is high: ${responseTime}ms`,
+        );
       }
     } catch (error) {
       this.healthMetrics.services.hvacApi.status = 'down';
       this.healthMetrics.services.hvacApi.errorCount++;
-      this.addAlert('critical', 'hvacApi', `HVAC API health check failed: ${error.message}`);
+      this.addAlert(
+        'critical',
+        'hvacApi',
+        `HVAC API health check failed: ${error.message}`,
+      );
     }
   }
 
   private async checkWeaviateHealth(): Promise<void> {
     const startTime = Date.now();
+
     try {
       const isHealthy = await this.weaviateService.checkHealth();
       const responseTime = Date.now() - startTime;
@@ -173,26 +190,37 @@ export class HvacProductionMonitoringService {
         status: isHealthy ? 'up' : 'down',
         responseTime,
         lastChecked: new Date().toISOString(),
-        errorCount: isHealthy ? 0 : this.healthMetrics.services.weaviate.errorCount + 1,
+        errorCount: isHealthy
+          ? 0
+          : this.healthMetrics.services.weaviate.errorCount + 1,
         uptime: isHealthy ? 100 : 0,
       };
 
       if (!isHealthy) {
-        this.addAlert('critical', 'weaviate', 'Weaviate service is not responding');
+        this.addAlert(
+          'critical',
+          'weaviate',
+          'Weaviate service is not responding',
+        );
       }
     } catch (error) {
       this.healthMetrics.services.weaviate.status = 'down';
       this.healthMetrics.services.weaviate.errorCount++;
-      this.addAlert('critical', 'weaviate', `Weaviate health check failed: ${error.message}`);
+      this.addAlert(
+        'critical',
+        'weaviate',
+        `Weaviate health check failed: ${error.message}`,
+      );
     }
   }
 
   private async checkDatabaseHealth(): Promise<void> {
     const startTime = Date.now();
+
     try {
       // Simple database health check - in production this would be more comprehensive
       const responseTime = Date.now() - startTime;
-      
+
       this.healthMetrics.services.database = {
         status: 'up',
         responseTime,
@@ -203,14 +231,18 @@ export class HvacProductionMonitoringService {
     } catch (error) {
       this.healthMetrics.services.database.status = 'down';
       this.healthMetrics.services.database.errorCount++;
-      this.addAlert('critical', 'database', `Database health check failed: ${error.message}`);
+      this.addAlert(
+        'critical',
+        'database',
+        `Database health check failed: ${error.message}`,
+      );
     }
   }
 
   private async checkCacheHealth(): Promise<void> {
     try {
       const cacheStats = this.hvacApiService.getCacheStats();
-      
+
       this.healthMetrics.services.cache = {
         status: 'up',
         responseTime: 1, // Cache is always fast
@@ -221,18 +253,26 @@ export class HvacProductionMonitoringService {
 
       // Check if cache is getting too large
       if (cacheStats.size > 1000) {
-        this.addAlert('warning', 'cache', `Cache size is large: ${cacheStats.size} entries`);
+        this.addAlert(
+          'warning',
+          'cache',
+          `Cache size is large: ${cacheStats.size} entries`,
+        );
       }
     } catch (error) {
       this.healthMetrics.services.cache.status = 'degraded';
-      this.addAlert('warning', 'cache', `Cache health check failed: ${error.message}`);
+      this.addAlert(
+        'warning',
+        'cache',
+        `Cache health check failed: ${error.message}`,
+      );
     }
   }
 
   private async updatePerformanceMetrics(): Promise<void> {
     try {
       const performanceData = await this.hvacApiService.getPerformanceMetrics();
-      
+
       this.healthMetrics.performance = {
         averageResponseTime: performanceData.averageResponseTime,
         requestsPerMinute: performanceData.totalRequests / 60, // Simplified calculation
@@ -242,11 +282,19 @@ export class HvacProductionMonitoringService {
 
       // Performance alerts
       if (performanceData.averageResponseTime > 1000) {
-        this.addAlert('warning', 'performance', `High average response time: ${performanceData.averageResponseTime}ms`);
+        this.addAlert(
+          'warning',
+          'performance',
+          `High average response time: ${performanceData.averageResponseTime}ms`,
+        );
       }
-      
+
       if (performanceData.errorRate > 0.05) {
-        this.addAlert('critical', 'performance', `High error rate: ${(performanceData.errorRate * 100).toFixed(2)}%`);
+        this.addAlert(
+          'critical',
+          'performance',
+          `High error rate: ${(performanceData.errorRate * 100).toFixed(2)}%`,
+        );
       }
     } catch (error) {
       this.logger.error('Failed to update performance metrics', error);
@@ -257,20 +305,28 @@ export class HvacProductionMonitoringService {
     try {
       // In production, these would be actual system metrics
       const memoryUsage = process.memoryUsage();
-      
+
       this.healthMetrics.resources = {
         memoryUsage: memoryUsage.heapUsed / memoryUsage.heapTotal,
         cpuUsage: 0.25, // Placeholder - would use actual CPU monitoring
-        diskUsage: 0.60, // Placeholder - would use actual disk monitoring
+        diskUsage: 0.6, // Placeholder - would use actual disk monitoring
       };
 
       // Resource alerts
       if (this.healthMetrics.resources.memoryUsage > 0.85) {
-        this.addAlert('critical', 'resources', `High memory usage: ${(this.healthMetrics.resources.memoryUsage * 100).toFixed(1)}%`);
+        this.addAlert(
+          'critical',
+          'resources',
+          `High memory usage: ${(this.healthMetrics.resources.memoryUsage * 100).toFixed(1)}%`,
+        );
       }
-      
-      if (this.healthMetrics.resources.diskUsage > 0.90) {
-        this.addAlert('critical', 'resources', `High disk usage: ${(this.healthMetrics.resources.diskUsage * 100).toFixed(1)}%`);
+
+      if (this.healthMetrics.resources.diskUsage > 0.9) {
+        this.addAlert(
+          'critical',
+          'resources',
+          `High disk usage: ${(this.healthMetrics.resources.diskUsage * 100).toFixed(1)}%`,
+        );
       }
     } catch (error) {
       this.logger.error('Failed to update resource metrics', error);
@@ -279,19 +335,28 @@ export class HvacProductionMonitoringService {
 
   private updateOverallHealth(): void {
     const services = Object.values(this.healthMetrics.services);
-    const downServices = services.filter(s => s.status === 'down').length;
-    const degradedServices = services.filter(s => s.status === 'degraded').length;
+    const downServices = services.filter((s) => s.status === 'down').length;
+    const degradedServices = services.filter(
+      (s) => s.status === 'degraded',
+    ).length;
 
     if (downServices > 0) {
       this.healthMetrics.overall = 'critical';
-    } else if (degradedServices > 0 || this.healthMetrics.performance.errorRate > 0.02) {
+    } else if (
+      degradedServices > 0 ||
+      this.healthMetrics.performance.errorRate > 0.02
+    ) {
       this.healthMetrics.overall = 'degraded';
     } else {
       this.healthMetrics.overall = 'healthy';
     }
   }
 
-  private addAlert(level: 'warning' | 'critical', service: string, message: string): void {
+  private addAlert(
+    level: 'warning' | 'critical',
+    service: string,
+    message: string,
+  ): void {
     const alert: HealthAlert = {
       level,
       service,
@@ -301,14 +366,16 @@ export class HvacProductionMonitoringService {
     };
 
     this.alerts.unshift(alert);
-    
+
     // Keep only the latest alerts
     if (this.alerts.length > this.MAX_ALERTS) {
       this.alerts = this.alerts.slice(0, this.MAX_ALERTS);
     }
 
-    this.logger.warn(`Health Alert [${level.toUpperCase()}] ${service}: ${message}`);
-    
+    this.logger.warn(
+      `Health Alert [${level.toUpperCase()}] ${service}: ${message}`,
+    );
+
     // Report critical alerts to Sentry
     if (level === 'critical') {
       this.hvacSentryService.reportHVACError(
@@ -318,25 +385,33 @@ export class HvacProductionMonitoringService {
           operation: 'health_alert',
           additionalData: { service, level },
         },
-        'error'
+        'error',
       );
     }
   }
 
   private processAlerts(): void {
     // Auto-resolve alerts for services that are now healthy
-    this.alerts.forEach(alert => {
+    this.alerts.forEach((alert) => {
       if (!alert.resolved) {
-        const service = this.healthMetrics.services[alert.service as keyof typeof this.healthMetrics.services];
+        const service =
+          this.healthMetrics.services[
+            alert.service as keyof typeof this.healthMetrics.services
+          ];
+
         if (service && service.status === 'up') {
           alert.resolved = true;
-          this.logger.info(`Alert resolved for ${alert.service}: ${alert.message}`);
+          this.logger.log(
+            `Alert resolved for ${alert.service}: ${alert.message}`,
+          );
         }
       }
     });
 
     // Update health metrics with current alerts
-    this.healthMetrics.alerts = this.alerts.filter(a => !a.resolved).slice(0, 10);
+    this.healthMetrics.alerts = this.alerts
+      .filter((a) => !a.resolved)
+      .slice(0, 10);
   }
 
   // Public API
@@ -345,17 +420,18 @@ export class HvacProductionMonitoringService {
   }
 
   getActiveAlerts(): HealthAlert[] {
-    return this.alerts.filter(a => !a.resolved);
+    return this.alerts.filter((a) => !a.resolved);
   }
 
   async forceHealthCheck(): Promise<SystemHealthMetrics> {
     await this.performHealthChecks();
+
     return this.getHealthMetrics();
   }
 
   clearResolvedAlerts(): void {
-    this.alerts = this.alerts.filter(a => !a.resolved);
-    this.logger.info('Cleared resolved alerts');
+    this.alerts = this.alerts.filter((a) => !a.resolved);
+    this.logger.log('Cleared resolved alerts');
   }
 
   private async evaluateAlerting(): Promise<void> {
@@ -375,7 +451,9 @@ export class HvacProductionMonitoringService {
           status: this.healthMetrics.overall === 'healthy' ? 1 : 0,
         },
         sync: {
-          error_count: this.healthMetrics.alerts.filter(a => a.service === 'sync').length,
+          error_count: this.healthMetrics.alerts.filter(
+            (a) => a.service === 'sync',
+          ).length,
         },
       };
 
