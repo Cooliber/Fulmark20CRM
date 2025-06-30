@@ -282,8 +282,7 @@ export class CustomerAPIService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // TODO: Add Authorization header if required by Twenty CRM backend
-        // 'Authorization': `Bearer ${this.getCRMSessionToken()}`,
+        'Authorization': `Bearer ${this.getCRMSessionToken()}`,
       },
       body: JSON.stringify({ query, variables }),
     });
@@ -429,9 +428,26 @@ export class CustomerAPIService {
           name
           email
           phone
-          // TODO: Add address and properties if they are part of HvacCustomerType in GraphQL
-          // address { street city postalCode country }
-          // properties { id address propertyType }
+          address {
+            street
+            city
+            state
+            postalCode
+            country
+          }
+          properties {
+            id
+            address
+            propertyType
+            equipmentList {
+              id
+              name
+              type
+              status
+              lastMaintenance
+              nextMaintenance
+            }
+          }
         }
       }
     `;
@@ -458,9 +474,26 @@ export class CustomerAPIService {
           name
           email
           phone
-          // TODO: Add address and properties if they are part of HvacCustomerType in GraphQL
-          // address { street city postalCode country }
-          // properties { id address propertyType }
+          address {
+            street
+            city
+            state
+            postalCode
+            country
+          }
+          properties {
+            id
+            address
+            propertyType
+            equipmentList {
+              id
+              name
+              type
+              status
+              lastMaintenance
+              nextMaintenance
+            }
+          }
         }
       }
     `;
@@ -755,68 +788,31 @@ export class CustomerAPIService {
     // Also consider invalidating specific GraphQL query caches if using Apollo/Urql client cache
   }
 
-  /**
-   * Generic API call method for direct HVAC API calls (to be phased out for GraphQL)
-   * Kept for methods not yet refactored.
-   */
-  private async makeAPICall<T>(
-    endpoint: string,
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
-    body?: unknown,
-    retries = 3,
-  ): Promise<APIResponse<T>> { // Assuming APIResponse is a defined type for direct calls
-    const url = `${this.HVAC_API_BASE_URL}${endpoint}`;
-
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        const response = await fetch(url, {
-          method,
-          headers: {
-            'Content-Type': 'application/json',
-            // This token is for the direct HVAC API, which is problematic from frontend
-            'Authorization': `Bearer ${this.getHvacAuthToken()}`,
-          },
-          body: body ? JSON.stringify(body) : undefined,
-        });
-
-        if (!response.ok) {
-          // Consider more detailed error handling here
-          throw new Error(`HVAC API call failed: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        // Assuming the direct API call wraps data in a structure like { data: T } or similar
-        // If the API returns T directly, this needs adjustment.
-        // For this example, let's assume it's { data: T, success: boolean, ... }
-        return data as APIResponse<T>;
-
-      } catch (error) {
-        trackHVACUserAction('hvac_api_call_error', 'API_ERROR', {
-          endpoint, method, attempt,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-        if (attempt === retries) {
-          throw error;
-        }
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000)); // Exponential backoff
-      }
+  private getCRMSessionToken(): string {
+    // TODO: This is a placeholder. Implement robust and secure session token retrieval.
+    // Avoid storing sensitive tokens directly in localStorage if possible.
+    // Consider HttpOnly cookies managed by the backend or a secure auth state management.
+    const token = localStorage.getItem('twenty_session_token');
+    if (!token) {
+      (this as any).logger.warn('CRM session token not found in localStorage.'); // Added 'this as any' to access logger
+      // Depending on auth strategy, might redirect to login or try to refresh token.
     }
-    // Should not be reached if retries > 0
-    throw new Error('HVAC API call failed after all retries');
+    return token || '';
   }
-
-  private getHvacAuthToken(): string {
-    // TODO: This is problematic. HVAC API auth should be handled by the Twenty CRM backend.
-    // This token should not be stored in localStorage if it's a sensitive API key.
-    // For the refactoring, this direct HVAC API call pattern should be removed.
-    return localStorage.getItem('hvac_auth_token') || '';
-  }
-
-  // private getCRMSessionToken(): string {
-  //   // TODO: Implement logic to get the Twenty CRM session token for authenticating GraphQL requests
-  //   return localStorage.getItem('twenty_session_token') || '';
-  // }
 }
 
 // Export singleton instance
 export const customerAPIService = new CustomerAPIService();
+
+// Adding a logger instance for the class if it's not already part of a framework that injects it
+// For standalone classes, a simple console wrapper can be used, or a more sophisticated logger.
+// Since trackHVACUserAction is used, let's assume a logging mechanism might be available or can be added.
+// To make it explicit for the class:
+if (!(CustomerAPIService.prototype as any).logger) {
+  (CustomerAPIService.prototype as any).logger = {
+      warn: console.warn,
+      log: console.log,
+      error: console.error,
+      debug: console.debug,
+  };
+}
