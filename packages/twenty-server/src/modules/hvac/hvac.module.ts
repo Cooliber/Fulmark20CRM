@@ -11,6 +11,11 @@ import { HvacHealthController } from './controllers/hvac-health.controller';
 import { HvacProductionMonitoringController } from './controllers/hvac-production-monitoring.controller';
 import { HvacSemanticSearchResolver } from './resolvers/hvac-semantic-search.resolver';
 import { HvacServiceTicketResolver } from './resolvers/hvac-service-ticket.resolver';
+import { HvacCustomerResolver } from './resolvers/hvac-customer.resolver';
+import { HvacEquipmentResolver } from './resolvers/hvac-equipment.resolver';
+import { HvacCommunicationResolver } from './resolvers/hvac-communication.resolver';
+import { HvacContractResolver } from './resolvers/hvac-contract.resolver';
+import { HvacCustomer360Resolver } from './resolvers/hvac-customer-360.resolver'; // Added
 import { HvacAlertNotificationService } from './services/hvac-alert-notification.service';
 import { HvacApiIntegrationService } from './services/hvac-api-integration.service';
 import { HvacCacheManagerService } from './services/hvac-cache-manager.service';
@@ -68,6 +73,11 @@ import { HvacWeaviateService } from './services/hvac-weaviate.service';
     // Resolvers
     HvacServiceTicketResolver,
     HvacSemanticSearchResolver,
+    HvacCustomerResolver,
+    HvacEquipmentResolver,
+    HvacCommunicationResolver,
+    HvacContractResolver,
+    HvacCustomer360Resolver, // Added
   ],
   exports: [
     // Core Services
@@ -94,6 +104,9 @@ import { HvacWeaviateService } from './services/hvac-weaviate.service';
     // Monitoring Services
     HvacProductionMonitoringService,
     HvacAlertNotificationService,
+
+    // Resolvers (if they need to be available to other modules, not typical for top-level resolvers)
+    // HvacCustomerResolver, // Typically resolvers are not exported from feature modules unless consumed by other modules for field resolution
   ],
 })
 export class HvacModule {}
