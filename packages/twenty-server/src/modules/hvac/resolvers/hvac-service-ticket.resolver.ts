@@ -1,6 +1,7 @@
-import { Resolver, Query, Mutation, Args, ID, Int, Parent, ResolveField } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, ID, Int, Parent, ResolveField, Subscription } from '@nestjs/graphql';
 import { Injectable, UseGuards, UsePipes, ValidationPipe, Logger } from '@nestjs/common';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
+import { PubSub } from 'graphql-subscriptions';
 import { HvacConfigService } from 'src/engine/core-modules/hvac-config/hvac-config.service';
 import { HvacApiIntegrationService, HvacServiceTicketData } from '../services/hvac-api-integration.service'; // HvacServiceTicketData might need update
 import {
@@ -48,6 +49,12 @@ export class HvacServiceTicketResolver {
 import { HvacCustomerType } from '../graphql-types/hvac-customer.types';
 import { HvacEquipmentType } from '../graphql-types/hvac-equipment.types';
 import { HvacApiNotFoundError } from '../exceptions/hvac-api.exceptions';
+
+// Initialize PubSub
+// For a production application, this should be configured as a provider
+// and potentially use a different engine like RedisPubSub.
+const pubSub = new PubSub();
+const SERVICE_TICKET_UPDATED_EVENT = 'hvacServiceTicketUpdated';
 
 @Resolver(() => HvacServiceTicketType)
 @Injectable()
@@ -137,9 +144,16 @@ import { HvacApiNotFoundError } from '../exceptions/hvac-api.exceptions';
     try {
       const { id, ...updateData } = input;
       this.logger.log(`Attempting to update HVAC service ticket ID: ${id} with data: ${JSON.stringify(updateData)}`);
-      const updatedTicketData = await this.hvacApiService.updateActualServiceTicketRecord(id, updateData as UpdateHvacServiceTicketInput);
-      this.logger.log(`Successfully updated HVAC service ticket: ${updatedTicketData.id}`);
-      return this.mapServiceDataToGqlType(updatedTicketData);
+      const updatedTicketDataFromService = await this.hvacApiService.updateActualServiceTicketRecord(id, updateData as UpdateHvacServiceTicketInput);
+      const updatedTicketGql = this.mapServiceDataToGqlType(updatedTicketDataFromService);
+      this.logger.log(`Successfully updated HVAC service ticket: ${updatedTicketGql.id}`);
+
+      // Publish the update event
+      pubSub.publish(`${SERVICE_TICKET_UPDATED_EVENT}_${id}`, { [SERVICE_TICKET_UPDATED_EVENT]: updatedTicketGql });
+      // Also publish for a generic event if needed, e.g., for a list view update
+      // pubSub.publish(SERVICE_TICKET_UPDATED_EVENT_GENERIC, { hvacServiceTicketGenericUpdate: updatedTicketGql });
+
+      return updatedTicketGql;
     } catch (error) {
       this.logger.error(`Error updating HVAC service ticket ${input.id}: ${error.message}`, error.stack);
       if (error instanceof HvacApiNotFoundError) return null;
@@ -191,6 +205,25 @@ import { HvacApiNotFoundError } from '../exceptions/hvac-api.exceptions';
       if (error instanceof HvacApiNotFoundError) return null;
       return null;
     }
+  }
+
+  // --- Subscription ---
+  @Subscription(() => HvacServiceTicketType, {
+    name: SERVICE_TICKET_UPDATED_EVENT,
+    filter: (payload, variables) => {
+      // Only send the update to subscribers interested in this specific ticket
+      return payload[SERVICE_TICKET_UPDATED_EVENT].id === variables.ticketId;
+    },
+    resolve: (payload) => {
+      // The payload is what was published. The structure should match HvacServiceTicketType.
+      return payload[SERVICE_TICKET_UPDATED_EVENT];
+    },
+  })
+  hvacServiceTicketUpdatedSubscribe(@Args('ticketId', { type: () => ID }) ticketId: string) {
+    this.checkFeatureEnabled('scheduling'); // Or a real-time specific flag
+    this.logger.log(`Client subscribed to updates for HVAC service ticket ID: ${ticketId}`);
+    // The string here must match the one used in pubSub.publish()
+    return pubSub.asyncIterator(`${SERVICE_TICKET_UPDATED_EVENT}_${ticketId}`);
   }
 
   private mapServiceDataToGqlType(ticketData: HvacServiceTicketData): HvacServiceTicketType {
