@@ -13,7 +13,9 @@ import {
 import {
   HvacCommunicationFilterInput,
   CreateHvacCommunicationInput,
-} from '../graphql-types/hvac-communication.types'; // Re-using the same file
+  UpdateHvacCommunicationInput, // Added
+} from '../graphql-types/hvac-communication.types';
+import { HvacApiNotFoundError } from '../exceptions/hvac-api.exceptions';
 
 @Resolver(() => HvacCommunicationType)
 @Injectable()
@@ -62,12 +64,11 @@ export class HvacCommunicationResolver {
     this.checkFeatureEnabled('customer360');
     try {
       this.logger.debug(`Fetching HVAC communication by ID: ${id}`);
-      // Placeholder
-      this.logger.debug(`Fetching HVAC communication by ID: ${id}`);
       const communication = await this.hvacApiService.getCommunicationDetailsById(id);
-      return communication as any; // Cast if necessary
+      return communication;
     } catch (error) {
-      this.logger.error(`Error fetching HVAC communication by ID ${id}:`, error.message, error.stack);
+      this.logger.error(`Error fetching HVAC communication by ID ${id}: ${error.message}`, error.stack);
+      if (error instanceof HvacApiNotFoundError) return null;
       throw error;
     }
   }
@@ -79,12 +80,11 @@ export class HvacCommunicationResolver {
     this.checkFeatureEnabled('aiInsights'); // Or customer360
     try {
       this.logger.debug(`Fetching HVAC communication stats for customer ID: ${customerId}`);
-      // Placeholder
-      this.logger.debug(`Fetching HVAC communication stats for customer ID: ${customerId}`);
       const stats = await this.hvacApiService.getCommunicationStatistics(customerId);
-      return stats as any; // Cast if necessary
+      return stats;
     } catch (error) {
       this.logger.error(`Error fetching HVAC communication stats for customer ${customerId}:`, error.message, error.stack);
+      if (error instanceof HvacApiNotFoundError) return null;
       throw error;
     }
   }
@@ -97,10 +97,8 @@ export class HvacCommunicationResolver {
     this.checkFeatureEnabled('customer360');
     try {
       this.logger.debug(`Fetching HVAC communication timeline for customer ID: ${customerId}, limit: ${limit}`);
-      // Placeholder
-      this.logger.debug(`Fetching HVAC communication timeline for customer ID: ${customerId}, limit: ${limit}`);
       const timeline = await this.hvacApiService.getCommunicationTimelineForCustomer(customerId, limit);
-      return timeline as any[]; // Cast if necessary
+      return timeline;
     } catch (error) {
       this.logger.error(`Error fetching HVAC communication timeline for customer ${customerId}:`, error.message, error.stack);
       throw error;
@@ -117,10 +115,8 @@ export class HvacCommunicationResolver {
     this.checkFeatureEnabled('semanticSearch');
     try {
       this.logger.debug(`Searching HVAC communications with query: "${query}", customerId: ${customerId}, limit: ${limit}`);
-      // Placeholder
-      this.logger.debug(`Searching HVAC communications with query: "${query}", customerId: ${customerId}, limit: ${limit}`);
       const results = await this.hvacApiService.searchCustomerCommunications(query, customerId, limit);
-      return results as any[]; // Cast if necessary
+      return results;
     } catch (error) {
       this.logger.error(`Error searching HVAC communications with query "${query}":`, error.message, error.stack);
       throw error;
@@ -135,12 +131,46 @@ export class HvacCommunicationResolver {
     this.checkFeatureEnabled('customer360'); // Or a specific communication creation flag
     try {
       this.logger.log(`Attempting to create HVAC communication: ${JSON.stringify(input)}`);
-      // Placeholder
-      this.logger.log(`Attempting to create HVAC communication: ${JSON.stringify(input)}`);
       const newCommunication = await this.hvacApiService.createActualCommunicationRecord(input);
-      return newCommunication as any; // Cast if necessary
+      return newCommunication;
     } catch (error) {
       this.logger.error(`Error creating HVAC communication:`, error.message, error.stack);
+      throw error;
+    }
+  }
+
+  @Mutation(() => HvacCommunicationType, { name: 'updateHvacCommunication', nullable: true })
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  async updateHvacCommunication(
+    @Args('input') input: UpdateHvacCommunicationInput,
+  ): Promise<HvacCommunicationType | null> {
+    this.checkFeatureEnabled('customer360');
+    this.logger.log(`Attempting to update HVAC communication with id: ${input.id}`);
+    try {
+      const { id, ...updateData } = input;
+      const updatedComm = await this.hvacApiService.updateActualCommunicationRecord(id, updateData);
+      this.logger.log(`Successfully updated HVAC communication: ${updatedComm.id}`);
+      return updatedComm;
+    } catch (error) {
+      this.logger.error(`Error updating HVAC communication ${input.id}: ${error.message}`, error.stack, input);
+      if (error instanceof HvacApiNotFoundError) return null;
+      throw error;
+    }
+  }
+
+  @Mutation(() => Boolean, { name: 'deleteHvacCommunication', nullable: true })
+  async deleteHvacCommunication(
+    @Args('id', { type: () => ID }) id: string,
+  ): Promise<boolean | null> {
+    this.checkFeatureEnabled('customer360');
+    this.logger.log(`Attempting to delete HVAC communication with id: ${id}`);
+    try {
+      const success = await this.hvacApiService.deleteActualCommunicationRecord(id);
+      this.logger.log(`Successfully deleted HVAC communication: ${id} - Success: ${success}`);
+      return success;
+    } catch (error) {
+      this.logger.error(`Error deleting HVAC communication ${id}: ${error.message}`, error.stack);
+      if (error instanceof HvacApiNotFoundError) return null;
       throw error;
     }
   }
@@ -154,12 +184,11 @@ export class HvacCommunicationResolver {
     this.checkFeatureEnabled('aiInsights');
     try {
       this.logger.log(`Processing email with AI for customer ID: ${customerId}`);
-      // Placeholder
-      this.logger.log(`Processing email with AI for customer ID: ${customerId}`);
       const insights = await this.hvacApiService.processEmailContentWithAI(emailContent, customerId);
-      return insights as any; // Cast if necessary
+      return insights;
     } catch (error) {
       this.logger.error(`Error processing email with AI for customer ${customerId}:`, error.message, error.stack);
+      if (error instanceof HvacApiNotFoundError) return null;
       throw error;
     }
   }
@@ -173,12 +202,11 @@ export class HvacCommunicationResolver {
     this.checkFeatureEnabled('customer360');
     try {
       this.logger.log(`Updating status for communication ID: ${communicationId} to ${status}`);
-      // Placeholder
-      this.logger.log(`Updating status for communication ID: ${communicationId} to ${status}`);
-      const updatedCommunication = await this.hvacApiService.updateStatusForCommunication(communicationId, status as string); // Service expects string
-      return updatedCommunication as any; // Cast if necessary
+      const updatedCommunication = await this.hvacApiService.updateStatusForCommunication(communicationId, status as string);
+      return updatedCommunication;
     } catch (error) {
       this.logger.error(`Error updating status for communication ${communicationId}:`, error.message, error.stack);
+      if (error instanceof HvacApiNotFoundError) return null;
       throw error;
     }
   }

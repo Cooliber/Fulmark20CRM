@@ -1,11 +1,12 @@
-import { Resolver, Query, Mutation, Args, ID } from '@nestjs/graphql'; // Added Mutation
-import { Injectable, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common'; // Added UsePipes, ValidationPipe
+import { Resolver, Query, Mutation, Args, ID, Int } from '@nestjs/graphql';
+import { Injectable, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { HvacConfigService } from 'src/engine/core-modules/hvac-config/hvac-config.service';
 import { HvacApiIntegrationService, HvacCustomer } from '../services/hvac-api-integration.service';
-import { HvacCustomerType } from '../graphql-types/hvac-customer.types';
-import { CreateHvacCustomerInput, UpdateHvacCustomerInput } from '../graphql-types/hvac-customer.inputs'; // Added
+import { HvacCustomerType, HvacCustomerListResponse } from '../graphql-types/hvac-customer.types';
+import { CreateHvacCustomerInput, UpdateHvacCustomerInput } from '../graphql-types/hvac-customer.inputs';
 import { Logger } from '@nestjs/common';
+import { HvacApiNotFoundError } from '../exceptions/hvac-api.exceptions';
 
 @Resolver(() => HvacCustomerType)
 @Injectable()
@@ -18,28 +19,36 @@ export class HvacCustomerResolver {
     private readonly hvacApiService: HvacApiIntegrationService,
   ) {}
 
-  @Query(() => [HvacCustomerType], { name: 'hvacCustomers', nullable: 'itemsAndList' })
+  @Query(() => HvacCustomerListResponse, { name: 'hvacCustomers', nullable: true })
   async getHvacCustomers(
-    // TODO: Add arguments for pagination (limit, offset) if API supports it
-  ): Promise<HvacCustomerType[] | null> {
-    // Check if the core HVAC integration feature is enabled (assuming a general flag or customer specific)
-    // For now, let's assume if HvacConfigService is available, the basic integration is intended.
-    // A more specific flag like 'FEATURE_HVAC_CUSTOMER_MANAGEMENT' could be used.
-    if (!this.hvacConfigService.isHvacFeatureEnabled('customer360')) { // Using customer360 as a proxy for now
+    @Args('page', { type: () => Int, nullable: true, defaultValue: 1 }) page: number,
+    @Args('limit', { type: () => Int, nullable: true, defaultValue: 50 }) limit: number,
+  ): Promise<HvacCustomerListResponse | null> {
+    if (!this.hvacConfigService.isHvacFeatureEnabled('customer360')) {
       this.logger.warn('HVAC customer feature is not enabled.');
-      // Depending on desired behavior, could return empty array or throw error
-      return [];
+      return { customers: [], total: 0, page, limit };
     }
 
     try {
-      const customers = await this.hvacApiService.getCustomers();
-      // Ensure the return type matches HvacCustomerType[], potentially map if structures differ significantly
-      // For now, assuming HvacCustomer from service is compatible with HvacCustomerType
-      return customers as HvacCustomerType[];
+      // TODO: Optimize pagination. Currently, this fetches ALL customers then paginates in memory.
+      // The hvacApiService.getCustomers method should ideally support API-level pagination
+      // and return a total count for true server-side pagination.
+      // For now, limit and offset are passed to the service, but the service itself doesn't return total.
+      // This implementation will show the pagination arguments in GraphQL but won't be efficient.
+      const offset = (page - 1) * limit;
+      const allCustomers = await this.hvacApiService.getCustomers(10000, 0); // Fetching a large number for now
+
+      const paginatedCustomers = allCustomers.slice(offset, offset + limit);
+      const totalCustomers = allCustomers.length; // This is the total of fetched, not necessarily absolute total from API
+
+      return {
+        customers: paginatedCustomers as HvacCustomerType[],
+        total: totalCustomers,
+        page,
+        limit,
+      };
     } catch (error) {
       this.logger.error('Error fetching HVAC customers:', error);
-      // Handle error appropriately, e.g., throw a GraphQL error or return null/empty
-      // For now, rethrowing to be caught by global error handlers or Sentry
       throw error;
     }
   }
@@ -98,41 +107,60 @@ export class HvacCustomerResolver {
   async updateHvacCustomer(
     @Args('input') input: UpdateHvacCustomerInput,
   ): Promise<HvacCustomerType | null> {
-    if (!this.hvacConfigService.isHvacFeatureEnabled('customer360')) {
+    if (!this.hvacConfigService.isHvacFeatureEnabled('customer360')) { // Or a more specific feature flag
       this.logger.warn('HVAC update customer feature is not enabled.');
       throw new Error('Feature not enabled to update HVAC customer.');
     }
 
     try {
       this.logger.log(`Attempting to update HVAC customer with id: ${input.id}`);
-      // Assuming hvacApiService.updateCustomer (if it exists or will be created)
-      // would take (id, data) and return the updated customer.
-      // For this example, we'll simulate it if the method doesn't exist yet in HvacApiIntegrationService
-      // const updatedCustomer = await this.hvacApiService.updateCustomer(input.id, input);
-
-      // Placeholder if hvacApiService.updateCustomer is not yet implemented
-      // In a real scenario, you'd call the service method.
-      const currentCustomer = await this.hvacApiService.getCustomerById(input.id);
-      if (!currentCustomer) {
-        throw new HvacApiNotFoundError(`Customer with id ${input.id} not found for update.`);
+      const { id, ...updateData } = input;
+      const updatedCustomer = await this.hvacApiService.updateActualCustomer(id, updateData);
+      if (!updatedCustomer) {
+        // This case should ideally be handled by hvacApiService throwing HvacApiNotFoundError
+        // which would then be processed by GraphQL error filters.
+        // However, if updateActualCustomer can return null on "not found" for some reason:
+        this.logger.warn(`HVAC customer with id ${id} not found for update, or update failed.`);
+        return null;
       }
-      const dataToUpdate = { ...input };
-      delete dataToUpdate.id; // remove id from payload
-
-      // This is a placeholder for the actual update logic using a dedicated service method
-      const simulatedUpdatedCustomer : HvacCustomer = {
-         ...currentCustomer,
-         ...dataToUpdate,
-         name: input.name || currentCustomer.name, // Ensure name is updated
-      };
-      // await this.hvacApiService.updateCustomer(input.id, dataToUpdate); // This would be the actual call
-
-      this.logger.log(`Successfully updated HVAC customer: ${input.id}`);
-      // For now, returning the simulated updated customer
-      return simulatedUpdatedCustomer as HvacCustomerType;
-
+      this.logger.log(`Successfully updated HVAC customer: ${updatedCustomer.id}`);
+      return updatedCustomer as HvacCustomerType;
     } catch (error) {
       this.logger.error(`Error updating HVAC customer ${input.id}: ${error.message}`, error.stack, input);
+      // HvacApiIntegrationService should throw specific errors like HvacApiNotFoundError
+      // which will be handled by NestJS/GraphQL error filters.
+      throw error;
+    }
+  }
+
+  @Mutation(() => Boolean, { name: 'deleteHvacCustomer', nullable: true })
+  async deleteHvacCustomer(
+    @Args('id', { type: () => ID }) id: string,
+  ): Promise<boolean | null> {
+    if (!this.hvacConfigService.isHvacFeatureEnabled('customer360')) { // Or a more specific feature flag
+      this.logger.warn('HVAC delete customer feature is not enabled.');
+      throw new Error('Feature not enabled to delete HVAC customer.');
+    }
+
+    try {
+      this.logger.log(`Attempting to delete HVAC customer with id: ${id}`);
+      const success = await this.hvacApiService.deleteActualCustomer(id);
+      if (success) {
+        this.logger.log(`Successfully deleted HVAC customer: ${id}`);
+      } else {
+        // This path should ideally not be hit if deleteActualCustomer throws on failure
+        // or HvacApiNotFoundError for not found.
+        this.logger.warn(`Failed to delete HVAC customer or customer not found: ${id}`);
+      }
+      return success;
+    } catch (error) {
+      this.logger.error(`Error deleting HVAC customer ${id}: ${error.message}`, error.stack);
+      // HvacApiIntegrationService should throw specific errors like HvacApiNotFoundError
+      // which will be handled by NestJS/GraphQL error filters.
+      // If it's a not found error, GraphQL might expect null or a specific error response.
+      if (error instanceof HvacApiNotFoundError) {
+        return null; // Or let the error propagate to be formatted by GraphQL error handler
+      }
       throw error;
     }
   }

@@ -13,8 +13,9 @@ import {
   CreateHvacEquipmentInput,
   UpdateHvacEquipmentInput,
   ScheduleHvacMaintenanceInput,
-} from '../graphql-types/hvac-equipment.types'; // Re-using the same file for inputs for now
-import { HvacEquipment as HvacEquipmentInterface, MaintenanceRecord as HvacMaintenanceRecordInterface } from '../services/EquipmentAPIService.types'; // Hypothetical import for service return types if different
+} from '../graphql-types/hvac-equipment.types';
+import { HvacApiNotFoundError } from '../exceptions/hvac-api.exceptions';
+// Removed hypothetical import as service should align with GraphQL types
 
 @Resolver(() => HvacEquipmentType)
 @Injectable()
@@ -55,17 +56,12 @@ export class HvacEquipmentResolver {
       // and return a structure like { equipment: [], total: number }
 
       // Placeholder: Adapt HvacApiIntegrationService.getEquipment or add a new method
-      // For now, this won't directly map to a paginated/filtered result from the current HvacApiIntegrationService.getEquipment
-      const equipmentSummaries = await this.hvacApiService.getEquipment(limit, (page -1) * limit);
-
-      this.logger.debug(`Fetching HVAC equipments with filters: ${JSON.stringify(filters)}, page: ${page}, limit: ${limit}`);
-
+      // The service method getEquipment is expected to handle offset calculation correctly.
       const result = await this.hvacApiService.getEquipment(filters, limit, (page - 1) * limit);
 
-      // Assuming HvacEquipmentSummary[] is compatible enough with HvacEquipmentType[]
-      // or that a field resolver on HvacEquipmentType would fetch more details if needed.
       return {
-        equipment: result.equipment as any[], // Cast if HvacEquipmentSummary and HvacEquipmentType differ
+        // Assuming HvacEquipmentSummary from service is compatible with HvacEquipmentType
+        equipment: result.equipment as HvacEquipmentType[],
         total: result.total,
       };
     } catch (error) {
@@ -80,10 +76,12 @@ export class HvacEquipmentResolver {
     try {
       this.logger.debug(`Fetching HVAC equipment by ID: ${id}`);
       const equipment = await this.hvacApiService.getEquipmentById(id);
-      // Assuming HvacEquipmentSummary can be cast or mapped to HvacEquipmentType
-      return equipment as unknown as HvacEquipmentType;
+      if (!equipment) return null;
+      // Assuming HvacEquipmentSummary from service is compatible with HvacEquipmentType
+      return equipment as HvacEquipmentType;
     } catch (error) {
-      this.logger.error(`Error fetching HVAC equipment by ID ${id}:`, error.message, error.stack);
+      this.logger.error(`Error fetching HVAC equipment by ID ${id}: ${error.message}`, error.stack);
+      if (error instanceof HvacApiNotFoundError) return null;
       throw error;
     }
   }
@@ -95,14 +93,11 @@ export class HvacEquipmentResolver {
     this.checkFeatureEnabled('maintenance');
     try {
       this.logger.debug(`Fetching maintenance history for equipment ID: ${equipmentId}`);
-      // Assuming HvacApiIntegrationService will have a method like getMaintenanceHistoryForEquipment
-      // const history = await this.hvacApiService.getMaintenanceHistoryForEquipment(equipmentId);
-      // Placeholder:
-      this.logger.debug(`Fetching maintenance history for equipment ID: ${equipmentId}`);
       const history = await this.hvacApiService.getMaintenanceHistoryForEquipment(equipmentId);
-      return history as HvacMaintenanceRecordType[]; // Assuming MaintenanceRecord from service is compatible
+      // Assuming MaintenanceRecord from service is compatible with HvacMaintenanceRecordType
+      return history as HvacMaintenanceRecordType[];
     } catch (error) {
-      this.logger.error(`Error fetching maintenance history for equipment ${equipmentId}:`, error.message, error.stack);
+      this.logger.error(`Error fetching maintenance history for equipment ${equipmentId}: ${error.message}`, error.stack);
       throw error;
     }
   }
@@ -112,9 +107,9 @@ export class HvacEquipmentResolver {
     this.checkFeatureEnabled('maintenance'); // Or a specific flag
     try {
       this.logger.debug('Fetching HVAC equipment needing service.');
-      this.logger.debug('Fetching HVAC equipment needing service.');
       const equipment = await this.hvacApiService.fetchEquipmentNeedingService();
-      return equipment as HvacEquipmentType[]; // Assuming HvacEquipmentSummary is compatible
+      // Assuming HvacEquipmentSummary from service is compatible with HvacEquipmentType
+      return equipment as HvacEquipmentType[];
     } catch (error) {
       this.logger.error('Error fetching HVAC equipment needing service:', error.message, error.stack);
       throw error;
@@ -128,9 +123,9 @@ export class HvacEquipmentResolver {
     this.checkFeatureEnabled('inventory');
     try {
       this.logger.debug(`Fetching HVAC equipment with warranties expiring in ${days} days.`);
-      this.logger.debug(`Fetching HVAC equipment with warranties expiring in ${days} days.`);
       const equipment = await this.hvacApiService.fetchEquipmentWithExpiringWarranties(days);
-      return equipment as HvacEquipmentType[]; // Assuming HvacEquipmentSummary is compatible
+      // Assuming HvacEquipmentSummary from service is compatible with HvacEquipmentType
+      return equipment as HvacEquipmentType[];
     } catch (error) {
       this.logger.error(`Error fetching HVAC equipment with expiring warranties:`, error.message, error.stack);
       throw error;
@@ -145,10 +140,8 @@ export class HvacEquipmentResolver {
     this.checkFeatureEnabled('inventory');
     try {
       this.logger.log(`Attempting to create HVAC equipment with input: ${JSON.stringify(input)}`);
-      this.logger.log(`Attempting to create HVAC equipment with input: ${JSON.stringify(input)}`);
       const newEquipment = await this.hvacApiService.createActualEquipment(input);
-      // Assuming HvacEquipmentSummary returned by service is compatible enough for HvacEquipmentType response
-      // or specific fields are guaranteed.
+      // Assuming HvacEquipmentSummary from service is compatible with HvacEquipmentType
       return newEquipment as HvacEquipmentType;
     } catch (error) {
       this.logger.error(`Error creating HVAC equipment:`, error.message, error.stack);
@@ -156,35 +149,35 @@ export class HvacEquipmentResolver {
     }
   }
 
-  @Mutation(() => HvacEquipmentType, { name: 'updateHvacEquipment' })
+  @Mutation(() => HvacEquipmentType, { name: 'updateHvacEquipment', nullable: true })
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async updateHvacEquipment(
     @Args('input') input: UpdateHvacEquipmentInput,
-  ): Promise<HvacEquipmentType> {
+  ): Promise<HvacEquipmentType | null> {
     this.checkFeatureEnabled('inventory');
     try {
       this.logger.log(`Attempting to update HVAC equipment with ID: ${input.id}`);
-      this.logger.log(`Attempting to update HVAC equipment with ID: ${input.id}`);
-      const updatedEquipment = await this.hvacApiService.updateActualEquipment(input.id, input);
+      const { id, ...updateData } = input;
+      const updatedEquipment = await this.hvacApiService.updateActualEquipment(id, updateData);
+      // Assuming HvacEquipmentSummary from service is compatible with HvacEquipmentType
       return updatedEquipment as HvacEquipmentType;
     } catch (error) {
-      this.logger.error(`Error updating HVAC equipment ${input.id}:`, error.message, error.stack);
+      this.logger.error(`Error updating HVAC equipment ${input.id}: ${error.message}`, error.stack);
+      if (error instanceof HvacApiNotFoundError) return null;
       throw error;
     }
   }
 
-  @Mutation(() => Boolean, { name: 'deleteHvacEquipment' })
-  async deleteHvacEquipment(@Args('id', { type: () => ID }) id: string): Promise<boolean> {
+  @Mutation(() => Boolean, { name: 'deleteHvacEquipment', nullable: true })
+  async deleteHvacEquipment(@Args('id', { type: () => ID }) id: string): Promise<boolean | null> {
     this.checkFeatureEnabled('inventory');
     try {
       this.logger.log(`Attempting to delete HVAC equipment with ID: ${id}`);
-      this.logger.log(`Attempting to delete HVAC equipment with ID: ${id}`);
-      await this.hvacApiService.deleteActualEquipment(id);
-      return true;
+      const success = await this.hvacApiService.deleteActualEquipment(id);
+      return success;
     } catch (error) {
-      this.logger.error(`Error deleting HVAC equipment ${id}:`, error.message, error.stack);
-      // Depending on API contract, you might want to return false or throw the error
-      // For GraphQL, throwing the error is often preferred so client can see it.
+      this.logger.error(`Error deleting HVAC equipment ${id}: ${error.message}`, error.stack);
+      if (error instanceof HvacApiNotFoundError) return null;
       throw error;
     }
   }
@@ -196,7 +189,6 @@ export class HvacEquipmentResolver {
   ): Promise<HvacMaintenanceRecordType> {
     this.checkFeatureEnabled('maintenance');
     try {
-      this.logger.log(`Attempting to schedule maintenance: ${JSON.stringify(input)}`);
       this.logger.log(`Attempting to schedule maintenance: ${JSON.stringify(input)}`);
       const newMaintenanceRecord = await this.hvacApiService.scheduleActualMaintenance(input);
       // Assuming MaintenanceRecord from service is compatible with HvacMaintenanceRecordType
