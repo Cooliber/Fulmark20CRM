@@ -303,48 +303,114 @@ export class CustomerAPIService {
   /**
    * Get customer 360 data with caching
    */
-  async getCustomer360Data(customerId: string): Promise<Customer360Data> {
-    const cacheKey = `customer_360_${customerId}`;
+  async getCustomer360Data(
+    customerId: string,
+    // Optional arguments for pagination/filtering of sub-entities
+    // These would align with the variables of the GetHvacCustomer360Data query
+    equipmentArgs?: { filters?: unknown; page?: number; limit?: number }, // Replace unknown with actual filter types
+    communicationArgs?: { filters?: unknown; page?: number; limit?: number },
+    ticketArgs?: { filters?: unknown; page?: number; limit?: number },
+    contractArgs?: { filters?: unknown; page?: number; limit?: number },
+  ): Promise<Customer360Data | null > { // Return type might be nullable if customer not found
+    // For a single, aggregated query, the cache key might just be based on customerId,
+    // or more complex if sub-entity args make it very distinct.
+    // For simplicity, let's use a basic key. Advanced caching would be handled by Apollo/Urql.
+    const cacheKey = `customer_360_agg_${customerId}_${JSON.stringify({equipmentArgs, communicationArgs, ticketArgs, contractArgs })}`;
     const cached = this.getCachedData<Customer360Data>(cacheKey);
 
     if (cached) {
-      trackHVACUserAction('customer_360_cache_hit', 'API_CACHE', { customerId });
+      trackHVACUserAction('customer_360_agg_cache_hit', 'API_CACHE', { customerId });
       return cached;
     }
 
-    try {
-      trackHVACUserAction('customer_360_api_call', 'API_REQUEST', { customerId });
-
-      // Fetch customer data via GraphQL
-      const customer = await this.getCustomerById(customerId);
-      if (!customer) {
-        throw new Error(`Customer with id ${customerId} not found via GraphQL.`);
+    const GET_HVAC_CUSTOMER_360_DATA_QUERY = `
+      query GetHvacCustomer360Data(
+        $customerId: ID!,
+        $equipmentFilters: HvacEquipmentFilterInput, $equipmentPage: Int, $equipmentLimit: Int,
+        $commFilters: HvacCommunicationFilterInput, $commPage: Int, $commLimit: Int,
+        $ticketFilters: HvacServiceTicketFilterInput, $ticketPage: Int, $ticketLimit: Int,
+        $contractFilters: HvacContractFilterInput, $contractPage: Int, $contractLimit: Int
+      ) {
+        hvacCustomer360(customerId: $customerId) {
+          customer {
+            id name email phone nip regon krs vatRate vatExempt status customerType industry companySize
+            totalValue lifetimeValue creditLimit paymentTerms preferredPaymentMethod satisfactionScore healthScore riskLevel
+            preferredLanguage preferredContactMethod timezone createdAt updatedAt lastContactDate nextFollowUpDate
+            hvacSystemCount maintenanceContract
+            # emergencyContact { name phone email relationship } # Needs HvacEmergencyContactType
+            # address { street city postalCode voivodeship country } # Needs HvacCustomerAddressType (already defined in resolver)
+            # billingAddress { street city postalCode voivodeship country }
+          }
+          insights {
+            financialMetrics { totalRevenue lifetimeValue averageOrderValue monthlyRecurringRevenue paymentHistory { id amount currency date status invoiceNumber } }
+            riskIndicators { churnRisk paymentRisk satisfactionTrend lastContactDays }
+            behaviorMetrics { serviceFrequency preferredContactMethod responseTime issueResolutionRate }
+          }
+          equipment(filters: $equipmentFilters, page: $equipmentPage, limit: $equipmentLimit) {
+            equipment { id name type brand model serialNumber installationDate lastService nextService status warrantyExpiry customerName location notes }
+            total
+          }
+          communications(filters: $commFilters, page: $commPage, limit: $commLimit) {
+            communications { id type direction subject content timestamp status priority tags }
+            total
+          }
+          serviceTickets(filters: $ticketFilters, page: $ticketPage, limit: $ticketLimit) {
+            tickets { id title description status priority scheduledDate completedDate estimatedCost actualCost serviceType customerId equipmentId assignedTechnicianId createdAt updatedAt }
+            total
+          }
+          contracts(filters: $contractFilters, page: $contractPage, limit: $contractLimit) {
+            contracts { id type startDate endDate value status terms contractNumber customerId createdAt updatedAt }
+            total
+          }
+        }
       }
+    `;
 
-      // Fetch other related data (insights, equipment, etc.) - these might still use direct calls or need refactoring
-      // For now, assuming they might still use makeAPICall or similar to the old HVAC_API_BASE_URL
-      const [insights, equipment, communications, tickets, contracts] = await Promise.all([
-        this.getCustomerInsights(customerId), // This method needs to be checked/refactored
-        this.getCustomerEquipment(customerId), // This method needs to be checked/refactored
-        this.getCustomerCommunications(customerId), // This method needs to be checked/refactored
-        this.getCustomerTickets(customerId), // This method needs to be checked/refactored
-        this.getCustomerContracts(customerId), // This method needs to be checked/refactored
-      ]);
-
-      const data: Customer360Data = {
-        customer,
-        insights,
-        equipment,
-        communications,
-        tickets,
-        contracts,
+    try {
+      trackHVACUserAction('customer_360_agg_api_call', 'API_REQUEST', { customerId });
+      const variables = {
+        customerId,
+        equipmentFilters: equipmentArgs?.filters, equipmentPage: equipmentArgs?.page, equipmentLimit: equipmentArgs?.limit,
+        commFilters: communicationArgs?.filters, commPage: communicationArgs?.page, commLimit: communicationArgs?.limit,
+        ticketFilters: ticketArgs?.filters, ticketPage: ticketArgs?.page, ticketLimit: ticketArgs?.limit,
+        contractFilters: contractArgs?.filters, contractPage: contractArgs?.page, contractLimit: contractArgs?.limit,
       };
 
-      this.setCachedData(cacheKey, data);
-      return data;
+      const response = await this.fetchGraphQL<{ hvacCustomer360: Customer360Data | null }>(
+        GET_HVAC_CUSTOMER_360_DATA_QUERY, variables
+      );
+
+      if (!response.hvacCustomer360 || !response.hvacCustomer360.customer) {
+        // If customer itself is not found, hvacCustomer360 might be null or customer field might be null
+        trackHVACUserAction('customer_360_agg_not_found', 'API_ERROR', { customerId });
+        return null;
+      }
+
+      // The backend resolver for hvacCustomer360 should return a structure that matches Customer360Data.
+      // Specifically, the lists like equipment, communications should come as { items: [], total: number }
+      // and need to be mapped to the expected simple arrays in Customer360Data interface if it's not changed.
+      // For now, assuming the GraphQL query is structured to return fields that directly map to Customer360Data.
+      // This means HvacEquipmentListResponse needs to be mapped to Equipment[] etc. or Customer360Data interface adapted.
+
+      // Let's adapt the Customer360Data interface or ensure the query returns the flat arrays.
+      // The current query returns objects like { equipment: Equipment[], total: number }.
+      // We need to extract the arrays.
+      const rawData = response.hvacCustomer360;
+      const mappedData: Customer360Data = {
+          customer: rawData.customer,
+          insights: rawData.insights!, // Assuming insights are always there if customer is there or handle null
+          equipment: rawData.equipment.equipment,
+          communications: rawData.communications.communications,
+          tickets: rawData.serviceTickets.tickets,
+          contracts: rawData.contracts.contracts,
+      };
+
+
+      this.setCachedData(cacheKey, mappedData);
+      return mappedData;
 
     } catch (error) {
-      trackHVACUserAction('customer_360_api_error', 'API_ERROR', {
+      trackHVACUserAction('customer_360_agg_api_error', 'API_ERROR', {
         customerId,
         error: error instanceof Error ? error.message : 'Unknown error',
       });

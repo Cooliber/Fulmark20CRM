@@ -73,11 +73,13 @@ export class HvacCustomer360Resolver {
   async resolveInsights(@Parent() customer360: Partial<HvacCustomer360Type>): Promise<HvacCustomerInsightsType | null> {
     const customerId = customer360.customer?.id;
     if (!customerId) return null;
+    const customerId = customer360.customer?.id;
+    if (!customerId) return null;
     this.logger.debug(`Resolving 'insights' for Customer360 (ID: ${customerId})`);
     try {
-      // Assuming HvacApiIntegrationService has a method to get customer insights
-      const insights = await this.hvacApiService.getCustomerInsights(customerId); // This method was planned in HvacApiIntegrationService
-      return insights as any; // Cast or map to HvacCustomerInsightsType
+      const insights = await this.hvacApiService.getCustomerInsights(customerId);
+      // Assuming HvacCustomerInsights from service is compatible with HvacCustomerInsightsType
+      return insights as HvacCustomerInsightsType;
     } catch (error) {
       this.logger.error(`Error resolving insights for customer ${customerId}:`, error.message);
       return null; // Or rethrow, depending on desired error handling for partial data
@@ -97,17 +99,13 @@ export class HvacCustomer360Resolver {
 
     const combinedFilters = { ...(filters || {}), customerId };
     // Placeholder: HvacApiIntegrationService needs a method for this that supports filters and pagination
-    // For now, using existing getEquipment and filtering client-side (not ideal for production)
-    this.logger.warn(`resolveEquipment for Customer360 needs proper filtering/pagination in HvacApiIntegrationService.`);
-    const allEquipment = await this.hvacApiService.getEquipment(1000, 0); // Fetch all, then filter (bad for perf)
-    const customerEquipment = allEquipment.filter(eq => eq.customerId === customerId); // Basic filter
-
-    // Basic pagination - should be done by the service/API
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const paginatedEquipment = customerEquipment.slice(start, end);
-
-    return { equipment: paginatedEquipment as any[], total: customerEquipment.length };
+    this.logger.debug(`Resolving 'equipment' for Customer360 (ID: ${customerId}) with filters: ${JSON.stringify(filters)}, page: ${page}, limit: ${limit}`);
+    const result = await this.hvacApiService.getEquipment(
+        { ...(filters || {}), customerId }, // Ensure customerId is part of the filters passed to service
+        limit,
+        (page - 1) * limit
+    );
+    return { equipment: result.equipment as any[], total: result.total };
   }
 
   @ResolveField('communications', () => HvacCommunicationListResponse)
@@ -119,14 +117,14 @@ export class HvacCustomer360Resolver {
   ): Promise<HvacCommunicationListResponse> {
     const customerId = customer360.customer?.id;
     if (!customerId) return { communications: [], total: 0 };
-    this.logger.debug(`Resolving 'communications' for Customer360 (ID: ${customerId}) with filters: ${JSON.stringify(filters)}`);
+    this.logger.debug(`Resolving 'communications' for Customer360 (ID: ${customerId}) with filters: ${JSON.stringify(filters)}, page: ${page}, limit: ${limit}`);
 
-    const combinedFilters = { ...(filters || {}), customerId };
-    // Placeholder: HvacApiIntegrationService needs a method for this
-    this.logger.warn(`resolveCommunications for Customer360 needs proper implementation in HvacApiIntegrationService.`);
-    // const result = await this.hvacApiService.getCommunicationsFiltered(combinedFilters, page, limit);
-    // return result;
-    return { communications: [], total: 0 };
+    const result = await this.hvacApiService.getCommunicationsList(
+        { ...(filters || {}), customerId },
+        limit,
+        (page - 1) * limit
+    );
+    return { communications: result.communications as any[], total: result.total };
   }
 
   @ResolveField('serviceTickets', () => HvacServiceTicketListResponse)
@@ -138,16 +136,16 @@ export class HvacCustomer360Resolver {
   ): Promise<HvacServiceTicketListResponse> {
     const customerId = customer360.customer?.id;
     if (!customerId) return { tickets: [], total: 0 };
-    this.logger.debug(`Resolving 'serviceTickets' for Customer360 (ID: ${customerId}) with filters: ${JSON.stringify(filters)}`);
+    this.logger.debug(`Resolving 'serviceTickets' for Customer360 (ID: ${customerId}) with filters: ${JSON.stringify(filters)}, page: ${page}, limit: ${limit}`);
 
-    const combinedFilters = { ...(filters || {}), customerId };
-     // Placeholder: HvacApiIntegrationService needs a method for this
-    this.logger.warn(`resolveServiceTickets for Customer360 needs proper implementation in HvacApiIntegrationService.`);
-    // const result = await this.hvacApiService.getServiceTicketsFiltered(combinedFilters, page, limit);
-    // return result;
-    const serviceTicketsFromApi = await this.hvacApiService.getServiceTickets(limit, (page - 1) * limit);
-    const customerTickets = serviceTicketsFromApi.filter(st => st.customerId === customerId);
-    return { tickets: customerTickets as any[], total: customerTickets.length };
+    const result = await this.hvacApiService.getServiceTicketsList(
+        { ...(filters || {}), customerId },
+        limit,
+        (page - 1) * limit
+    );
+    // Assuming HvacServiceTicketResolver has a mapServiceDataToGqlType or similar if needed
+    // For now, direct cast, but ensure service returns data compatible with HvacServiceTicketType
+    return { tickets: result.tickets.map(t => (this as any).mapServiceTicketDataToGqlType ? (this as any).mapServiceTicketDataToGqlType(t) : t) as any[], total: result.total };
   }
 
   @ResolveField('contracts', () => HvacContractListResponse)
@@ -159,13 +157,14 @@ export class HvacCustomer360Resolver {
   ): Promise<HvacContractListResponse> {
     const customerId = customer360.customer?.id;
     if (!customerId) return { contracts: [], total: 0 };
-    this.logger.debug(`Resolving 'contracts' for Customer360 (ID: ${customerId}) with filters: ${JSON.stringify(filters)}`);
+    this.logger.debug(`Resolving 'contracts' for Customer360 (ID: ${customerId}) with filters: ${JSON.stringify(filters)}, page: ${page}, limit: ${limit}`);
 
-    const combinedFilters = { ...(filters || {}), customerId };
-    // Placeholder: HvacApiIntegrationService needs a method for this
-    this.logger.warn(`resolveContracts for Customer360 needs proper implementation in HvacApiIntegrationService.`);
-    // const result = await this.hvacApiService.getContractsFiltered(combinedFilters, page, limit);
-    // return result;
-    return { contracts: [], total: 0 };
+    const result = await this.hvacApiService.getContractsList(
+        { ...(filters || {}), customerId },
+        limit,
+        (page - 1) * limit
+    );
+    // Assuming HvacContractResolver has a mapContractDataToGqlType or similar if needed
+    return { contracts: result.contracts.map(c => (this as any).mapContractDataToGqlType ? (this as any).mapContractDataToGqlType(c) : c) as any[], total: result.total };
   }
 }

@@ -107,60 +107,59 @@ export interface CommunicationStats {
  * Handles all communication-related API operations with AI insights
  */
 export class CommunicationAPIService {
-  private baseURL: string;
+  private readonly CRM_GRAPHQL_URL = process.env.NEXT_PUBLIC_SERVER_URL
+    ? `${process.env.NEXT_PUBLIC_SERVER_URL}/graphql`
+    : 'http://localhost:3001/graphql';
+
   private cache: Map<string, { data: unknown; timestamp: number }>;
   private readonly CACHE_TTL = 3 * 60 * 1000; // 3 minutes for real-time communication
 
   constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_HVAC_API_URL || 'http://localhost:8000';
     this.cache = new Map();
+    if (!process.env.NEXT_PUBLIC_SERVER_URL) {
+      console.warn('NEXT_PUBLIC_SERVER_URL is not set for CommunicationAPIService. Defaulting to http://localhost:3001 for GraphQL.');
+    }
   }
 
-  /**
-   * Make API call with error handling and performance tracking
-   */
-  private async makeAPICall<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<{ data: T; status: number }> {
-    const url = `${this.baseURL}${endpoint}`;
+  private async fetchGraphQL<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
     const startTime = Date.now();
-
+    let operationName = 'UnknownGraphQLOperation';
     try {
-      const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_HVAC_API_KEY || ''}`,
-          ...options.headers,
-        },
-        ...options,
-      });
+        const match = query.match(/(query|mutation)\s+(\w+)/);
+        if (match && match[2]) {
+            operationName = match[2];
+        }
 
-      const duration = Date.now() - startTime;
+        const response = await fetch(this.CRM_GRAPHQL_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                // TODO: Add Authorization header if required
+            },
+            body: JSON.stringify({ query, variables }),
+        });
 
-      if (!response.ok) {
-        throw new Error(`API call failed: ${response.status} ${response.statusText}`);
-      }
+        const duration = Date.now() - startTime;
 
-      const data = await response.json();
+        if (!response.ok) {
+            const errorBody = await response.text();
+            trackHVACUserAction('communication_graphql_api_error', 'API_ERROR', { operationName, variables, duration, status: response.status, error: `GraphQL API call failed: ${response.status} ${response.statusText} - ${errorBody}` });
+            throw new Error(`GraphQL API call failed: ${response.status} ${response.statusText} - ${errorBody}`);
+        }
 
-      trackHVACUserAction('communication_api_success', 'API_SUCCESS', {
-        endpoint,
-        duration,
-        status: response.status,
-      });
+        const result = await response.json();
+        if (result.errors) {
+            trackHVACUserAction('communication_graphql_query_error', 'API_ERROR', { operationName, variables, duration, errors: result.errors });
+            throw new Error(`GraphQL query failed: ${JSON.stringify(result.errors)}`);
+        }
 
-      return { data, status: response.status };
+        trackHVACUserAction('communication_graphql_api_success', 'API_SUCCESS', { operationName, variables, duration, status: response.status });
+        return result.data;
+
     } catch (error) {
-      const duration = Date.now() - startTime;
-      
-      trackHVACUserAction('communication_api_error', 'API_ERROR', {
-        endpoint,
-        duration,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-
-      throw error;
+        const duration = Date.now() - startTime;
+        trackHVACUserAction('communication_graphql_fetch_exception', 'API_ERROR', { operationName, variables, duration, error: error instanceof Error ? error.message : 'Unknown fetch exception' });
+        throw error;
     }
   }
 
@@ -197,182 +196,213 @@ export class CommunicationAPIService {
   async getCommunications(
     filters: CommunicationFilter = {},
     page = 1,
-    limit = 20
+    limit = 20,
   ): Promise<{ communications: Communication[]; total: number }> {
     const cacheKey = `communications_${JSON.stringify(filters)}_${page}_${limit}`;
     const cached = this.getCachedData<{ communications: Communication[]; total: number }>(cacheKey);
-    
     if (cached) {
       trackHVACUserAction('communication_cache_hit', 'API_CACHE', { filters, page, limit });
       return cached;
     }
 
-    const queryParams = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-      ...Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value !== undefined)
-      ),
-    });
-
-    const response = await this.makeAPICall<{ communications: Communication[]; total: number }>(
-      `/api/v1/communications?${queryParams.toString()}`
+    const GET_HVAC_COMMUNICATIONS_QUERY = `
+      query GetHvacCommunications($filters: HvacCommunicationFilterInput, $page: Int, $limit: Int) {
+        hvacCommunications(filters: $filters, page: $page, limit: $limit) {
+          communications {
+            id customerId type direction subject content timestamp status priority
+            # participants { id name email role } # Requires HvacParticipantType to be fully defined
+            # attachments { id name type size url uploadedAt } # Requires HvacAttachmentType
+            # metadata { source channel } # Requires HvacCommunicationMetadataType
+            # aiInsights { sentiment summary } # Requires HvacAIInsightsType
+            tags
+          }
+          total
+        }
+      }
+    `;
+    const response = await this.fetchGraphQL<{ hvacCommunications: { communications: Communication[]; total: number } }>(
+      GET_HVAC_COMMUNICATIONS_QUERY, { filters, page, limit }
     );
 
-    this.setCachedData(cacheKey, response.data);
-    return response.data;
+    const responseData = response.hvacCommunications || { communications: [], total: 0 };
+    this.setCachedData(cacheKey, responseData);
+    return responseData;
   }
 
-  /**
-   * Get communication by ID
-   */
-  async getCommunicationById(communicationId: string): Promise<Communication> {
+  async getCommunicationById(communicationId: string): Promise<Communication | null> {
     const cacheKey = `communication_${communicationId}`;
     const cached = this.getCachedData<Communication>(cacheKey);
-    
-    if (cached) {
-      return cached;
+    if (cached) return cached;
+
+    const GET_HVAC_COMMUNICATION_BY_ID_QUERY = `
+      query GetHvacCommunication($id: ID!) {
+        hvacCommunication(id: $id) {
+          id customerId type direction subject content timestamp status priority tags
+          # Expand with participants, attachments, metadata, aiInsights as needed and defined in GQL type
+        }
+      }
+    `;
+    const response = await this.fetchGraphQL<{ hvacCommunication: Communication | null }>(
+      GET_HVAC_COMMUNICATION_BY_ID_QUERY, { id: communicationId }
+    );
+
+    if (response.hvacCommunication) {
+      this.setCachedData(cacheKey, response.hvacCommunication);
     }
-
-    const response = await this.makeAPICall<Communication>(`/api/v1/communications/${communicationId}`);
-    this.setCachedData(cacheKey, response.data);
-    return response.data;
+    return response.hvacCommunication;
   }
 
-  /**
-   * Create new communication
-   */
   async createCommunication(communicationData: CreateCommunicationRequest): Promise<Communication> {
-    const response = await this.makeAPICall<Communication>('/api/v1/communications', {
-      method: 'POST',
-      body: JSON.stringify(communicationData),
-    });
+    const CREATE_HVAC_COMMUNICATION_MUTATION = `
+      mutation CreateHvacCommunication($input: CreateHvacCommunicationInput!) {
+        createHvacCommunication(input: $input) {
+          id customerId type direction subject timestamp status priority
+          # Expand as needed
+        }
+      }
+    `;
+    const response = await this.fetchGraphQL<{ createHvacCommunication: Communication }>(
+      CREATE_HVAC_COMMUNICATION_MUTATION, { input: communicationData }
+    );
 
-    // Invalidate relevant caches
     this.invalidateCache('communications_');
-    this.invalidateCache(`customer_${communicationData.customerId}`);
-
-    trackHVACUserAction('communication_created', 'COMMUNICATION', {
-      communicationId: response.data.id,
-      customerId: communicationData.customerId,
-      type: communicationData.type,
-      direction: communicationData.direction,
-    });
-
-    return response.data;
+    if (communicationData.customerId) {
+      this.invalidateCache(`customer_${communicationData.customerId}_communications`);
+    }
+    trackHVACUserAction('communication_created_graphql', 'COMMUNICATION', { communicationId: response.createHvacCommunication.id });
+    return response.createHvacCommunication;
   }
 
-  /**
-   * Get communication statistics for customer
-   */
-  async getCommunicationStats(customerId: string): Promise<CommunicationStats> {
+  async getCommunicationStats(customerId: string): Promise<CommunicationStats | null> {
     const cacheKey = `communication_stats_${customerId}`;
     const cached = this.getCachedData<CommunicationStats>(cacheKey);
-    
-    if (cached) {
-      return cached;
+    if (cached) return cached;
+
+    const GET_HVAC_COMMUNICATION_STATS_QUERY = `
+      query GetHvacCommunicationStats($customerId: ID!) {
+        hvacCommunicationStats(customerId: $customerId) {
+          total
+          # byType { type count } # Requires HvacCommunicationStatsByType to be defined
+          # byDirection { direction count }
+          # byStatus { status count }
+          # sentimentDistribution { sentiment count }
+          avgResponseTime
+          # recentActivity { id subject timestamp }
+        }
+      }
+    `;
+    // Note: The HvacCommunicationStatsType in backend needs to be fully defined for this to work.
+    // The query above is simplified.
+    try {
+        const response = await this.fetchGraphQL<{ hvacCommunicationStats: CommunicationStats | null }>(
+        GET_HVAC_COMMUNICATION_STATS_QUERY, { customerId }
+        );
+        if (response.hvacCommunicationStats) {
+        this.setCachedData(cacheKey, response.hvacCommunicationStats);
+        }
+        return response.hvacCommunicationStats;
+    } catch (error) {
+        trackHVACUserAction('get_comm_stats_graphql_error', 'API_ERROR', { customerId, error: error instanceof Error ? error.message : 'Unknown error' });
+        throw error;
     }
-
-    const response = await this.makeAPICall<CommunicationStats>(
-      `/api/v1/communications/stats/${customerId}`
-    );
-
-    this.setCachedData(cacheKey, response.data);
-    return response.data;
   }
 
-  /**
-   * Process email with AI insights
-   */
-  async processEmailWithAI(emailContent: string, customerId: string): Promise<AIInsights> {
-    const response = await this.makeAPICall<AIInsights>('/api/v1/communications/ai-process', {
-      method: 'POST',
-      body: JSON.stringify({
-        content: emailContent,
-        customerId,
-        language: 'pl', // Polish language processing
-      }),
-    });
-
-    trackHVACUserAction('email_ai_processed', 'AI_PROCESSING', {
-      customerId,
-      contentLength: emailContent.length,
-      sentiment: response.data.sentiment,
-      urgency: response.data.urgency,
-    });
-
-    return response.data;
+  async processEmailWithAI(emailContent: string, customerId: string): Promise<AIInsights | null> {
+    const PROCESS_EMAIL_MUTATION = `
+      mutation ProcessHvacEmailWithAI($emailContent: String!, $customerId: ID!) {
+        processHvacEmailWithAI(emailContent: $emailContent, customerId: $customerId) {
+          sentiment sentimentScore topics urgency actionItems summary language confidence
+        }
+      }
+    `;
+    try {
+        const response = await this.fetchGraphQL<{ processHvacEmailWithAI: AIInsights | null }>(
+        PROCESS_EMAIL_MUTATION, { emailContent, customerId }
+        );
+        trackHVACUserAction('email_ai_processed_graphql', 'AI_PROCESSING', { customerId, sentiment: response.processHvacEmailWithAI?.sentiment });
+        return response.processHvacEmailWithAI;
+    } catch (error) {
+        trackHVACUserAction('process_email_ai_graphql_error', 'API_ERROR', { customerId, error: error instanceof Error ? error.message : 'Unknown error' });
+        throw error;
+    }
   }
 
-  /**
-   * Get communication timeline for customer
-   */
-  async getCommunicationTimeline(
-    customerId: string,
-    limit = 50
-  ): Promise<Communication[]> {
+  async getCommunicationTimeline(customerId: string, limit = 50): Promise<Communication[]> {
     const cacheKey = `communication_timeline_${customerId}_${limit}`;
     const cached = this.getCachedData<Communication[]>(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
+    if (cached) return cached;
 
-    const response = await this.makeAPICall<Communication[]>(
-      `/api/v1/communications/timeline/${customerId}?limit=${limit}`
-    );
-
-    this.setCachedData(cacheKey, response.data);
-    return response.data;
-  }
-
-  /**
-   * Search communications with semantic search
-   */
-  async searchCommunications(
-    query: string,
-    customerId?: string,
-    limit = 20
-  ): Promise<Communication[]> {
-    const queryParams = new URLSearchParams({
-      q: query,
-      limit: limit.toString(),
-      ...(customerId && { customerId }),
-    });
-
-    const response = await this.makeAPICall<Communication[]>(
-      `/api/v1/communications/search?${queryParams.toString()}`
-    );
-
-    trackHVACUserAction('communication_search', 'SEMANTIC_SEARCH', {
-      query: query.substring(0, 20), // First 20 chars for privacy
-      customerId,
-      resultCount: response.data.length,
-    });
-
-    return response.data;
-  }
-
-  /**
-   * Update communication status
-   */
-  async updateCommunicationStatus(
-    communicationId: string,
-    status: Communication['status']
-  ): Promise<Communication> {
-    const response = await this.makeAPICall<Communication>(
-      `/api/v1/communications/${communicationId}/status`,
-      {
-        method: 'PATCH',
-        body: JSON.stringify({ status }),
+    const GET_COMMUNICATION_TIMELINE_QUERY = `
+      query GetHvacCommunicationTimeline($customerId: ID!, $limit: Int) {
+        hvacCommunicationTimeline(customerId: $customerId, limit: $limit) {
+          id type direction subject content timestamp status priority
+        }
       }
-    );
+    `;
+    try {
+        const response = await this.fetchGraphQL<{ hvacCommunicationTimeline: Communication[] }>(
+        GET_COMMUNICATION_TIMELINE_QUERY, { customerId, limit }
+        );
+        const timeline = response.hvacCommunicationTimeline || [];
+        this.setCachedData(cacheKey, timeline);
+        return timeline;
+    } catch (error) {
+        trackHVACUserAction('get_comm_timeline_graphql_error', 'API_ERROR', { customerId, error: error instanceof Error ? error.message : 'Unknown error' });
+        throw error;
+    }
+  }
 
-    // Invalidate relevant caches
-    this.invalidateCache('communications_');
-    this.invalidateCache(`communication_${communicationId}`);
+  async searchCommunications(query: string, customerId?: string, limit = 20): Promise<Communication[]> {
+    // This cache key might become very large if query is long. Consider hashing or truncating.
+    const cacheKey = `communication_search_${query}_${customerId}_${limit}`;
+    // Caching search results can be tricky due to variability; use with caution or short TTL.
+    // const cached = this.getCachedData<Communication[]>(cacheKey);
+    // if (cached) return cached;
 
-    return response.data;
+    const SEARCH_COMMUNICATIONS_QUERY = `
+      query SearchHvacCommunications($query: String!, $customerId: ID, $limit: Int) {
+        searchHvacCommunications(query: $query, customerId: $customerId, limit: $limit) {
+          id type direction subject content timestamp status priority
+        }
+      }
+    `;
+    try {
+        const response = await this.fetchGraphQL<{ searchHvacCommunications: Communication[] }>(
+        SEARCH_COMMUNICATIONS_QUERY, { query, customerId, limit }
+        );
+        const results = response.searchHvacCommunications || [];
+        // this.setCachedData(cacheKey, results); // Use caching for search if appropriate
+        trackHVACUserAction('communication_search_graphql', 'SEMANTIC_SEARCH', { queryLength: query.length, resultCount: results.length });
+        return results;
+    } catch (error) {
+        trackHVACUserAction('search_comms_graphql_error', 'API_ERROR', { queryLength: query.length, error: error instanceof Error ? error.message : 'Unknown error' });
+        throw error;
+    }
+  }
+
+  async updateCommunicationStatus(communicationId: string, status: Communication['status']): Promise<Communication | null> {
+    const UPDATE_COMM_STATUS_MUTATION = `
+      mutation UpdateHvacCommunicationStatus($communicationId: ID!, $status: String!) { # Status should be HvacCommunicationStatusEnum ideally
+        updateHvacCommunicationStatus(communicationId: $communicationId, status: $status) {
+          id status timestamp
+        }
+      }
+    `;
+    try {
+        const response = await this.fetchGraphQL<{ updateHvacCommunicationStatus: Communication | null }>(
+        UPDATE_COMM_STATUS_MUTATION, { communicationId, status }
+        );
+
+        this.invalidateCache('communications_');
+        this.invalidateCache(`communication_${communicationId}`);
+        if (response.updateHvacCommunicationStatus?.customerId) {
+            this.invalidateCache(`customer_${response.updateHvacCommunicationStatus.customerId}_communications`);
+        }
+        return response.updateHvacCommunicationStatus;
+    } catch (error) {
+        trackHVACUserAction('update_comm_status_graphql_error', 'API_ERROR', { communicationId, status, error: error instanceof Error ? error.message : 'Unknown error' });
+        throw error;
+    }
   }
 }
 

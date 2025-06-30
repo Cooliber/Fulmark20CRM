@@ -58,13 +58,15 @@ export class HvacEquipmentResolver {
       // For now, this won't directly map to a paginated/filtered result from the current HvacApiIntegrationService.getEquipment
       const equipmentSummaries = await this.hvacApiService.getEquipment(limit, (page -1) * limit);
 
-      // This is a simplified mapping. In reality, you might need more complex logic
-      // or the service method should return the total count.
-      const equipmentData = equipmentSummaries as unknown as HvacEquipmentType[];
+      this.logger.debug(`Fetching HVAC equipments with filters: ${JSON.stringify(filters)}, page: ${page}, limit: ${limit}`);
 
+      const result = await this.hvacApiService.getEquipment(filters, limit, (page - 1) * limit);
+
+      // Assuming HvacEquipmentSummary[] is compatible enough with HvacEquipmentType[]
+      // or that a field resolver on HvacEquipmentType would fetch more details if needed.
       return {
-        equipment: equipmentData,
-        total: equipmentData.length, // Placeholder for total count
+        equipment: result.equipment as any[], // Cast if HvacEquipmentSummary and HvacEquipmentType differ
+        total: result.total,
       };
     } catch (error) {
       this.logger.error('Error fetching HVAC equipments:', error.message, error.stack);
@@ -96,8 +98,9 @@ export class HvacEquipmentResolver {
       // Assuming HvacApiIntegrationService will have a method like getMaintenanceHistoryForEquipment
       // const history = await this.hvacApiService.getMaintenanceHistoryForEquipment(equipmentId);
       // Placeholder:
-      this.logger.warn(`getMaintenanceHistoryForEquipment not yet implemented in HvacApiIntegrationService. Returning empty array for ${equipmentId}.`);
-      return []; //return history as HvacMaintenanceRecordType[];
+      this.logger.debug(`Fetching maintenance history for equipment ID: ${equipmentId}`);
+      const history = await this.hvacApiService.getMaintenanceHistoryForEquipment(equipmentId);
+      return history as HvacMaintenanceRecordType[]; // Assuming MaintenanceRecord from service is compatible
     } catch (error) {
       this.logger.error(`Error fetching maintenance history for equipment ${equipmentId}:`, error.message, error.stack);
       throw error;
@@ -109,10 +112,9 @@ export class HvacEquipmentResolver {
     this.checkFeatureEnabled('maintenance'); // Or a specific flag
     try {
       this.logger.debug('Fetching HVAC equipment needing service.');
-      // Placeholder: Assuming HvacApiIntegrationService will have a method like getEquipmentNeedingService
-      // const equipment = await this.hvacApiService.getEquipmentNeedingService();
-      this.logger.warn(`getEquipmentNeedingService not yet implemented in HvacApiIntegrationService. Returning empty array.`);
-      return []; // return equipment as HvacEquipmentType[];
+      this.logger.debug('Fetching HVAC equipment needing service.');
+      const equipment = await this.hvacApiService.fetchEquipmentNeedingService();
+      return equipment as HvacEquipmentType[]; // Assuming HvacEquipmentSummary is compatible
     } catch (error) {
       this.logger.error('Error fetching HVAC equipment needing service:', error.message, error.stack);
       throw error;
@@ -126,10 +128,9 @@ export class HvacEquipmentResolver {
     this.checkFeatureEnabled('inventory');
     try {
       this.logger.debug(`Fetching HVAC equipment with warranties expiring in ${days} days.`);
-      // Placeholder: Assuming HvacApiIntegrationService will have a method like getExpiringWarranties
-      // const equipment = await this.hvacApiService.getExpiringWarranties(days);
-      this.logger.warn(`getExpiringWarranties not yet implemented in HvacApiIntegrationService. Returning empty array.`);
-      return []; // return equipment as HvacEquipmentType[];
+      this.logger.debug(`Fetching HVAC equipment with warranties expiring in ${days} days.`);
+      const equipment = await this.hvacApiService.fetchEquipmentWithExpiringWarranties(days);
+      return equipment as HvacEquipmentType[]; // Assuming HvacEquipmentSummary is compatible
     } catch (error) {
       this.logger.error(`Error fetching HVAC equipment with expiring warranties:`, error.message, error.stack);
       throw error;
@@ -144,21 +145,11 @@ export class HvacEquipmentResolver {
     this.checkFeatureEnabled('inventory');
     try {
       this.logger.log(`Attempting to create HVAC equipment with input: ${JSON.stringify(input)}`);
-      // Assuming HvacApiIntegrationService.createEquipment exists and takes similar input
-      // const newEquipment = await this.hvacApiService.createEquipment(input);
-      // Placeholder:
-      this.logger.warn(`createEquipment not yet fully implemented in HvacApiIntegrationService or resolver. Using placeholder logic.`);
-      const placeholderNewEquipment = { // Simulate return type; ensure all required fields of HvacEquipmentType are present
-        id: 'temp-id-' + Date.now(),
-        ...input,
-        lastService: new Date(), // Placeholder
-        nextService: new Date(), // Placeholder
-        status: HvacEquipmentStatusEnum.ACTIVE, // Placeholder
-        manufacturer: 'Placeholder Manufacturer',
-        customerName: 'Placeholder Customer Name',
-        maintenanceHistory: []
-      };
-      return placeholderNewEquipment as HvacEquipmentType; // return newEquipment as HvacEquipmentType;
+      this.logger.log(`Attempting to create HVAC equipment with input: ${JSON.stringify(input)}`);
+      const newEquipment = await this.hvacApiService.createActualEquipment(input);
+      // Assuming HvacEquipmentSummary returned by service is compatible enough for HvacEquipmentType response
+      // or specific fields are guaranteed.
+      return newEquipment as HvacEquipmentType;
     } catch (error) {
       this.logger.error(`Error creating HVAC equipment:`, error.message, error.stack);
       throw error;
@@ -173,28 +164,9 @@ export class HvacEquipmentResolver {
     this.checkFeatureEnabled('inventory');
     try {
       this.logger.log(`Attempting to update HVAC equipment with ID: ${input.id}`);
-      // Assuming HvacApiIntegrationService.updateEquipment exists
-      // const updatedEquipment = await this.hvacApiService.updateEquipment(input.id, input);
-      // Placeholder:
-      this.logger.warn(`updateEquipment not yet fully implemented in HvacApiIntegrationService or resolver. Using placeholder logic for ID: ${input.id}.`);
-      const placeholderUpdatedEquipment = { // Simulate return type
-        ...input,
-        // Fill in any missing required fields from HvacEquipmentType if not in UpdateHvacEquipmentInput
-        customerId: input.customerId || 'placeholder-cust-id',
-        name: input.name || 'Placeholder Name',
-        type: input.type || HvacEquipmentTypeEnum.AIR_CONDITIONING,
-        brand: input.brand || 'Placeholder Brand',
-        model: input.model || 'Placeholder Model',
-        serialNumber: input.serialNumber || 'SN-PLACEHOLDER',
-        installationDate: input.installationDate || new Date(),
-        lastService: input.lastService || new Date(),
-        nextService: input.nextService || new Date(),
-        status: input.status || HvacEquipmentStatusEnum.ACTIVE,
-        manufacturer: 'Placeholder Manufacturer',
-        customerName: 'Placeholder Customer Name',
-        maintenanceHistory: []
-      };
-      return placeholderUpdatedEquipment as HvacEquipmentType; // return updatedEquipment as HvacEquipmentType;
+      this.logger.log(`Attempting to update HVAC equipment with ID: ${input.id}`);
+      const updatedEquipment = await this.hvacApiService.updateActualEquipment(input.id, input);
+      return updatedEquipment as HvacEquipmentType;
     } catch (error) {
       this.logger.error(`Error updating HVAC equipment ${input.id}:`, error.message, error.stack);
       throw error;
@@ -206,13 +178,14 @@ export class HvacEquipmentResolver {
     this.checkFeatureEnabled('inventory');
     try {
       this.logger.log(`Attempting to delete HVAC equipment with ID: ${id}`);
-      // Assuming HvacApiIntegrationService.deleteEquipment exists
-      // await this.hvacApiService.deleteEquipment(id);
-      this.logger.warn(`deleteEquipment not yet fully implemented in HvacApiIntegrationService or resolver for ID: ${id}. Simulating success.`);
+      this.logger.log(`Attempting to delete HVAC equipment with ID: ${id}`);
+      await this.hvacApiService.deleteActualEquipment(id);
       return true;
     } catch (error) {
       this.logger.error(`Error deleting HVAC equipment ${id}:`, error.message, error.stack);
-      throw error; // Or return false
+      // Depending on API contract, you might want to return false or throw the error
+      // For GraphQL, throwing the error is often preferred so client can see it.
+      throw error;
     }
   }
 
@@ -224,18 +197,10 @@ export class HvacEquipmentResolver {
     this.checkFeatureEnabled('maintenance');
     try {
       this.logger.log(`Attempting to schedule maintenance: ${JSON.stringify(input)}`);
-      // Assuming HvacApiIntegrationService.scheduleMaintenance exists
-      // const newMaintenanceRecord = await this.hvacApiService.scheduleMaintenance(input);
-      // Placeholder:
-      this.logger.warn(`scheduleMaintenance not yet fully implemented in HvacApiIntegrationService or resolver. Using placeholder logic.`);
-      const placeholderMaintenanceRecord = { // Simulate return type
-        id: 'maint-temp-id-' + Date.now(),
-        ...input,
-        technician: input.technicianId || 'Placeholder Tech',
-        cost: input.estimatedCost || 0,
-        partsUsed: [],
-      };
-      return placeholderMaintenanceRecord as HvacMaintenanceRecordType; // return newMaintenanceRecord as HvacMaintenanceRecordType;
+      this.logger.log(`Attempting to schedule maintenance: ${JSON.stringify(input)}`);
+      const newMaintenanceRecord = await this.hvacApiService.scheduleActualMaintenance(input);
+      // Assuming MaintenanceRecord from service is compatible with HvacMaintenanceRecordType
+      return newMaintenanceRecord as HvacMaintenanceRecordType;
     } catch (error) {
       this.logger.error(`Error scheduling maintenance:`, error.message, error.stack);
       throw error;

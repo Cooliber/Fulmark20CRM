@@ -44,11 +44,12 @@ export class HvacContractResolver {
     this.checkFeatureEnabled();
     try {
       this.logger.debug(`Fetching HVAC contracts with filters: ${JSON.stringify(filters)}, page: ${page}, limit: ${limit}`);
-      // Placeholder: HvacApiIntegrationService needs a method like getContracts(filters, page, limit)
-      this.logger.warn(`getContracts not yet implemented in HvacApiIntegrationService. Returning empty response.`);
-      // const result = await this.hvacApiService.getContracts(filters, page, limit);
-      // return result;
-      return { contracts: [], total: 0 };
+      const result = await this.hvacApiService.getContractsList(filters, limit, (page - 1) * limit);
+      // Assuming result.contracts are compatible with HvacContractType or need mapping
+      return {
+        contracts: result.contracts.map(c => this.mapContractDataToGqlType(c)),
+        total: result.total,
+      };
     } catch (error) {
       this.logger.error('Error fetching HVAC contracts:', error.message, error.stack);
       throw error;
@@ -61,10 +62,10 @@ export class HvacContractResolver {
     try {
       this.logger.debug(`Fetching HVAC contract by ID: ${id}`);
       // Placeholder
-      this.logger.warn(`getContractById not yet implemented in HvacApiIntegrationService. Returning null for ID: ${id}.`);
-      // const contract = await this.hvacApiService.getContractById(id);
-      // return contract;
-      return null;
+      this.logger.debug(`Fetching HVAC contract by ID: ${id}`);
+      const contractData = await this.hvacApiService.getContractDetailsById(id);
+      if (!contractData) return null;
+      return this.mapContractDataToGqlType(contractData);
     } catch (error) {
       this.logger.error(`Error fetching HVAC contract by ID ${id}:`, error.message, error.stack);
       throw error;
@@ -80,16 +81,9 @@ export class HvacContractResolver {
     try {
       this.logger.log(`Attempting to create HVAC contract: ${JSON.stringify(input)}`);
       // Placeholder
-      this.logger.warn(`createContract not yet fully implemented in HvacApiIntegrationService or resolver. Using placeholder logic.`);
-      const placeholderContract = {
-        id: 'contract-temp-id-' + Date.now(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        ...input,
-      };
-      return placeholderContract as any; // Cast needed as not all fields of HvacContractType are in input
-      // const newContract = await this.hvacApiService.createContract(input);
-      // return newContract;
+      this.logger.log(`Attempting to create HVAC contract: ${JSON.stringify(input)}`);
+      const newContractData = await this.hvacApiService.createActualContractRecord(input);
+      return this.mapContractDataToGqlType(newContractData);
     } catch (error) {
       this.logger.error(`Error creating HVAC contract:`, error.message, error.stack);
       throw error;
@@ -105,24 +99,10 @@ export class HvacContractResolver {
     try {
       this.logger.log(`Attempting to update HVAC contract ID: ${input.id}`);
       // Placeholder
-      this.logger.warn(`updateContract not yet fully implemented in HvacApiIntegrationService or resolver. Using placeholder logic for ID: ${input.id}.`);
-      const placeholderUpdatedContract = {
-        id: input.id,
-        createdAt: new Date(), // Should be fetched from existing if not updated
-        updatedAt: new Date(),
-        // Simulate fetching existing and merging
-        customerId: input.customerId || 'placeholder-cust-id',
-        type: input.type || HvacContractTypeEnum.SERVICE,
-        startDate: input.startDate || new Date(),
-        endDate: input.endDate || new Date(),
-        value: input.value === undefined ? 1000 : input.value,
-        status: input.status || HvacContractStatusEnum.ACTIVE,
-        terms: input.terms,
-        contractNumber: input.contractNumber
-      };
-      return placeholderUpdatedContract as any; // Cast needed
-      // const updatedContract = await this.hvacApiService.updateContract(input.id, input);
-      // return updatedContract;
+      this.logger.log(`Attempting to update HVAC contract ID: ${input.id}`);
+      const { id, ...updateData } = input;
+      const updatedContractData = await this.hvacApiService.updateActualContractRecord(id, updateData as UpdateHvacContractInput);
+      return this.mapContractDataToGqlType(updatedContractData);
     } catch (error) {
       this.logger.error(`Error updating HVAC contract ${input.id}:`, error.message, error.stack);
       throw error;
@@ -135,12 +115,12 @@ export class HvacContractResolver {
     try {
       this.logger.log(`Attempting to delete HVAC contract ID: ${id}`);
       // Placeholder
-      this.logger.warn(`deleteContract not yet implemented in HvacApiIntegrationService for ID: ${id}. Simulating success.`);
-      // await this.hvacApiService.deleteContract(id);
+      this.logger.log(`Attempting to delete HVAC contract ID: ${id}`);
+      await this.hvacApiService.deleteActualContractRecord(id);
       return true;
     } catch (error) {
       this.logger.error(`Error deleting HVAC contract ${id}:`, error.message, error.stack);
-      return false;
+      throw error; // Or return false based on requirements
     }
   }
 
