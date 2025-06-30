@@ -83,5 +83,12 @@ RUN mkdir -p /app/.local-storage /app/packages/twenty-server/.local-storage && \
 # Use non root user with uid 1000
 USER 1000
 
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+# Note: Adjust the port and /health endpoint if different for the main twenty-server.
+# Common alternatives: /api/health, /status, or a specific port if not 3000.
+
+EXPOSE 3000 # Assuming NODE_PORT defaults or is set to 3000
+
 CMD ["node", "dist/src/main"]
 ENTRYPOINT ["/app/entrypoint.sh"]
