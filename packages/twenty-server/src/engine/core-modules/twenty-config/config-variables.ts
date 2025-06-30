@@ -900,6 +900,8 @@ export class ConfigVariables {
     isEnvOnly: true,
     type: ConfigVariableType.STRING,
   })
+  @IsString()
+  @IsNotEmpty({ message: 'APP_SECRET must not be empty' })
   APP_SECRET: string;
 
   @ConfigVariablesMetadata({
