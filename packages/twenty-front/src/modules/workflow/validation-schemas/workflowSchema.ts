@@ -113,7 +113,7 @@ export const workflowFormActionSettingsSchema =
 export const workflowHttpRequestActionSettingsSchema =
   baseWorkflowActionSettingsSchema.extend({
     input: z.object({
-      url: z.string().url(),
+      url: z.string(),
       method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
       headers: z.record(z.string()).optional(),
       body: z
@@ -126,7 +126,15 @@ export const workflowHttpRequestActionSettingsSchema =
             z.array(z.union([z.string(), z.number(), z.boolean(), z.null()])),
           ]),
         )
+        .or(z.string())
         .optional(),
+    }),
+  });
+
+export const workflowAiAgentActionSettingsSchema =
+  baseWorkflowActionSettingsSchema.extend({
+    input: z.object({
+      agentId: z.string(),
     }),
   });
 
@@ -177,6 +185,11 @@ export const workflowHttpRequestActionSchema = baseWorkflowActionSchema.extend({
   settings: workflowHttpRequestActionSettingsSchema,
 });
 
+export const workflowAiAgentActionSchema = baseWorkflowActionSchema.extend({
+  type: z.literal('AI_AGENT'),
+  settings: workflowAiAgentActionSettingsSchema,
+});
+
 // Combined action schema
 export const workflowActionSchema = z.discriminatedUnion('type', [
   workflowCodeActionSchema,
@@ -187,6 +200,7 @@ export const workflowActionSchema = z.discriminatedUnion('type', [
   workflowFindRecordsActionSchema,
   workflowFormActionSchema,
   workflowHttpRequestActionSchema,
+  workflowAiAgentActionSchema,
 ]);
 
 // Trigger schemas
@@ -206,6 +220,7 @@ export const workflowManualTriggerSchema = baseTriggerSchema.extend({
   settings: z.object({
     objectType: z.string().optional(),
     outputSchema: z.object({}).passthrough(),
+    icon: z.string().optional(),
   }),
 });
 
@@ -270,7 +285,7 @@ export const workflowTriggerSchema = z.discriminatedUnion('type', [
 // Step output schemas
 export const workflowExecutorOutputSchema = z.object({
   result: z.any().optional(),
-  error: z.string().optional(),
+  error: z.any().optional(),
   pendingEvent: z.boolean().optional(),
 });
 
@@ -285,7 +300,7 @@ export const workflowRunOutputSchema = z.object({
     steps: z.array(workflowActionSchema),
   }),
   stepsOutput: workflowRunOutputStepsOutputSchema.optional(),
-  error: z.string().optional(),
+  error: z.any().optional(),
 });
 
 export const workflowRunContextSchema = z.record(z.any());
@@ -295,6 +310,7 @@ export const workflowRunStatusSchema = z.enum([
   'RUNNING',
   'COMPLETED',
   'FAILED',
+  'ENQUEUED',
 ]);
 
 export const workflowRunSchema = z
