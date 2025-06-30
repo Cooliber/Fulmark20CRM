@@ -1,13 +1,14 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { Injectable, UseGuards } from '@nestjs/common';
-import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
-import { HvacApiIntegrationService, HvacSearchQuery, HvacSearchResult } from '../services/hvac-api-integration.service';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { HvacConfigService } from 'src/engine/core-modules/hvac-config/hvac-config.service';
-import { HvacWeaviateService, HvacSemanticSearchQuery } from '../services/hvac-weaviate.service';
+import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
+import { HvacPermissionsGuard, RequireSemanticSearch } from '../guards/hvac-permissions.guard';
+import { HvacApiIntegrationService, HvacSearchQuery, HvacSearchResult } from '../services/hvac-api-integration.service';
 import { HvacDataSyncService } from '../services/hvac-data-sync.service';
+import { HvacSemanticSearchQuery, HvacWeaviateService } from '../services/hvac-weaviate.service';
 
 // GraphQL Types
-import { ObjectType, Field, InputType, Int } from '@nestjs/graphql';
+import { Field, InputType, Int, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
 export class HvacSearchResultType {
@@ -122,7 +123,7 @@ export class HvacSemanticStatsType {
 
 @Resolver()
 @Injectable()
-@UseGuards(WorkspaceAuthGuard)
+@UseGuards(WorkspaceAuthGuard, HvacPermissionsGuard)
 export class HvacSemanticSearchResolver {
   constructor(
     private readonly hvacApiService: HvacApiIntegrationService,
@@ -132,6 +133,7 @@ export class HvacSemanticSearchResolver {
   ) {}
 
   @Query(() => HvacSemanticSearchResponse, { name: 'hvacSemanticSearch' })
+  @RequireSemanticSearch()
   async performHvacSemanticSearch(
     @Args('input') input: HvacSemanticSearchInput,
     @Args('useWeaviate', { defaultValue: true }) useWeaviate: boolean,
@@ -225,6 +227,7 @@ export class HvacSemanticSearchResolver {
   }
 
   @Query(() => [String], { name: 'hvacSearchSuggestions' })
+  @RequireSemanticSearch()
   async getHvacSearchSuggestions(
     @Args('query') query: string,
     @Args('limit', { type: () => Int, defaultValue: 5 }) limit: number,
@@ -253,6 +256,7 @@ export class HvacSemanticSearchResolver {
   }
 
   @Query(() => HvacSemanticStatsType, { name: 'hvacSemanticSearchStats' })
+  @RequireHvacRead()
   async getHvacSemanticSearchStats(): Promise<HvacSemanticStatsType> {
     if (!this.hvacConfigService.isHvacFeatureEnabled('semanticSearch')) {
       throw new Error('HVAC semantic search feature is not enabled');

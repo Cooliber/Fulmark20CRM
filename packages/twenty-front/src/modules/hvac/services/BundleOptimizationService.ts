@@ -311,6 +311,200 @@ class BundleOptimizationService {
       });
     }
 
+    // Track bundle size optimization opportunities
+    if (bundleSize > 500000) { // 500KB threshold
+      trackHVACUserAction('large_bundle_detected', 'PERFORMANCE', {
+        componentType,
+        bundleSize,
+        loadTime,
+        strategy,
+      });
+    }
+  }
+
+  /**
+   * Advanced bundle analysis and optimization recommendations
+   */
+  analyzeBundleOptimization(): {
+    currentBundleSize: number;
+    optimizationOpportunities: Array<{
+      type: 'code-splitting' | 'lazy-loading' | 'tree-shaking' | 'compression';
+      description: string;
+      estimatedSavings: number;
+      priority: 'high' | 'medium' | 'low';
+    }>;
+    totalPotentialSavings: number;
+    implementationSteps: string[];
+  } {
+    const currentSize = this.estimateCurrentBundleSize();
+    const opportunities = [];
+    let totalSavings = 0;
+
+    // Code splitting opportunities
+    const codeSplittingSavings = currentSize * 0.3;
+    opportunities.push({
+      type: 'code-splitting' as const,
+      description: 'Split large components into separate chunks',
+      estimatedSavings: codeSplittingSavings,
+      priority: 'high' as const,
+    });
+    totalSavings += codeSplittingSavings;
+
+    // Lazy loading opportunities
+    const lazyLoadingSavings = currentSize * 0.25;
+    opportunities.push({
+      type: 'lazy-loading' as const,
+      description: 'Implement lazy loading for non-critical components',
+      estimatedSavings: lazyLoadingSavings,
+      priority: 'high' as const,
+    });
+    totalSavings += lazyLoadingSavings;
+
+    // Tree shaking opportunities
+    const treeShakingSavings = currentSize * 0.15;
+    opportunities.push({
+      type: 'tree-shaking' as const,
+      description: 'Remove unused code and dependencies',
+      estimatedSavings: treeShakingSavings,
+      priority: 'medium' as const,
+    });
+    totalSavings += treeShakingSavings;
+
+    // Compression opportunities
+    const compressionSavings = currentSize * 0.2;
+    opportunities.push({
+      type: 'compression' as const,
+      description: 'Enable gzip/brotli compression',
+      estimatedSavings: compressionSavings,
+      priority: 'medium' as const,
+    });
+    totalSavings += compressionSavings;
+
+    const implementationSteps = [
+      '1. Implement React.lazy() for heavy components',
+      '2. Use dynamic imports for route-based code splitting',
+      '3. Configure webpack bundle analyzer',
+      '4. Enable tree shaking in build configuration',
+      '5. Implement compression middleware',
+      '6. Monitor bundle size in CI/CD pipeline',
+    ];
+
+    return {
+      currentBundleSize: currentSize,
+      optimizationOpportunities: opportunities,
+      totalPotentialSavings: totalSavings,
+      implementationSteps,
+    };
+  }
+
+  /**
+   * Estimate current bundle size based on loaded components
+   */
+  private estimateCurrentBundleSize(): number {
+    // This would typically be provided by webpack-bundle-analyzer
+    // For now, we'll estimate based on component metrics
+    let estimatedSize = 0;
+
+    this.metrics.forEach(metric => {
+      estimatedSize += metric.bundleSize;
+    });
+
+    // Add base framework size estimate
+    estimatedSize += 2000000; // ~2MB for React + Twenty CRM base
+
+    return estimatedSize;
+  }
+
+  /**
+   * Get performance recommendations based on current metrics
+   */
+  getPerformanceRecommendations(): {
+    bundleOptimization: string[];
+    loadingOptimization: string[];
+    cacheOptimization: string[];
+    networkOptimization: string[];
+  } {
+    const bundleAnalysis = this.analyzeBundleOptimization();
+    const avgLoadTime = this.calculateAverageLoadTime();
+    const cacheHitRate = this.calculateCacheHitRate();
+
+    const recommendations = {
+      bundleOptimization: [],
+      loadingOptimization: [],
+      cacheOptimization: [],
+      networkOptimization: [],
+    };
+
+    // Bundle optimization recommendations
+    if (bundleAnalysis.currentBundleSize > 4700000) { // 4.7MB Twenty CRM limit
+      recommendations.bundleOptimization.push(
+        'Bundle size exceeds Twenty CRM limit - implement immediate code splitting'
+      );
+    }
+
+    bundleAnalysis.optimizationOpportunities
+      .filter(opp => opp.priority === 'high')
+      .forEach(opp => {
+        recommendations.bundleOptimization.push(opp.description);
+      });
+
+    // Loading optimization recommendations
+    if (avgLoadTime > this.config.performanceThreshold) {
+      recommendations.loadingOptimization.push(
+        'Average load time exceeds threshold - implement preloading'
+      );
+      recommendations.loadingOptimization.push(
+        'Consider using React.Suspense with fallback components'
+      );
+    }
+
+    // Cache optimization recommendations
+    if (cacheHitRate < 0.7) {
+      recommendations.cacheOptimization.push(
+        'Low cache hit rate - review caching strategy'
+      );
+      recommendations.cacheOptimization.push(
+        'Implement service worker for better caching'
+      );
+    }
+
+    // Network optimization recommendations
+    const slowNetworkMetrics = this.metrics.filter(
+      m => m.networkType === 'slow-2g' || m.networkType === '2g'
+    );
+
+    if (slowNetworkMetrics.length > 0) {
+      recommendations.networkOptimization.push(
+        'Optimize for slow networks - implement progressive loading'
+      );
+      recommendations.networkOptimization.push(
+        'Consider offline-first approach with service workers'
+      );
+    }
+
+    return recommendations;
+  }
+
+  /**
+   * Calculate average load time across all components
+   */
+  private calculateAverageLoadTime(): number {
+    if (this.metrics.length === 0) return 0;
+
+    const totalTime = this.metrics.reduce((sum, metric) => sum + metric.loadTime, 0);
+    return totalTime / this.metrics.length;
+  }
+
+  /**
+   * Calculate cache hit rate
+   */
+  private calculateCacheHitRate(): number {
+    if (this.metrics.length === 0) return 0;
+
+    const cacheHits = this.metrics.filter(metric => metric.cacheHit).length;
+    return cacheHits / this.metrics.length;
+  }
+
     // Keep only last 100 metrics to prevent memory leaks
     if (this.metrics.length > 100) {
       this.metrics = this.metrics.slice(-100);

@@ -6,6 +6,7 @@ export enum HealthIndicatorId {
   worker = 'worker',
   connectedAccount = 'connectedAccount',
   app = 'app',
+  hvac = 'hvac',
 }
 
 registerEnumType(HealthIndicatorId, {

@@ -41,14 +41,12 @@ export {
     type SearchPerformanceMetric
 } from './services/PerformanceMonitoringService';
 
-// Performance Monitoring Components
-export { PerformanceMonitor } from './components/monitoring/PerformanceMonitor';
+// Performance Monitoring Components - Legacy (use HvacPerformanceDashboard instead)
 
 // Search Components - Refactored for cursor rules compliance
 export { SearchHeader, SearchResults, SearchStats } from './components/search';
 
 // Error Handling and Fault Tolerance
-export { HvacErrorBoundary } from './components/error-handling';
 export {
     useFaultTolerance,
     useFaultToleranceHealth,
@@ -100,8 +98,11 @@ export {
 
 // Navigation Components
 export {
-    HvacNavigationSection
+    HvacNavigationSection,
+    HvacObjectsNavigationSection
 } from './components/navigation';
+
+// Error Handling Components - Unified exports below
 
 // Customer 360 Components - Use lazy versions for bundle optimization
 // export {
@@ -223,9 +224,9 @@ export {
 // } from './components/dashboard';
 
 // Error Handling & Monitoring
-export {
-    HVACErrorBoundary, useHVACErrorReporting, withHVACErrorBoundary
-} from './components/HVACErrorBoundary';
+export { HvacErrorBoundary } from './components/error/HvacErrorBoundary';
+export type { HvacErrorBoundaryProps } from './components/error/HvacErrorBoundary';
+export { HVACErrorBoundary, useHVACErrorReporting, withHVACErrorBoundary } from './components/HVACErrorBoundary';
 
 // Fault Tolerance Components
 export {
@@ -233,10 +234,25 @@ export {
     HVACSuspenseWrapper
 } from './components/fault-tolerance';
 
-// Performance Monitoring
+// Performance Monitoring & Optimization
 export {
-    PERFORMANCE_THRESHOLDS, useHVACDebouncedPerformance, useHVACPerformanceMonitoring
+    PERFORMANCE_THRESHOLDS, useHVACPerformanceMonitoring
 } from './hooks/useHVACPerformanceMonitoring';
+
+export {
+    useHVACDebouncedPerformance
+} from './hooks/useHVACDebouncedPerformance';
+
+// Performance Components
+export { HvacPerformanceDashboard, PerformanceMonitor } from './components/performance';
+
+export { HvacPerformanceOptimizer, hvacPerformanceOptimizer } from './services/HvacPerformanceOptimizer';
+
+export type {
+    ComponentMetrics,
+    OptimizationConfig as HvacOptimizationConfig,
+    PerformanceMetrics
+} from './services/HvacPerformanceOptimizer';
 
 // Sentry Configuration & Utilities
 export {

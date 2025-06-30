@@ -1,9 +1,9 @@
 import {
-  BadRequestException,
-  Controller,
-  Get,
-  Param,
-  UseGuards,
+    BadRequestException,
+    Controller,
+    Get,
+    Param,
+    UseGuards,
 } from '@nestjs/common';
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
 
@@ -14,6 +14,7 @@ import { DatabaseHealthIndicator } from 'src/engine/core-modules/health/indicato
 import { RedisHealthIndicator } from 'src/engine/core-modules/health/indicators/redis.health';
 import { WorkerHealthIndicator } from 'src/engine/core-modules/health/indicators/worker.health';
 import { PublicEndpointGuard } from 'src/engine/guards/public-endpoint.guard';
+import { HvacHealthIndicator } from 'src/modules/hvac/health/hvac.health';
 
 @Controller('healthz')
 export class HealthController {
@@ -24,6 +25,7 @@ export class HealthController {
     private readonly workerHealth: WorkerHealthIndicator,
     private readonly connectedAccountHealth: ConnectedAccountHealth,
     private readonly appHealth: AppHealthIndicator,
+    private readonly hvacHealth: HvacHealthIndicator,
   ) {}
 
   @Get()
@@ -44,6 +46,7 @@ export class HealthController {
       [HealthIndicatorId.connectedAccount]: () =>
         this.connectedAccountHealth.isHealthy(),
       [HealthIndicatorId.app]: () => this.appHealth.isHealthy(),
+      [HealthIndicatorId.hvac]: () => this.hvacHealth.isHealthy(),
     };
 
     if (!(indicatorId in checks)) {

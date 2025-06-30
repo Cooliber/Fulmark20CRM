@@ -447,6 +447,53 @@ export class HvacErrorHandlerService {
     );
   }
 
+  /**
+   * Enhanced error reporting with Twenty CRM integration
+   */
+  reportToTwentyErrorSystem(error: HvacError): void {
+    try {
+      // Report to Twenty's exception handler service
+      this.exceptionHandlerService.captureExceptions([error.originalError], {
+        user: error.metadata.userId ? { id: error.metadata.userId } : undefined,
+        workspace: error.metadata.workspaceId ? { id: error.metadata.workspaceId } : undefined,
+        operation: {
+          name: error.type,
+          type: 'hvac_operation',
+        },
+      });
+    } catch (reportingError) {
+      this.logger.error('Failed to report HVAC error to Twenty system', {
+        originalError: error,
+        reportingError,
+      });
+    }
+  }
+
+  /**
+   * Create user-friendly error messages in Polish
+   */
+  createPolishErrorMessage(error: HvacError): string {
+    const polishMessages = {
+      [HvacErrorType.API_CONNECTION_FAILED]: 'Błąd połączenia z systemem HVAC. Sprawdź połączenie internetowe.',
+      [HvacErrorType.AUTHENTICATION_FAILED]: 'Błąd uwierzytelniania. Sprawdź dane logowania.',
+      [HvacErrorType.PERMISSION_DENIED]: 'Brak uprawnień do wykonania tej operacji.',
+      [HvacErrorType.RESOURCE_NOT_FOUND]: 'Nie znaleziono żądanego zasobu.',
+      [HvacErrorType.VALIDATION_FAILED]: 'Błąd walidacji danych. Sprawdź wprowadzone informacje.',
+      [HvacErrorType.RATE_LIMIT_EXCEEDED]: 'Przekroczono limit żądań. Spróbuj ponownie za chwilę.',
+      [HvacErrorType.SERVICE_UNAVAILABLE]: 'Usługa HVAC jest tymczasowo niedostępna.',
+      [HvacErrorType.TIMEOUT]: 'Przekroczono czas oczekiwania na odpowiedź.',
+      [HvacErrorType.DATA_CORRUPTION]: 'Wykryto uszkodzenie danych. Skontaktuj się z administratorem.',
+      [HvacErrorType.CONFIGURATION_ERROR]: 'Błąd konfiguracji systemu. Skontaktuj się z administratorem.',
+      [HvacErrorType.EXTERNAL_SERVICE_ERROR]: 'Błąd zewnętrznego serwisu. Spróbuj ponownie później.',
+      [HvacErrorType.BUSINESS_RULE_VIOLATION]: 'Naruszenie reguł biznesowych.',
+      [HvacErrorType.CONCURRENCY_CONFLICT]: 'Konflikt współbieżności. Odśwież dane i spróbuj ponownie.',
+      [HvacErrorType.QUOTA_EXCEEDED]: 'Przekroczono limit zasobów.',
+      [HvacErrorType.MAINTENANCE_MODE]: 'System jest w trybie konserwacji.',
+    };
+
+    return polishMessages[error.type] || 'Wystąpił nieoczekiwany błąd systemu HVAC.';
+  }
+
   private mapSeverityToSentryLevel(severity: HvacErrorSeverity): 'error' | 'warning' | 'info' {
     switch (severity) {
       case HvacErrorSeverity.CRITICAL:

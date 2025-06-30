@@ -364,7 +364,17 @@
   "version": "0.2.1",
   "nx": {},
   "scripts": {
-    "start": "npx concurrently --kill-others 'npx nx run-many -t start -p twenty-server twenty-front' 'npx wait-on tcp:3000 && npx nx run twenty-server:worker'"
+    "start": "npx concurrently --kill-others 'npx nx run-many -t start -p twenty-server twenty-front' 'npx wait-on tcp:3000 && npx nx run twenty-server:worker'",
+    "test:hvac": "cd packages/twenty-e2e-testing && npm run test:hvac",
+    "test:hvac:dashboard": "cd packages/twenty-e2e-testing && npm run test:hvac:dashboard",
+    "test:hvac:search": "cd packages/twenty-e2e-testing && npm run test:hvac:search",
+    "test:hvac:planner": "cd packages/twenty-e2e-testing && npm run test:hvac:planner",
+    "test:hvac:dispatch": "cd packages/twenty-e2e-testing && npm run test:hvac:dispatch",
+    "test:hvac:mobile": "cd packages/twenty-e2e-testing && npm run test:hvac:mobile",
+    "test:hvac:errors": "cd packages/twenty-e2e-testing && npm run test:hvac:errors",
+    "test:hvac:all": "cd packages/twenty-e2e-testing && npm run test:hvac",
+    "test:hvac:headed": "cd packages/twenty-e2e-testing && npm run test:hvac:headed",
+    "test:hvac:report": "cd packages/twenty-e2e-testing && npm run test:hvac:report"
   },
   "workspaces": {
     "packages": [

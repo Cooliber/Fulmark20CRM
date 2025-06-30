@@ -1,0 +1,267 @@
+# HVAC Production Docker Compose
+# "Pasja rodzi profesjonalizm" - Professional HVAC Production Deployment
+# 
+# Complete production setup for HVAC-enabled TwentyCRM
+# Includes all necessary services, monitoring, and security configurations
+
+version: '3.8'
+
+services:
+  # TwentyCRM Server with HVAC Integration
+  twenty-server:
+    image: twentycrm/twenty:latest
+    container_name: hvac-twenty-server
+    restart: unless-stopped
+    environment:
+      # Core Twenty Configuration
+      - NODE_ENV=production
+      - SERVER_URL=https://crm.fulmark.pl
+      - FRONT_BASE_URL=https://app.fulmark.pl
+      - PG_DATABASE_URL=postgresql://twenty:${POSTGRES_PASSWORD}@postgres:5432/default
+      - REDIS_URL=redis://redis:6379
+      
+      # HVAC Configuration
+      - HVAC_API_URL=https://api.hvac.fulmark.pl
+      - HVAC_API_KEY=${HVAC_API_KEY}
+      - HVAC_API_VERSION=v1
+      - HVAC_API_TIMEOUT=30000
+      
+      # Weaviate Configuration
+      - WEAVIATE_HOST=weaviate
+      - WEAVIATE_PORT=8080
+      - WEAVIATE_SCHEME=http
+      - WEAVIATE_API_KEY=${WEAVIATE_API_KEY}
+      
+      # Security Configuration
+      - HVAC_ENABLE_HTTPS=true
+      - HVAC_SSL_CERT_PATH=/certs/fullchain.pem
+      - HVAC_SSL_KEY_PATH=/certs/privkey.pem
+      - HVAC_CORS_ORIGINS=https://crm.fulmark.pl,https://app.fulmark.pl
+      
+      # Performance Configuration
+      - HVAC_CACHE_ENABLED=true
+      - HVAC_CACHE_TTL=300000
+      - HVAC_MAX_CONCURRENT_REQUESTS=100
+      
+      # Monitoring Configuration
+      - HVAC_ENABLE_HEALTH_CHECKS=true
+      - HVAC_HEALTH_CHECK_INTERVAL=30000
+      - HVAC_ENABLE_METRICS=true
+      - HVAC_METRICS_PORT=9090
+      - HVAC_LOG_LEVEL=info
+      - HVAC_ENABLE_SENTRY=true
+      - HVAC_SENTRY_DSN=${HVAC_SENTRY_DSN}
+      
+      # Polish Localization
+      - HVAC_DEFAULT_LANGUAGE=pl
+      - HVAC_CURRENCY=PLN
+      - HVAC_TIMEZONE=Europe/Warsaw
+      - HVAC_ENABLE_POLISH_INTEGRATIONS=true
+      - COMPANY_NAME=Fulmark HVAC
+      - LOCALIZATION_CURRENCY=PLN
+      
+      # Authentication & Security
+      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET}
+      - LOGIN_TOKEN_SECRET=${LOGIN_TOKEN_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      - FILE_TOKEN_SECRET=${FILE_TOKEN_SECRET}
+      
+      # Email Configuration
+      - EMAIL_DRIVER=smtp
+      - EMAIL_SMTP_HOST=${EMAIL_SMTP_HOST}
+      - EMAIL_SMTP_PORT=${EMAIL_SMTP_PORT}
+      - EMAIL_SMTP_USER=${EMAIL_SMTP_USER}
+      - EMAIL_SMTP_PASSWORD=${EMAIL_SMTP_PASSWORD}
+      
+      # Storage Configuration
+      - STORAGE_TYPE=s3
+      - STORAGE_S3_REGION=${AWS_REGION}
+      - STORAGE_S3_NAME=${S3_BUCKET_NAME}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      
+    ports:
+      - "3000:3000"
+      - "9090:9090"  # Metrics port
+    volumes:
+      - ./certs:/certs:ro
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+      - weaviate
+    networks:
+      - hvac-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: hvac-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=default
+      - POSTGRES_USER=twenty
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=pl_PL.UTF-8 --lc-ctype=pl_PL.UTF-8
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    networks:
+      - hvac-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U twenty -d default"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: hvac-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - hvac-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Weaviate Vector Database
+  weaviate:
+    image: semitechnologies/weaviate:1.22.4
+    container_name: hvac-weaviate
+    restart: unless-stopped
+    environment:
+      - QUERY_DEFAULTS_LIMIT=25
+      - AUTHENTICATION_APIKEY_ENABLED=true
+      - AUTHENTICATION_APIKEY_ALLOWED_KEYS=${WEAVIATE_API_KEY}
+      - AUTHENTICATION_APIKEY_USERS=hvac-user
+      - AUTHORIZATION_ADMINLIST_ENABLED=true
+      - AUTHORIZATION_ADMINLIST_USERS=hvac-user
+      - PERSISTENCE_DATA_PATH=/var/lib/weaviate
+      - DEFAULT_VECTORIZER_MODULE=none
+      - ENABLE_MODULES=text2vec-openai,generative-openai
+      - CLUSTER_HOSTNAME=node1
+    ports:
+      - "8080:8080"
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    networks:
+      - hvac-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx Reverse Proxy with SSL
+  nginx:
+    image: nginx:alpine
+    container_name: hvac-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certs:/etc/nginx/certs:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - twenty-server
+    networks:
+      - hvac-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: hvac-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - hvac-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: hvac-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_DOMAIN=monitoring.fulmark.pl
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=${EMAIL_SMTP_HOST}:${EMAIL_SMTP_PORT}
+      - GF_SMTP_USER=${EMAIL_SMTP_USER}
+      - GF_SMTP_PASSWORD=${EMAIL_SMTP_PASSWORD}
+      - GF_SMTP_FROM_ADDRESS=monitoring@fulmark.pl
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - hvac-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  weaviate_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  hvac-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

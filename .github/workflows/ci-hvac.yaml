@@ -1,0 +1,428 @@
+name: CI HVAC Module
+
+on:
+  push:
+    branches: [main, develop, 'hvac-*']
+    paths:
+      - 'packages/twenty-front/src/modules/hvac/**'
+      - 'packages/twenty-server/src/modules/hvac/**'
+      - 'packages/twenty-e2e-testing/tests/hvac/**'
+      - 'scripts/hvac-*'
+      - '.github/workflows/ci-hvac.yaml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'packages/twenty-front/src/modules/hvac/**'
+      - 'packages/twenty-server/src/modules/hvac/**'
+      - 'packages/twenty-e2e-testing/tests/hvac/**'
+      - 'scripts/hvac-*'
+
+env:
+  NX_REJECT_UNKNOWN_LOCAL_CACHE: 0
+  NODE_VERSION: '18.x'
+
+jobs:
+  # Check for changes in HVAC module
+  changed-files-check:
+    runs-on: ubuntu-latest
+    outputs:
+      hvac_changed: ${{ steps.changes.outputs.hvac }}
+      frontend_changed: ${{ steps.changes.outputs.frontend }}
+      backend_changed: ${{ steps.changes.outputs.backend }}
+      e2e_changed: ${{ steps.changes.outputs.e2e }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            hvac:
+              - 'packages/twenty-front/src/modules/hvac/**'
+              - 'packages/twenty-server/src/modules/hvac/**'
+              - 'packages/twenty-e2e-testing/tests/hvac/**'
+              - 'scripts/hvac-*'
+            frontend:
+              - 'packages/twenty-front/src/modules/hvac/**'
+            backend:
+              - 'packages/twenty-server/src/modules/hvac/**'
+            e2e:
+              - 'packages/twenty-e2e-testing/tests/hvac/**'
+
+  # HVAC Frontend Tests
+  hvac-frontend-tests:
+    needs: changed-files-check
+    if: needs.changed-files-check.outputs.frontend_changed == 'true'
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Twenty Shared
+        run: npx nx build twenty-shared
+
+      - name: Lint HVAC Frontend
+        run: npx nx lint twenty-front --skip-nx-cache
+
+      - name: Type check HVAC Frontend
+        run: npx nx type-check twenty-front
+
+      - name: Test HVAC Frontend Components
+        run: |
+          npx nx test twenty-front \
+            --testPathPattern="src/modules/hvac" \
+            --coverage \
+            --coverageDirectory=coverage/hvac-frontend
+
+      - name: Build HVAC Frontend
+        run: npx nx build twenty-front
+
+      - name: Bundle Size Analysis
+        run: |
+          npx nx run twenty-front:analyze-bundle
+          # Check if bundle size exceeds Twenty CRM limit (4.7MB)
+          BUNDLE_SIZE=$(du -sb packages/twenty-front/dist | cut -f1)
+          MAX_SIZE=$((4700000)) # 4.7MB in bytes
+          if [ $BUNDLE_SIZE -gt $MAX_SIZE ]; then
+            echo "❌ Bundle size ($BUNDLE_SIZE bytes) exceeds limit ($MAX_SIZE bytes)"
+            exit 1
+          else
+            echo "✅ Bundle size ($BUNDLE_SIZE bytes) within limit"
+          fi
+
+      - name: Upload Frontend Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/hvac-frontend/lcov.info
+          flags: hvac-frontend
+          name: hvac-frontend-coverage
+
+  # HVAC Backend Tests
+  hvac-backend-tests:
+    needs: changed-files-check
+    if: needs.changed-files-check.outputs.backend_changed == 'true'
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: twentycrm/twenty-postgres-spilo
+        env:
+          PGUSER_SUPERUSER: postgres
+          PGPASSWORD_SUPERUSER: postgres
+          ALLOW_NOSSL: 'true'
+          SPILO_PROVIDER: 'local'
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build dependencies
+        run: |
+          npx nx build twenty-shared
+          npx nx build twenty-emails
+
+      - name: Setup test environment
+        run: |
+          cp packages/twenty-server/.env.example packages/twenty-server/.env.test
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/test" >> packages/twenty-server/.env.test
+          echo "REDIS_URL=redis://localhost:6379" >> packages/twenty-server/.env.test
+
+      - name: Create test database
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d postgres -c 'CREATE DATABASE "test";'
+
+      - name: Run database migrations
+        run: npx nx database:migrate twenty-server
+
+      - name: Lint HVAC Backend
+        run: npx nx lint twenty-server --skip-nx-cache
+
+      - name: Test HVAC Backend
+        run: |
+          npx nx test twenty-server \
+            --testPathPattern="src/modules/hvac" \
+            --coverage \
+            --coverageDirectory=coverage/hvac-backend
+
+      - name: Build HVAC Backend
+        run: npx nx build twenty-server
+
+      - name: Upload Backend Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/hvac-backend/lcov.info
+          flags: hvac-backend
+          name: hvac-backend-coverage
+
+  # HVAC E2E Tests
+  hvac-e2e-tests:
+    needs: changed-files-check
+    if: needs.changed-files-check.outputs.hvac_changed == 'true'
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: twentycrm/twenty-postgres-spilo
+        env:
+          PGUSER_SUPERUSER: postgres
+          PGPASSWORD_SUPERUSER: postgres
+          ALLOW_NOSSL: 'true'
+          SPILO_PROVIDER: 'local'
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Build application
+        run: |
+          npx nx build twenty-shared
+          npx nx build twenty-emails
+          npx nx build twenty-server
+          npx nx build twenty-front
+
+      - name: Setup test environment
+        run: |
+          cp packages/twenty-server/.env.example packages/twenty-server/.env.test
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/test" >> packages/twenty-server/.env.test
+          echo "REDIS_URL=redis://localhost:6379" >> packages/twenty-server/.env.test
+
+      - name: Create test database
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d postgres -c 'CREATE DATABASE "test";'
+
+      - name: Run database migrations
+        run: npx nx database:migrate twenty-server
+
+      - name: Start application
+        run: |
+          npx nx start twenty-server &
+          npx nx start twenty-front &
+          # Wait for services to be ready
+          timeout 120 bash -c 'until curl -f http://localhost:3001/healthz; do sleep 2; done'
+          timeout 120 bash -c 'until curl -f http://localhost:3002; do sleep 2; done'
+
+      - name: Run HVAC E2E Tests
+        run: |
+          npx nx run twenty-e2e-testing:e2e \
+            --testPathPattern="tests/hvac" \
+            --reporter=html
+
+      - name: Upload E2E Test Results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: hvac-e2e-results
+          path: packages/twenty-e2e-testing/playwright-report/
+
+  # Performance Tests
+  hvac-performance-tests:
+    needs: changed-files-check
+    if: needs.changed-files-check.outputs.hvac_changed == 'true'
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: |
+          npx nx build twenty-shared
+          npx nx build twenty-front
+
+      - name: Run Lighthouse CI
+        run: |
+          npm install -g @lhci/cli
+          lhci autorun --config=.lighthouserc.js
+
+      - name: Bundle Analysis
+        run: |
+          npx nx run twenty-front:analyze-bundle
+          # Generate bundle report
+          npx webpack-bundle-analyzer packages/twenty-front/dist/static/js/*.js --report --mode static --report-filename bundle-report.html
+
+      - name: Upload Performance Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: hvac-performance-results
+          path: |
+            .lighthouseci/
+            bundle-report.html
+
+  # Security Scan
+  hvac-security-scan:
+    needs: changed-files-check
+    if: needs.changed-files-check.outputs.hvac_changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          languages: javascript,typescript
+
+  # Deployment Status Check
+  hvac-deployment-check:
+    needs: [hvac-frontend-tests, hvac-backend-tests, hvac-e2e-tests, hvac-performance-tests, hvac-security-scan]
+    if: always() && needs.changed-files-check.outputs.hvac_changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check deployment readiness
+        run: |
+          # Check if all required jobs passed
+          if [[ "${{ needs.hvac-frontend-tests.result }}" == "success" && \
+                "${{ needs.hvac-backend-tests.result }}" == "success" && \
+                "${{ needs.hvac-e2e-tests.result }}" == "success" && \
+                "${{ needs.hvac-performance-tests.result }}" == "success" && \
+                "${{ needs.hvac-security-scan.result }}" == "success" ]]; then
+            echo "✅ All HVAC tests passed - Ready for deployment"
+            echo "DEPLOYMENT_READY=true" >> $GITHUB_ENV
+          else
+            echo "❌ Some HVAC tests failed - Not ready for deployment"
+            echo "DEPLOYMENT_READY=false" >> $GITHUB_ENV
+          fi
+
+      - name: Create deployment status
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const deploymentReady = process.env.DEPLOYMENT_READY === 'true';
+            const status = deploymentReady ? 'success' : 'failure';
+            const description = deploymentReady 
+              ? 'HVAC module ready for deployment' 
+              : 'HVAC module not ready for deployment';
+
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: status,
+              description: description,
+              context: 'HVAC Deployment Readiness'
+            });
+
+  # Notify on completion
+  notify-completion:
+    needs: [hvac-deployment-check]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Notify Slack
+        if: github.ref == 'refs/heads/main'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#hvac-crm-ci'
+          text: |
+            HVAC CI Pipeline completed for commit ${{ github.sha }}
+            Branch: ${{ github.ref_name }}
+            Status: ${{ job.status }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
