@@ -1,22 +1,27 @@
-import { Resolver, Query, Mutation, Args, ID, Int, Parent, ResolveField, Subscription } from '@nestjs/graphql';
-import { Injectable, UseGuards, UsePipes, ValidationPipe, Logger } from '@nestjs/common';
-import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
+import { Injectable, Logger, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Args, ID, Int, Mutation, Parent, Query, ResolveField, Resolver, Subscription } from '@nestjs/graphql';
 import { PubSub } from 'graphql-subscriptions';
 import { HvacConfigService } from 'src/engine/core-modules/hvac-config/hvac-config.service';
-import { HvacApiIntegrationService, HvacServiceTicketData } from '../services/hvac-api-integration.service'; // HvacServiceTicketData might need update
-import {
-  HvacServiceTicketType,
-  HvacServiceTicketListResponse,
-  HvacServiceTicketStatusEnum, // Import Enum
-  HvacServiceTicketPriorityEnum, // Import Enum
-} from '../graphql-types/hvac-service-ticket.types';
-import {
-  HvacServiceTicketFilterInput,
-  CreateHvacServiceTicketInput,
-  UpdateHvacServiceTicketInput,
-} from '../graphql-types/hvac-service-ticket.types';
+import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
+import { HvacApiNotFoundError } from '../exceptions/hvac-api.exceptions';
 import { HvacCustomerType } from '../graphql-types/hvac-customer.types';
 import { HvacEquipmentType } from '../graphql-types/hvac-equipment.types';
+import {
+    CreateHvacServiceTicketInput,
+    HvacServiceTicketFilterInput,
+    HvacServiceTicketListResponse, // Import Enum
+    HvacServiceTicketPriorityEnum,
+    HvacServiceTicketStatusEnum,
+    HvacServiceTicketType,
+    UpdateHvacServiceTicketInput,
+} from '../graphql-types/hvac-service-ticket.types';
+import { HvacApiIntegrationService, HvacServiceTicketData } from '../services/hvac-api-integration.service'; // HvacServiceTicketData might need update
+
+// Initialize PubSub
+// For a production application, this should be configured as a provider
+// and potentially use a different engine like RedisPubSub.
+const pubSub = new PubSub();
+const SERVICE_TICKET_UPDATED_EVENT = 'hvacServiceTicketUpdated';
 
 @Resolver(() => HvacServiceTicketType)
 @Injectable()
@@ -46,18 +51,18 @@ export class HvacServiceTicketResolver {
     @Args('limit', { type: () => Int, defaultValue: 20 }) limit?: number,
   ): Promise<HvacServiceTicketListResponse> {
     this.checkFeatureEnabled('scheduling');
-import { HvacCustomerType } from '../graphql-types/hvac-customer.types';
-import { HvacEquipmentType } from '../graphql-types/hvac-equipment.types';
-import { HvacApiNotFoundError } from '../exceptions/hvac-api.exceptions';
 
-// Initialize PubSub
-// For a production application, this should be configured as a provider
-// and potentially use a different engine like RedisPubSub.
-const pubSub = new PubSub();
-const SERVICE_TICKET_UPDATED_EVENT = 'hvacServiceTicketUpdated';
+    this.logger.log(`Fetching HVAC service tickets with filters: ${JSON.stringify(filters)}, page: ${page}, limit: ${limit}`);
+    try {
+      const serviceTicketsData = await this.hvacApiService.getServiceTickets(filters, page, limit);
+      this.logger.log(`Successfully fetched ${serviceTicketsData.data.length} HVAC service tickets`);
+      return serviceTicketsData;
+    } catch (error) {
+      this.logger.error(`Error fetching HVAC service tickets: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
 
-@Resolver(() => HvacServiceTicketType)
-@Injectable()
   @ResolveField('customer', () => HvacCustomerType, { nullable: true })
   async getCustomer(@Parent() serviceTicket: HvacServiceTicketType): Promise<HvacCustomerType | null> {
     this.logger.debug(`Resolving customer for service ticket ID: ${serviceTicket.id}, customer ID: ${serviceTicket.customerId}`);
@@ -85,18 +90,27 @@ const SERVICE_TICKET_UPDATED_EVENT = 'hvacServiceTicketUpdated';
   }
 
   // Helper to map data from HvacApiIntegrationService to GraphQL HvacServiceTicketType
-    try {
-      this.logger.debug(`Fetching HVAC service tickets with filters: ${JSON.stringify(filters)}, page: ${page}, limit: ${limit}`);
-      const result = await this.hvacApiService.getServiceTicketsList(filters, limit, (page - 1) * limit);
-
-      return {
-        tickets: result.tickets.map(ticket => this.mapServiceDataToGqlType(ticket)),
-        total: result.total,
-      };
-    } catch (error) {
-      this.logger.error('Error fetching HVAC service tickets:', error.message, error.stack);
-      throw error;
-    }
+  private mapServiceDataToGqlType(ticket: any): HvacServiceTicketType {
+    return {
+      id: ticket.id,
+      ticketNumber: ticket.ticketNumber,
+      title: ticket.title,
+      description: ticket.description,
+      status: ticket.status,
+      priority: ticket.priority,
+      serviceType: ticket.serviceType,
+      customerId: ticket.customerId,
+      equipmentId: ticket.equipmentId,
+      technicianId: ticket.technicianId,
+      scheduledDate: ticket.scheduledDate,
+      completedDate: ticket.completedDate,
+      estimatedDuration: ticket.estimatedDuration,
+      actualDuration: ticket.actualDuration,
+      cost: ticket.cost,
+      notes: ticket.notes,
+      createdAt: ticket.createdAt,
+      updatedAt: ticket.updatedAt,
+    } as HvacServiceTicketType;
   }
 
   @Query(() => HvacServiceTicketType, { name: 'hvacServiceTicket', nullable: true })

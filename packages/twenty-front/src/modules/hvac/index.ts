@@ -91,6 +91,11 @@ export {
     HvacMaintenanceChecklist
 } from './components/maintenance';
 
+// Equipment Management Components
+export {
+    HvacEquipmentManagement
+} from './components/equipment/HvacEquipmentManagement';
+
 export {
     HvacMobileDashboard,
     HvacMobileJobCard, HvacMobileNavigation, HvacMobileWorkOrder

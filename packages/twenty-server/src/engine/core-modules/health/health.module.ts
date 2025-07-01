@@ -30,7 +30,6 @@ import { WorkerHealthIndicator } from './indicators/worker.health';
     WorkerHealthIndicator,
     ConnectedAccountHealth,
     AppHealthIndicator,
-    HvacHealthIndicator,
   ],
   exports: [
     DatabaseHealthIndicator,
@@ -38,7 +37,6 @@ import { WorkerHealthIndicator } from './indicators/worker.health';
     WorkerHealthIndicator,
     ConnectedAccountHealth,
     AppHealthIndicator,
-    HvacHealthIndicator,
   ],
 })
 export class HealthModule {}

@@ -9,20 +9,19 @@
  * - Performance optimization with debouncing
  */
 
-import React, { useState, useCallback } from 'react';
-import { Card, Progress, Alert, Button, Statistic, Row, Col, Tabs, Table } from 'antd';
-import { 
-  DashboardOutlined, 
-  ThunderboltOutlined, 
-  DatabaseOutlined,
-  CloudOutlined,
-  WarningOutlined,
-  CheckCircleOutlined 
+import {
+    CheckCircleOutlined,
+    CloudOutlined,
+    DashboardOutlined,
+    DatabaseOutlined,
+    ThunderboltOutlined,
+    WarningOutlined
 } from '@ant-design/icons';
+import { Alert, Button, Card, Col, Progress, Row, Statistic, Table, Tabs } from 'antd';
+import React, { useCallback, useState } from 'react';
 
 import { useHVACDebouncedPerformance } from '../../hooks/useHVACDebouncedPerformance';
 import { hvacPerformanceOptimizer } from '../../services/HvacPerformanceOptimizer';
-import { bundleOptimizationService } from '../../services/BundleOptimizationService';
 import { trackHVACUserAction } from '../../utils/sentry-init';
 
 const { TabPane } = Tabs;
@@ -31,7 +30,7 @@ const { TabPane } = Tabs;
 type PerformanceStatus = 'excellent' | 'good' | 'fair' | 'poor';
 
 // Component props
-interface HvacPerformanceDashboardProps {
+export interface HvacPerformanceDashboardProps {
   className?: string;
   onOptimizationApplied?: (optimization: string) => void;
   onPerformanceAlert?: (alert: any) => void;
@@ -88,7 +87,7 @@ export const HvacPerformanceDashboard: React.FC<HvacPerformanceDashboardProps> =
             break;
           case 'bundle':
             // Trigger bundle optimization
-            const analysis = bundleOptimizationService.analyzeBundleOptimization();
+            const analysis = hvacPerformanceOptimizer.optimizeBundleSize();
             console.log('Bundle optimization analysis:', analysis);
             break;
           default:
@@ -276,7 +275,7 @@ export const HvacPerformanceDashboard: React.FC<HvacPerformanceDashboardProps> =
 
   // Bundle analysis tab
   const renderBundleAnalysisTab = () => {
-    const bundleAnalysis = bundleOptimizationService.analyzeBundleOptimization();
+    const bundleAnalysis = hvacPerformanceOptimizer.optimizeBundleSize();
     
     const columns = [
       {

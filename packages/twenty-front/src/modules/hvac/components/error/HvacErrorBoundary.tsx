@@ -6,13 +6,11 @@
  * Integrates with Twenty's error handling system and Sentry
  */
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
 import styled from '@emotion/styled';
-import { IconAlertTriangle, IconRefresh, IconBug, IconHome } from 'twenty-ui';
-import { Button } from '@/ui/input/button/components/Button';
-import { Card } from '@/ui/layout/card/components/Card';
-import { CardContent } from '@/ui/layout/card/components/CardContent';
-import { CardHeader } from '@/ui/layout/card/components/CardHeader';
+import { Component, ErrorInfo, ReactNode } from 'react';
+import { IconAlertTriangle, IconBug, IconHome, IconRefresh } from 'twenty-ui';
+import { Button } from 'twenty-ui/input';
+import { Card, CardContent, CardHeader } from 'twenty-ui/layout';
 
 const StyledErrorContainer = styled.div`
   display: flex;

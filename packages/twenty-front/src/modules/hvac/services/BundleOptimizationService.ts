@@ -300,6 +300,7 @@ class BundleOptimizationService {
     };
 
     this.metrics.push(metrics);
+    this.cleanupMetrics();
 
     // Track performance issues
     if (loadTime > this.config.performanceThreshold) {
@@ -505,6 +506,10 @@ class BundleOptimizationService {
     return cacheHits / this.metrics.length;
   }
 
+  /**
+   * Clean up old metrics to prevent memory leaks
+   */
+  private cleanupMetrics(): void {
     // Keep only last 100 metrics to prevent memory leaks
     if (this.metrics.length > 100) {
       this.metrics = this.metrics.slice(-100);

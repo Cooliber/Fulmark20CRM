@@ -33,9 +33,4 @@ export const HEALTH_INDICATORS: Record<HealthIndicatorId, HealthIndicatorInfo> =
       label: 'App',
       description: 'Workspace metadata migration status check',
     },
-    [HealthIndicatorId.hvac]: {
-      id: HealthIndicatorId.hvac,
-      label: 'HVAC',
-      description: 'HVAC services and integration health status',
-    },
   };

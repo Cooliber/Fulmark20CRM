@@ -102,7 +102,7 @@ export class HvacQuoteResolver {
       // updateActualQuoteRecord should throw HvacApiNotFoundError if not found.
       this.logger.log(`Successfully updated HVAC quote: ${updatedQuote.id}`);
       return updatedQuote;
-    } catch (error)
+    } catch (error) {
       this.logger.error(`Error updating HVAC quote ${input.id}: ${error.message}`, error.stack, input);
       if (error instanceof HvacApiNotFoundError) {
         return null; // Or let error propagate

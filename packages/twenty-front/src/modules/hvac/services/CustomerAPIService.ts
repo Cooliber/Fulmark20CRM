@@ -765,7 +765,6 @@ export class CustomerAPIService {
    * Cache management (simple in-memory cache)
    */
   private getCachedData<T>(key: string): T | null {
-  private getCachedData<T>(key: string): T | null {
     const cachedItem = this.cache.get(key);
     if (cachedItem && Date.now() - cachedItem.timestamp < this.CACHE_TTL) {
       return cachedItem.data as T;

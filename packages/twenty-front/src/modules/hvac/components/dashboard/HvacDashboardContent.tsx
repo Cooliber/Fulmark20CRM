@@ -15,12 +15,12 @@ import React from 'react';
 // HVAC Components
 import { HvacSemanticSearch } from '../HvacSemanticSearch';
 import { HvacServiceTicketList } from '../HvacServiceTicketList';
+import { TabType } from './HvacDashboardHeader';
 import { HvacDashboardOverview } from './HvacDashboardOverview';
 import { HvacDashboardPlaceholder } from './HvacDashboardPlaceholder';
-import { TabType } from './HvacDashboardHeader';
 
 // HVAC Monitoring
-import { trackHVACUserAction, useHVACPerformanceMonitoring } from '../../index';
+import { trackHVACUserAction, useHVACPerformanceMonitoring, HvacEquipmentManagement } from '../../index';
 
 // Types
 interface HvacDashboardContentProps {
@@ -95,11 +95,9 @@ export const HvacDashboardContent: React.FC<HvacDashboardContentProps> = ({
 
     case 'equipment':
       return (
-        <HvacDashboardPlaceholder
-          type="equipment"
-          title="Zarządzanie Sprzętem HVAC"
-          description="Moduł zarządzania sprzętem będzie dostępny wkrótce."
-        />
+        <div className="p-4">
+          <HvacEquipmentManagement />
+        </div>
       );
 
     case 'analytics':
