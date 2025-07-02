@@ -2,7 +2,6 @@
 import { lingui } from '@lingui/vite-plugin';
 import { isNonEmptyString } from '@sniptt/guards';
 import react from '@vitejs/plugin-react-swc';
-import wyw from '@wyw-in-js/vite';
 import fs from 'fs';
 import path from 'path';
 import { visualizer } from 'rollup-plugin-visualizer';
@@ -118,42 +117,42 @@ export default defineConfig(({ command, mode }) => {
       checker(checkers),
       // TODO: fix this, we have to restrict the include to only the components that are using linaria
       // Otherwise the build will fail because wyw tries to include emotion styled components
-      wyw({
-        include: [
-          '**/CurrencyDisplay.tsx',
-          '**/EllipsisDisplay.tsx',
-          '**/ContactLink.tsx',
-          '**/BooleanDisplay.tsx',
-          '**/LinksDisplay.tsx',
-          '**/RoundedLink.tsx',
-          '**/OverflowingTextWithTooltip.tsx',
-          '**/Chip.tsx',
-          '**/Tag.tsx',
-          '**/MultiSelectFieldDisplay.tsx',
-          '**/RatingInput.tsx',
-          '**/RecordTableCellContainer.tsx',
-          '**/RecordTableCellDisplayContainer.tsx',
-          '**/Avatar.tsx',
-          '**/RecordTableBodyDroppable.tsx',
-          '**/RecordTableCellBaseContainer.tsx',
-          '**/RecordTableCellTd.tsx',
-          '**/RecordTableTd.tsx',
-          '**/RecordTableHeaderDragDropColumn.tsx',
-          '**/ActorDisplay.tsx',
-          '**/BooleanDisplay.tsx',
-          '**/CurrencyDisplay.tsx',
-          '**/TextDisplay.tsx',
-          '**/EllipsisDisplay.tsx',
-          '**/AvatarChip.tsx',
-          '**/URLDisplay.tsx',
-          '**/EmailsDisplay.tsx',
-          '**/PhonesDisplay.tsx',
-          '**/MultiSelectDisplay.tsx',
-        ],
-        babelOptions: {
-          presets: ['@babel/preset-typescript', '@babel/preset-react'],
-        },
-      }),
+      // wyw({
+      //   include: [
+      //     '**/CurrencyDisplay.tsx',
+      //     '**/EllipsisDisplay.tsx',
+      //     '**/ContactLink.tsx',
+      //     '**/BooleanDisplay.tsx',
+      //     '**/LinksDisplay.tsx',
+      //     '**/RoundedLink.tsx',
+      //     '**/OverflowingTextWithTooltip.tsx',
+      //     '**/Chip.tsx',
+      //     '**/Tag.tsx',
+      //     '**/MultiSelectFieldDisplay.tsx',
+      //     '**/RatingInput.tsx',
+      //     '**/RecordTableCellContainer.tsx',
+      //     '**/RecordTableCellDisplayContainer.tsx',
+      //     '**/Avatar.tsx',
+      //     '**/RecordTableBodyDroppable.tsx',
+      //     '**/RecordTableCellBaseContainer.tsx',
+      //     '**/RecordTableCellTd.tsx',
+      //     '**/RecordTableTd.tsx',
+      //     '**/RecordTableHeaderDragDropColumn.tsx',
+      //     '**/ActorDisplay.tsx',
+      //     '**/BooleanDisplay.tsx',
+      //     '**/CurrencyDisplay.tsx',
+      //     '**/TextDisplay.tsx',
+      //     '**/EllipsisDisplay.tsx',
+      //     '**/AvatarChip.tsx',
+      //     '**/URLDisplay.tsx',
+      //     '**/EmailsDisplay.tsx',
+      //     '**/PhonesDisplay.tsx',
+      //     '**/MultiSelectDisplay.tsx',
+      //   ],
+      //   babelOptions: {
+      //     presets: ['@babel/preset-typescript', '@babel/preset-react'],
+      //   },
+      // }),
       visualizer({
         open: true,
         gzipSize: true,
@@ -175,9 +174,7 @@ export default defineConfig(({ command, mode }) => {
       outDir: 'build',
       sourcemap: VITE_BUILD_SOURCEMAP === 'true',
       rollupOptions: {
-        //  Don't use manual chunks as it causes many issue
-        // including this one we wasted a lot of time on:
-        // https://github.com/rollup/rollup/issues/2793
+        // Optimized chunk splitting for bundle size reduction
         output: {
           // Set chunk size warning limit (in bytes) - warns at 1MB
           chunkSizeWarningLimit: CHUNK_SIZE_WARNING_LIMIT,

@@ -1,30 +1,51 @@
-// HVAC Module Exports
+// HVAC Module Exports - REFACTORED TO MICRO-PACKAGES
 // "Pasja rodzi profesjonalizm" - Fulmark HVAC Professional CRM
+//
+// MAJOR REFACTOR: Split into micro-packages for bundle optimization
+// - hvac-core: Types, hooks, utils, states (max 500KB)
+// - hvac-dashboard: Dashboard components with lazy loading
+// - hvac-analytics: Chart.js/D3.js components (lazy loaded)
+// - hvac-equipment: Equipment management components
 
-// State Management - Following Twenty CRM cursor rules
-export * from './states';
+// TEMPORARY: Direct imports until packages are properly configured
+// TODO: Replace with proper package imports after Nx configuration
 
-// Components
-export { HvacDashboard } from './components/HvacDashboard';
+// Core functionality - Temporarily using relative imports
+export * from '../../hvac-core/src';
+
+// Remaining components that haven't been moved yet
+export { HvacCustomerList } from './components/HvacCustomerList';
 export { HvacSemanticSearch } from './components/HvacSemanticSearch';
 export { HvacServiceTicketList } from './components/HvacServiceTicketList';
+
+// Lazy loading components
+export { HvacLazyComponents } from './components/HvacLazyComponents';
 
 // Enhanced Customer 360 Components
 export { Customer360CommunicationTabEnhanced } from './components/customer360/Customer360CommunicationTabEnhanced';
 
-// Lazy Loading Components - Bundle Size Optimization
-export {
-    HvacLazyCalendar, HvacLazyChart, HvacLazyDataTable, LazyAnalyticsDashboard, LazyCustomer360,
-    LazyCustomer360CommunicationTab,
-    LazyCustomer360EquipmentTab, LazyKanbanBoard,
-    LazyMaintenanceDashboard, PRIMEREACT_BUNDLE_SAVINGS, createLoadingTracker, preloadCriticalPrimeReactComponents, preloadHeavyComponents
-} from './components/lazy';
+// REMOVED: Audio Transcription Components - Heavy dependency (~200KB)
+// Moved to lazy loading to reduce main bundle size
+// export * from './components/audio-transcription';
 
-// Bundle Optimization Services
-export {
-    BUNDLE_SIZE_ESTIMATES, BundleOptimizationService, bundleOptimizationService, type BundleMetrics, type ComponentType,
-    type LoadingStrategy, type OptimizationConfig
-} from './services/BundleOptimizationService';
+// REMOVED: Polish Compliance Components - Heavy dependency (~150KB)
+// Moved to lazy loading to reduce main bundle size
+// export * from './components/polish-compliance';
+
+// REMOVED: Lazy Components Static Exports - Preventing Code Splitting
+// These components should only be imported dynamically to maintain bundle optimization
+// Static exports prevent Vite from properly splitting these into separate chunks
+// Use dynamic imports instead: const LazyComponent = lazy(() => import('./components/lazy/LazyComponent'))
+// export {
+//     LazyAnalyticsDashboard, LazyCustomer360, LazyKanbanBoard, LazyMaintenanceDashboard, preloadHeavyComponents
+// } from './components/lazy';
+
+// REMOVED: Bundle Optimization Services - Heavy dependency (~200KB)
+// Moved to lazy loading to reduce main bundle size
+// export {
+//     BUNDLE_SIZE_ESTIMATES, BundleOptimizationService, bundleOptimizationService, type BundleMetrics, type ComponentType,
+//     type LoadingStrategy, type OptimizationConfig
+// } from './services/BundleOptimizationService';
 
 // Advanced Lazy Loading Hooks
 export {
@@ -34,12 +55,13 @@ export {
     type UseLazyComponentReturn
 } from './hooks/useLazyComponent';
 
-// Performance Monitoring Services
-export {
-    PERFORMANCE_THRESHOLDS as CORE_WEB_VITALS_THRESHOLDS, PerformanceMonitoringService, performanceMonitoringService, type ComponentPerformanceMetric, type CoreWebVitalMetric,
-    type PerformanceMetric,
-    type SearchPerformanceMetric
-} from './services/PerformanceMonitoringService';
+// REMOVED: Performance Monitoring Services - Heavy dependency (~100KB)
+// Moved to lazy loading to reduce main bundle size
+// export {
+//     PERFORMANCE_THRESHOLDS as CORE_WEB_VITALS_THRESHOLDS, PerformanceMonitoringService, performanceMonitoringService, type ComponentPerformanceMetric, type CoreWebVitalMetric,
+//     type PerformanceMetric,
+//     type SearchPerformanceMetric
+// } from './services/PerformanceMonitoringService';
 
 // Performance Monitoring Components - Legacy (use HvacPerformanceDashboard instead)
 
@@ -58,7 +80,7 @@ export {
 } from './hooks/useFaultTolerance';
 export {
     CircuitBreakerService,
-    hvacApiCircuitBreaker, searchCircuitBreaker, weaviateCircuitBreaker, type CircuitBreakerConfig,
+    hvacApiCircuitBreaker, searchCircuitBreaker, type CircuitBreakerConfig,
     type CircuitBreakerMetrics, type CircuitBreakerState
 } from './services/CircuitBreakerService';
 export {
@@ -66,40 +88,46 @@ export {
     type RetryResult, type RetryStrategy
 } from './services/RetryService';
 
-// Kanban Components - Use lazy versions for bundle optimization
-export { CreateCardDialog } from './components/kanban/CreateCardDialog';
-export { KanbanBoard } from './components/kanban/KanbanBoard';
-export { KanbanCard } from './components/kanban/KanbanCard';
-export { KanbanColumn } from './components/kanban/KanbanColumn';
+// REMOVED: Kanban Components - Heavy dependency (~200KB)
+// Moved to lazy loading to reduce main bundle size
+// export { CreateCardDialog } from './components/kanban/CreateCardDialog';
+// export { KanbanBoard } from './components/kanban/KanbanBoard';
+// export { KanbanCard } from './components/kanban/KanbanCard';
+// export { KanbanColumn } from './components/kanban/KanbanColumn';
 
-// Alias for KanbanColumn to match import expectations
-export { KanbanColumn as KanbanColumnComponent } from './components/kanban/KanbanColumn';
+// REMOVED: Alias for KanbanColumn to match import expectations
+// export { KanbanColumn as KanbanColumnComponent } from './components/kanban/KanbanColumn';
 
 // Analytics Components - Use lazy versions for bundle optimization
 // export { AdvancedAnalyticsDashboard } from './components/analytics/AdvancedAnalyticsDashboard'; // Replaced with LazyAnalyticsDashboard
 
-// Service Planner Components
-export {
-    HvacDispatchPanel,
-    HvacRouteOptimizer, HvacSchedulingCalendar, HvacSchedulingDashboard, HvacTechnicianTracker
-} from './components/scheduling';
+// REMOVED: Service Planner Components - Heavy dependency (~150KB)
+// Moved to lazy loading to reduce main bundle size
+// export {
+//     HvacDispatchPanel,
+//     HvacRouteOptimizer, HvacSchedulingCalendar, HvacSchedulingDashboard, HvacTechnicianTracker
+// } from './components/scheduling';
 
-// Maintenance Components - Use lazy versions for bundle optimization
-export {
-    HvacComplianceTracker,
-    HvacMaintenanceAnalytics, HvacMaintenanceCalendar,
-    HvacMaintenanceChecklist
-} from './components/maintenance';
+// REMOVED: Maintenance Components - Heavy dependency (~120KB)
+// Moved to lazy loading to reduce main bundle size
+// export {
+//     HvacComplianceTracker,
+//     HvacMaintenanceAnalytics, HvacMaintenanceCalendar,
+//     HvacMaintenanceChecklist
+// } from './components/maintenance';
 
-// Equipment Management Components
-export {
-    HvacEquipmentManagement
-} from './components/equipment/HvacEquipmentManagement';
+// REMOVED: Equipment Management Components - Heavy dependency (~150KB)
+// Moved to lazy loading to reduce main bundle size
+// export {
+//     HvacEquipmentManagement
+// } from './components/equipment/HvacEquipmentManagement';
 
-export {
-    HvacMobileDashboard,
-    HvacMobileJobCard, HvacMobileNavigation, HvacMobileWorkOrder
-} from './components/mobile';
+// REMOVED: Mobile Components - Heavy dependency (~200KB)
+// Moved to lazy loading to reduce main bundle size
+// export {
+//     HvacMobileDashboard,
+//     HvacMobileJobCard, HvacMobileNavigation, HvacMobileWorkOrder
+// } from './components/mobile';
 
 // Navigation Components
 export {
@@ -114,6 +142,23 @@ export {
 //     Customer360AnalyticsTab, Customer360CommunicationTab, Customer360Container, Customer360Content, Customer360EquipmentTab, Customer360ErrorState, Customer360Header,
 //     Customer360KPICards, Customer360LoadingState, Customer360ProfileTab
 // } from './components/customer360';
+
+// REMOVED: Enhanced API Integration Services - Heavy dependency (~150KB)
+// Moved to lazy loading to reduce main bundle size
+// export {
+//     HvacApiIntegrationService,
+//     hvacApiIntegrationService,
+//     type HvacApiConfig,
+//     type HvacApiResponse,
+//     type HvacHealthStatus
+// } from './services/HvacApiIntegrationService';
+
+// Enhanced Authentication Services
+export {
+    HvacAuthService, HvacPermission, HvacUserRole, hvacAuthService, type HvacAuthConfig, type HvacAuthToken,
+    type HvacUser,
+    type HvacUserProfile
+} from './services/HvacAuthService';
 
 // Services
 export {
@@ -152,6 +197,50 @@ export {
 export {
     DataPipelineService, dataPipelineService, type DataPipeline, type PipelineAnalytics, type PipelineStatus, type PipelineType, type RealTimeSyncConfig
 } from './services/DataPipelineService';
+
+// Enhanced GraphQL Integration
+export {
+    useCreateHvacCustomer, useCreateHvacServiceTicket, useHvacCustomer, useHvacCustomers, useHvacDashboardAnalytics, useHvacEquipment, useHvacGraphQL, useHvacSemanticSearch, useHvacServiceTicket, useHvacServiceTickets, useHvacSystemHealth, useUpdateHvacCustomer, useUpdateHvacServiceTicket
+} from './hooks/useHvacGraphQL';
+
+// Enhanced Authentication Integration
+export {
+    useHvacAuth,
+    useHvacPermissions,
+    useHvacRoleAccess
+} from './hooks/useHvacAuth';
+
+// Enhanced Protection Components
+export {
+    HvacProtectedRoute, useHvacConditionalRender, withHvacProtection, type HvacProtectedRouteProps
+} from './components/HvacProtectedRoute';
+
+// REMOVED: Enhanced Bundle Optimization - Heavy dependency (~100KB)
+// Moved to lazy loading to reduce main bundle size
+// export {
+//     HvacBundleOptimizer,
+//     hvacBundleOptimizer,
+//     type BundleAnalytics, type LazyLoadConfig, type ModuleSize,
+//     type OptimizationSuggestion
+// } from './services/HvacBundleOptimizer';
+
+// Enhanced Lazy Loading Components
+export {
+    HvacErrorFallback, HvacLoadingSpinner, LazyHvacAnalytics, LazyHvacCustomers, LazyHvacEquipment, LazyHvacFinances, LazyHvacInspections, LazyHvacInventory, LazyHvacQuotes, LazyHvacServiceTickets, LazyHvacTechnicians, createLazyComponent, useHvacPreloader, type LazyComponentProps,
+    type LazyLoadError
+} from './components/HvacLazyComponents';
+
+// GraphQL Types
+export type {
+    CreateHvacCustomerInput, CreateHvacServiceTicketInput, DateRangeInput, HvacCustomer, HvacCustomerFilter,
+    HvacCustomerSort, HvacDashboardAnalytics, HvacEquipment, HvacSemanticSearchResult, PaginationInput, UpdateHvacCustomerInput, UpdateHvacServiceTicketInput
+} from './graphql/hvac-types';
+
+// Audio Transcription Types - NEW
+export type * from './types/hvac-audio.types';
+
+// Polish Compliance Types - NEW
+export type * from './types/hvac-polish-compliance.types';
 
 // Hooks
 export {
@@ -220,6 +309,16 @@ export {
 export {
     useHvacMobileTechnician
 } from './hooks/useHvacMobileTechnician';
+
+// Audio Transcription Hooks - NEW
+export {
+    useHvacAudioTranscription
+} from './hooks/useHvacAudioTranscription';
+
+// Polish Compliance Hooks - NEW
+export {
+    useHvacPolishCompliance
+} from './hooks/useHvacPolishCompliance';
 
 // Dashboard Components - Use lazy versions for bundle optimization
 // export {

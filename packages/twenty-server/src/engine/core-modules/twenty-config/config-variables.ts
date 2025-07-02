@@ -3,7 +3,10 @@ import { LogLevel, Logger } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
 import {
   IsDefined,
+  IsEmail,
+  IsNotEmpty,
   IsOptional,
+  IsString,
   IsUrl,
   ValidateIf,
   ValidationError,

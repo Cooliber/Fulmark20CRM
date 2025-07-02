@@ -1,10 +1,10 @@
 import { ConsoleLogger, Injectable, LogLevel } from '@nestjs/common';
-import { isObject } from 'lodash.isobject';
+import isObject from 'lodash.isobject';
 
 @Injectable()
 export class ProductionJsonLogger extends ConsoleLogger {
   constructor(context?: string, options: { timestamp?: boolean, logLevels?: LogLevel[] } = {}) {
-    super(context, { ...options, timestamp: options.timestamp ?? true });
+    super(context || '', { ...options, timestamp: options.timestamp ?? true });
     if (options.logLevels) {
       this.setLogLevels(options.logLevels);
     }

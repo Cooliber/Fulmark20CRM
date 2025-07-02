@@ -1,0 +1,45 @@
+{
+  "name": "hvac-core",
+  "version": "0.1.0",
+  "description": "HVAC Core - Podstawowe typy, hooks i utilities dla systemu HVAC",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src --ext .ts,.tsx",
+    "test": "jest"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recoil": "^0.7.7",
+    "twenty-shared": "workspace:*",
+    "twenty-ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "keywords": [
+    "hvac",
+    "core",
+    "types",
+    "hooks",
+    "utilities",
+    "twenty-crm"
+  ],
+  "author": "Fulmark HVAC Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cooliber/Fulmark20CRM"
+  }
+}

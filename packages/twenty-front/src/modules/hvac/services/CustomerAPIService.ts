@@ -17,13 +17,11 @@ export interface Customer {
   name: string;
   email?: string;
   phone?: string;
-
-  // Polish Business Compliance Fields
   nip?: string; // Numer Identyfikacji Podatkowej
   regon?: string; // Rejestr Gospodarki Narodowej
   krs?: string; // Krajowy Rejestr Sądowy
-  vatRate: number; // Polish VAT rate (23%, 8%, 5%, 0%)
-  vatExempt: boolean; // VAT exemption status
+  vatRate?: number; // Polish VAT rate (23%, 8%, 5%, 0%) - Made optional as it might not always be present for all customers
+  vatExempt?: boolean; // VAT exemption status - Made optional
 
   // Address Information
   address?: CustomerAddress;
@@ -418,44 +416,52 @@ export class CustomerAPIService {
   }
 
   /**
-   * Get all HVAC customers via GraphQL
+   * Get HVAC customers via GraphQL with pagination
    */
-  async getCustomers(): Promise<Customer[]> {
+  async getCustomers(page: number = 1, limit: number = 50): Promise<{ customers: Customer[]; total: number }> {
     const query = `
-      query GetHvacCustomers {
-        hvacCustomers {
-          id
-          name
-          email
-          phone
-          address {
-            street
-            city
-            state
-            postalCode
-            country
-          }
-          properties {
+      query GetHvacCustomers(
+        $pagination: PaginationInput
+      ) {
+        hvacCustomers(pagination: $pagination) {
+          data {
             id
-            address
-            propertyType
-            equipmentList {
-              id
-              name
-              type
-              status
-              lastMaintenance
-              nextMaintenance
+            name
+            email
+            phone
+            nip
+            regon
+            address {
+              street
+              city
+              postalCode
+              country
             }
+            status
+            type
+            createdAt
+            updatedAt
+          }
+          pagination {
+            total
+            page
+            limit
+            hasNext
+            hasPrevious
           }
         }
       }
     `;
     try {
-      const response = await this.fetchGraphQL<{ hvacCustomers: Customer[] }>(query);
-      return response.hvacCustomers || [];
+      const variables = {
+        pagination: { page, limit },
+      };
+      const response = await this.fetchGraphQL<{ hvacCustomers: { data: Customer[]; pagination: { total: number } } }>(query, variables);
+      const customers = response.hvacCustomers?.data || [];
+      const total = response.hvacCustomers?.pagination?.total || 0;
+      return { customers, total };
     } catch (error) {
-      trackHVACUserAction('get_all_customers_graphql_error', 'API_ERROR', {
+      trackHVACUserAction('get_customers_graphql_error', 'API_ERROR', {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
       throw error;
@@ -754,6 +760,73 @@ export class CustomerAPIService {
       return response.updateHvacCustomer;
     } catch (error) {
       trackHVACUserAction('update_customer_graphql_error', 'API_ERROR', {
+        customerId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Create new customer via GraphQL Mutation
+   */
+  async createCustomer(input: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>): Promise<Customer> {
+    const CREATE_HVAC_CUSTOMER_MUTATION = `
+      mutation CreateHvacCustomer($input: CreateHvacCustomerInput!) {
+        createHvacCustomer(input: $input) {
+          id
+          name
+          email
+          phone
+          nip
+          regon
+          address {
+            street
+            city
+            postalCode
+            country
+          }
+          status
+          type
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+    try {
+      const response = await this.fetchGraphQL<{ createHvacCustomer: Customer }>(
+        CREATE_HVAC_CUSTOMER_MUTATION, { input }
+      );
+      this.invalidateCustomerCache('hvacCustomers'); // Invalidate general list
+      trackHVACUserAction('create_customer_graphql_success', 'API_SUCCESS', { customerId: response.createHvacCustomer.id });
+      return response.createHvacCustomer;
+    } catch (error) {
+      trackHVACUserAction('create_customer_graphql_error', 'API_ERROR', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete customer via GraphQL Mutation
+   */
+  async deleteCustomer(customerId: string): Promise<boolean> {
+    const DELETE_HVAC_CUSTOMER_MUTATION = `
+      mutation DeleteHvacCustomer($id: ID!) {
+        deleteHvacCustomer(id: $id)
+      }
+    `;
+    try {
+      const response = await this.fetchGraphQL<{ deleteHvacCustomer: boolean }>(
+        DELETE_HVAC_CUSTOMER_MUTATION, { id: customerId }
+      );
+      this.invalidateCustomerCache(customerId); // Invalidate specific customer cache
+      this.invalidateCustomerCache('hvacCustomers'); // Invalidate general list
+      trackHVACUserAction('delete_customer_graphql_success', 'API_SUCCESS', { customerId });
+      return response.deleteHvacCustomer;
+    } catch (error) {
+      trackHVACUserAction('delete_customer_graphql_error', 'API_ERROR', {
         customerId,
         error: error instanceof Error ? error.message : 'Unknown error',
       });

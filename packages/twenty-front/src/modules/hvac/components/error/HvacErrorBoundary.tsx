@@ -8,7 +8,7 @@
 
 import styled from '@emotion/styled';
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { IconAlertTriangle, IconBug, IconHome, IconRefresh } from 'twenty-ui';
+import { IconAlertTriangle, IconRefresh } from 'twenty-ui/display';
 import { Button } from 'twenty-ui/input';
 import { Card, CardContent, CardHeader } from 'twenty-ui/layout';
 
@@ -325,13 +325,13 @@ Dodatkowe informacje:
                   variant="secondary"
                 />
                 <Button
-                  Icon={IconHome}
+                  Icon={IconRefresh}
                   title={HVAC_ERROR_MESSAGES.goHome}
                   onClick={this.handleGoHome}
                   variant="secondary"
                 />
                 <Button
-                  Icon={IconBug}
+                  Icon={IconExclamationCircle}
                   title={HVAC_ERROR_MESSAGES.reportBug}
                   onClick={this.handleReportBug}
                   variant="tertiary"

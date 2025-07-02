@@ -13,10 +13,10 @@ import React from 'react';
 import {
     IconCalendar,
     IconChartCandle,
-    IconGauge,
     IconPhone,
+    IconSettings,
     IconUsers
-} from 'twenty-ui';
+} from 'twenty-ui/display';
 
 export const HvacNavigationSection: React.FC = () => {
   return (
@@ -25,7 +25,7 @@ export const HvacNavigationSection: React.FC = () => {
       <NavigationDrawerItem
         label="Dashboard"
         to={AppPath.HvacDashboard}
-        Icon={IconGauge}
+        Icon={IconSettings}
       />
       <NavigationDrawerItem
         label="Planer Serwisowy"

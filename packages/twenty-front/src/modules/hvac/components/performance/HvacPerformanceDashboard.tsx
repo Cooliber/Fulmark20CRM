@@ -9,16 +9,9 @@
  * - Performance optimization with debouncing
  */
 
-import {
-    CheckCircleOutlined,
-    CloudOutlined,
-    DashboardOutlined,
-    DatabaseOutlined,
-    ThunderboltOutlined,
-    WarningOutlined
-} from '@ant-design/icons';
-import { Alert, Button, Card, Col, Progress, Row, Statistic, Table, Tabs } from 'antd';
+import { Card } from 'primereact/card';
 import React, { useCallback, useState } from 'react';
+import { Button } from 'twenty-ui/input';
 
 import { useHVACDebouncedPerformance } from '../../hooks/useHVACDebouncedPerformance';
 import { hvacPerformanceOptimizer } from '../../services/HvacPerformanceOptimizer';
