@@ -1,0 +1,47 @@
+# HVAC-Enhanced TwentyCRM Frontend Development Dockerfile
+# "Pasja rodzi profesjonalizm" - Professional HVAC Frontend Development
+
+FROM node:22-alpine AS base
+
+# Install system dependencies
+RUN apk add --no-cache \
+    git \
+    curl \
+    bash \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/cache/apk/*
+
+# Enable corepack for Yarn
+RUN corepack enable
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY packages/twenty-front/package.json ./packages/twenty-front/
+COPY packages/twenty-shared/package.json ./packages/twenty-shared/
+COPY packages/twenty-ui/package.json ./packages/twenty-ui/
+COPY packages/hvac-core/package.json ./packages/hvac-core/ 2>/dev/null || true
+COPY packages/hvac-dashboard/package.json ./packages/hvac-dashboard/ 2>/dev/null || true
+
+# Install dependencies
+RUN yarn install --immutable
+
+# Copy source code
+COPY . .
+
+# Build shared packages
+RUN yarn nx build twenty-shared
+RUN yarn nx build twenty-ui
+
+# Build HVAC packages if they exist
+RUN yarn nx build hvac-core 2>/dev/null || echo "hvac-core not found, skipping"
+RUN yarn nx build hvac-dashboard 2>/dev/null || echo "hvac-dashboard not found, skipping"
+
+# Expose port
+EXPOSE 3000
+
+# Start development server
+CMD ["yarn", "nx", "start", "twenty-front"]
