@@ -10,19 +10,11 @@
  * - Real-time route adjustments
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
-import { Badge } from 'primereact/badge';
-import { Tag } from 'primereact/tag';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
-import { Toast } from 'primereact/toast';
-import { ProgressBar } from 'primereact/progressbar';
-import { Chip } from 'primereact/chip';
-import { Timeline } from 'primereact/timeline';
-import { Knob } from 'primereact/knob';
-import { classNames } from 'primereact/utils';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+// Replaced PrimeReact with TwentyCRM native components for bundle optimization
+import { Button } from 'twenty-ui/input';
+import { HvacCard, HvacTable } from '../ui/HvacNativeComponents';
+import { toast } from '../ui/PrimeReactReplacements';
 
 // Types
 interface RouteOptimization {

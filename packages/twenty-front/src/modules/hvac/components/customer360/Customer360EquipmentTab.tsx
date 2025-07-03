@@ -10,20 +10,15 @@
  * - PrimeReact/PrimeFlex UI consistency
  */
 
-import { Badge } from 'primereact/badge';
-import { Button } from 'primereact/button';
-import { Card } from 'primereact/card';
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
-import { Tag } from 'primereact/tag';
+// Replaced PrimeReact with TwentyCRM native components for bundle optimization
+import { Button } from 'twenty-ui/input';
+import { HvacCard, HvacTable } from '../ui/HvacNativeComponents';
 import React, { useState } from 'react';
 
-// HVAC services and hooks
-import {
-    HVACEquipment as Equipment,
-    trackHVACUserAction,
-    useEquipmentManagement
-} from '../../index';
+// HVAC services and hooks - Direct imports to avoid circular dependencies
+import { useEquipmentManagement } from '../../hooks/useEquipmentManagement';
+import { trackHVACUserAction } from '../../utils/sentry-init';
+import type { HVACEquipment as Equipment } from '../../graphql/hvac-types';
 
 interface Customer360EquipmentTabProps {
   customerId: string;

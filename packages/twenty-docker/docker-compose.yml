@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   server:
-    image: twentycrm/twenty:${TAG:-latest}
+    image: twentycrm/twenty:${TAG:-hvac-latest}
     volumes:
       - server-local-data:/app/packages/twenty-server/.local-storage
     ports:
@@ -56,7 +56,7 @@ services:
     restart: always
 
   worker:
-    image: twentycrm/twenty:${TAG:-latest}
+    image: twentycrm/twenty:${TAG:-hvac-latest}
     volumes:
       - server-local-data:/app/packages/twenty-server/.local-storage
     command: ["yarn", "worker:prod"]

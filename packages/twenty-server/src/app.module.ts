@@ -47,7 +47,14 @@ const MIGRATED_REST_METHODS = [
     SentryModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: process.env.NODE_ENV === 'test' ? '.env.test' : '.env',
+      // Consistent env file loading strategy with TwentyConfigModule
+      envFilePath: (() => {
+        const paths = ['.env'];
+        if (process.env.NODE_ENV) {
+          paths.push(`.env.${process.env.NODE_ENV}`);
+        }
+        return paths;
+      })(),
     }),
     GraphQLModule.forRootAsync<YogaDriverConfig>({
       driver: YogaDriver,

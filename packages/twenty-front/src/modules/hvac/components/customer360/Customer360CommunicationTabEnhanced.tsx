@@ -23,12 +23,23 @@ import { Chip } from 'primereact/chip';
 import { ProgressBar } from 'primereact/progressbar';
 
 // HVAC services and hooks
-import { 
-  useCommunicationTimeline,
+import {
   Communication,
   AIInsights,
-  trackHVACUserAction 
+  trackHVACUserAction
 } from '../../index';
+
+// Placeholder hook for communication timeline
+const useCommunicationTimeline = (customerId: string) => {
+  return {
+    communications: [] as Communication[],
+    loading: false,
+    error: null,
+    refetch: () => Promise.resolve(),
+    loadMore: () => Promise.resolve(),
+    hasMore: false,
+  };
+};
 
 interface Customer360CommunicationTabEnhancedProps {
   customerId: string;

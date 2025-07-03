@@ -1,0 +1,51 @@
+flowchart TD
+    A[📧 Incoming Email] --> B{Email Connector}
+    B -->|IMAP| C[IMAP Processor]
+    B -->|Exchange| D[Exchange Processor]
+    B -->|Gmail API| E[Gmail Processor]
+    
+    C --> F[📝 Content Extraction]
+    D --> F
+    E --> F
+    
+    F --> G[🌍 Language Detection]
+    G --> H[🧠 AI Analysis Engine]
+    
+    H --> I[🎯 Intent Classification]
+    H --> J[🔍 Entity Extraction]
+    H --> K[😊 Sentiment Analysis]
+    H --> L[⚡ Priority Scoring]
+    
+    I --> M{Intent Type}
+    M -->|NEW_LEAD| N[💰 Sales Pipeline]
+    M -->|SERVICE_REQUEST| O[🔧 Service Pipeline]
+    M -->|EMERGENCY| P[🚨 Emergency Pipeline]
+    M -->|QUOTE_REQUEST| Q[📋 Quote Pipeline]
+    
+    J --> R[📊 Entity Database]
+    K --> S[📈 Sentiment Tracking]
+    L --> T[⚠️ Priority Queue]
+    
+    N --> U[🤖 Response Generation]
+    O --> U
+    P --> U
+    Q --> U
+    
+    U --> V{Approval Required?}
+    V -->|Yes| W[👨‍💼 Human Approval]
+    V -->|No| X[📤 Auto Send]
+    
+    W --> Y{Approved?}
+    Y -->|Yes| X
+    Y -->|No| Z[✏️ Manual Edit]
+    Z --> X
+    
+    X --> AA[📊 Analytics Update]
+    AA --> BB[🔄 Pipeline Update]
+    BB --> CC[📱 Notifications]
+    
+    style A fill:#e3f2fd
+    style H fill:#f3e5f5
+    style U fill:#e8f5e8
+    style X fill:#fff3e0
+    style P fill:#ffebee

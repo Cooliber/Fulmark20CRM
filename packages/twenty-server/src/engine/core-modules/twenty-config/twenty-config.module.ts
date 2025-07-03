@@ -23,7 +23,17 @@ export class TwentyConfigModule extends ConfigurableModuleClass {
         isGlobal: true,
         expandVariables: true,
         validate,
-        envFilePath: process.env.NODE_ENV === 'test' ? '.env.test' : '.env',
+        envFilePath: (() => {
+          const paths = ['.env'];
+          if (process.env.NODE_ENV) {
+            paths.push(`.env.${process.env.NODE_ENV}`); // e.g., .env.development, .env.production, .env.test
+          }
+          // Ensure .env.test is loaded and takes precedence if NODE_ENV is 'test'
+          // The default behavior of providing an array is that later files override earlier ones.
+          // So, if NODE_ENV=test, paths would be ['.env', '.env.test'], .env.test values override .env
+          // If NODE_ENV=development, paths would be ['.env', '.env.development']
+          return paths;
+        })(),
       }),
     ];
 

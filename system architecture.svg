@@ -1,0 +1,76 @@
+graph TB
+    subgraph "Frontend Layer"
+        A[TwentyCRM Integration] --> B[HVAC Dashboard]
+        C[Standalone HVAC App] --> D[Mobile Apps]
+        E[Customer Portal] --> F[Technician App]
+    end
+    
+    subgraph "API Gateway"
+        G[Kong API Gateway]
+        H[Rate Limiting]
+        I[Authentication]
+    end
+    
+    subgraph "Core Services"
+        J[Email Intelligence Engine]
+        K[Pipeline Management Engine]
+        L[Analytics Engine]
+        M[IoT Platform]
+        N[Notification Service]
+    end
+    
+    subgraph "AI/ML Layer"
+        O[OpenAI GPT-4]
+        P[Custom NLP Models]
+        Q[Predictive Analytics]
+        R[Computer Vision]
+    end
+    
+    subgraph "Data Layer"
+        S[SurrealDB - Main DB]
+        T[Redis - Cache]
+        U[InfluxDB - IoT Data]
+        V[Elasticsearch - Search]
+        W[MinIO - File Storage]
+    end
+    
+    subgraph "External Integrations"
+        X[Email Providers]
+        Y[Polish Gov APIs]
+        Z[IoT Devices]
+        AA[Payment Systems]
+    end
+    
+    A --> G
+    C --> G
+    D --> G
+    E --> G
+    F --> G
+    
+    G --> J
+    G --> K
+    G --> L
+    G --> M
+    G --> N
+    
+    J --> O
+    J --> P
+    K --> Q
+    M --> R
+    
+    J --> S
+    K --> S
+    L --> S
+    M --> U
+    N --> T
+    
+    J --> X
+    K --> Y
+    M --> Z
+    L --> AA
+    
+    style J fill:#e1f5fe
+    style K fill:#f3e5f5
+    style L fill:#e8f5e8
+    style M fill:#fff3e0
+    style O fill:#ffebee

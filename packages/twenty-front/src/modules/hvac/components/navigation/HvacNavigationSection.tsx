@@ -14,7 +14,8 @@ import {
     IconCalendar,
     IconChartCandle,
     IconPhone,
-    IconTool
+    IconSettings,
+    IconUsers
 } from 'twenty-ui/display';
 
 export const HvacNavigationSection: React.FC = () => {
@@ -22,28 +23,28 @@ export const HvacNavigationSection: React.FC = () => {
     <NavigationDrawerSection>
       <NavigationDrawerSectionTitle label="HVAC" />
       <NavigationDrawerItem
+        label="Dashboard"
+        to={AppPath.HvacDashboard}
+        Icon={IconSettings}
+      />
+      <NavigationDrawerItem
         label="Planer Serwisowy"
         to={AppPath.HvacServicePlanner}
         Icon={IconCalendar}
       />
       <NavigationDrawerItem
-        label="Harmonogram"
-        to={`${AppPath.HvacServicePlanner}#scheduling`}
-        Icon={IconCalendar}
-      />
-      <NavigationDrawerItem
-        label="Konserwacja"
-        to={`${AppPath.HvacServicePlanner}#maintenance`}
-        Icon={IconTool}
+        label="Dyspozytornia"
+        to={AppPath.HvacDispatch}
+        Icon={IconUsers}
       />
       <NavigationDrawerItem
         label="Mobilny"
-        to={`${AppPath.HvacServicePlanner}#mobile`}
+        to={AppPath.HvacMobile}
         Icon={IconPhone}
       />
       <NavigationDrawerItem
         label="Analityka"
-        to={`${AppPath.HvacServicePlanner}#analytics`}
+        to={AppPath.HvacAnalytics}
         Icon={IconChartCandle}
       />
     </NavigationDrawerSection>

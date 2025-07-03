@@ -4,3 +4,5 @@
  */
 
 export { HvacNavigationSection } from './HvacNavigationSection';
+export { HvacObjectsNavigationSection } from './HvacObjectsNavigationSection';
+

@@ -1,9 +1,9 @@
 import {
-  BadRequestException,
-  Controller,
-  Get,
-  Param,
-  UseGuards,
+    BadRequestException,
+    Controller,
+    Get,
+    Param,
+    UseGuards,
 } from '@nestjs/common';
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
 

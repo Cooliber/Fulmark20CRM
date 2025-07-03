@@ -3,7 +3,10 @@ import { LogLevel, Logger } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
 import {
   IsDefined,
+  IsEmail,
+  IsNotEmpty,
   IsOptional,
+  IsString,
   IsUrl,
   ValidateIf,
   ValidationError,
@@ -900,6 +903,8 @@ export class ConfigVariables {
     isEnvOnly: true,
     type: ConfigVariableType.STRING,
   })
+  @IsString()
+  @IsNotEmpty({ message: 'APP_SECRET must not be empty' })
   APP_SECRET: string;
 
   @ConfigVariablesMetadata({

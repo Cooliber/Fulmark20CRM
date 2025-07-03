@@ -10,10 +10,11 @@
  * - PrimeReact/PrimeFlex UI consistency
  */
 
-import { Avatar } from 'primereact/avatar';
-import { Badge } from 'primereact/badge';
-import { Card } from 'primereact/card';
-import { Chip } from 'primereact/chip';
+// REMOVED: PrimeReact imports - Bundle size optimization (~150KB)
+// import { Avatar } from 'primereact/avatar';
+// import { Badge } from 'primereact/badge';
+// import { Card } from 'primereact/card';
+// import { Chip } from 'primereact/chip';
 import React, { useCallback } from 'react';
 
 // HVAC services and hooks

@@ -1,9 +1,26 @@
 {
   "name": "twenty-e2e-testing",
-  "description": "",
-  "author": "",
+  "description": "E2E Testing Suite for Twenty CRM with HVAC Integration",
+  "author": "Fulmark HVAC Team",
   "private": true,
   "license": "AGPL-3.0",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:hvac": "playwright test tests/hvac/",
+    "test:hvac:dashboard": "playwright test tests/hvac/hvac-dashboard.spec.ts",
+    "test:hvac:search": "playwright test tests/hvac/hvac-semantic-search.spec.ts",
+    "test:hvac:planner": "playwright test tests/hvac/hvac-service-planner.spec.ts",
+    "test:hvac:dispatch": "playwright test tests/hvac/hvac-dispatch-panel.spec.ts",
+    "test:hvac:mobile": "playwright test tests/hvac/hvac-mobile-maintenance.spec.ts",
+    "test:hvac:errors": "playwright test tests/hvac/hvac-error-handling.spec.ts",
+    "test:hvac:headed": "playwright test tests/hvac/ --headed",
+    "test:hvac:report": "playwright show-report",
+    "install:browsers": "playwright install",
+    "install:deps": "playwright install-deps"
+  },
   "devDependencies": {
     "@playwright/test": "^1.51.0"
   }

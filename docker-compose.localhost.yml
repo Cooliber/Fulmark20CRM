@@ -1,0 +1,191 @@
+# HVAC-Enhanced TwentyCRM Localhost Docker Setup
+# "Pasja rodzi profesjonalizm" - Professional HVAC Development Environment
+#
+# Optimized for localhost development with full HVAC integration
+# Includes Weaviate for semantic search and Sentry for error monitoring
+
+version: '3.8'
+
+services:
+  # TwentyCRM Server with HVAC Integration
+  twenty-server:
+    build:
+      context: .
+      dockerfile: packages/twenty-docker/twenty/Dockerfile
+      target: development
+    container_name: hvac-twenty-server-dev
+    restart: unless-stopped
+    environment:
+      # Core Configuration
+      - NODE_ENV=development
+      - SERVER_URL=http://localhost:3001
+      - FRONT_BASE_URL=http://localhost:3002
+      - PG_DATABASE_URL=postgresql://twenty:twenty_dev_password@postgres:5432/default
+      - REDIS_URL=redis://redis:6379
+
+      # HVAC Configuration
+      - HVAC_ENABLED=true
+      - HVAC_API_VERSION=v1
+      - HVAC_API_TIMEOUT=30000
+      - HVAC_CACHE_ENABLED=true
+      - HVAC_CACHE_TTL=300000
+
+      # Weaviate Configuration (for semantic search)
+      - WEAVIATE_HOST=weaviate
+      - WEAVIATE_PORT=8080
+      - WEAVIATE_SCHEME=http
+      - WEAVIATE_API_KEY=hvac-dev-key-2024
+
+      # Polish Localization
+      - HVAC_DEFAULT_LANGUAGE=pl
+      - HVAC_CURRENCY=PLN
+      - HVAC_TIMEZONE=Europe/Warsaw
+      - COMPANY_NAME=Fulmark HVAC Development
+
+      # Development Features
+      - HVAC_ENABLE_DEBUG=true
+      - HVAC_LOG_LEVEL=debug
+      - HVAC_ENABLE_HOT_RELOAD=true
+
+      # Security (development keys)
+      - ACCESS_TOKEN_SECRET=hvac_dev_access_secret_2024
+      - LOGIN_TOKEN_SECRET=hvac_dev_login_secret_2024
+      - REFRESH_TOKEN_SECRET=hvac_dev_refresh_secret_2024
+      - FILE_TOKEN_SECRET=hvac_dev_file_secret_2024
+
+    ports:
+      - "3001:3000"  # Backend API
+      - "9229:9229"  # Node.js debugging
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      weaviate:
+        condition: service_healthy
+    networks:
+      - hvac-dev-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # TwentyCRM Frontend with HVAC UI
+  twenty-front:
+    build:
+      context: .
+      dockerfile: packages/twenty-front/Dockerfile.dev
+    container_name: hvac-twenty-front-dev
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_SERVER_BASE_URL=http://localhost:3001
+      - REACT_APP_HVAC_ENABLED=true
+      - REACT_APP_HVAC_DEBUG=true
+      - REACT_APP_WEAVIATE_URL=http://localhost:8080
+    ports:
+      - "3002:3000"  # Frontend
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - twenty-server
+    networks:
+      - hvac-dev-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: hvac-postgres-dev
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=default
+      - POSTGRES_USER=twenty
+      - POSTGRES_PASSWORD=twenty_dev_password
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=pl_PL.UTF-8 --lc-ctype=pl_PL.UTF-8
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./scripts/sql:/docker-entrypoint-initdb.d
+    networks:
+      - hvac-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U twenty -d default"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: hvac-redis-dev
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - hvac-dev-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Weaviate Vector Database (for HVAC semantic search)
+  weaviate:
+    image: semitechnologies/weaviate:1.22.4
+    container_name: hvac-weaviate-dev
+    restart: unless-stopped
+    environment:
+      - QUERY_DEFAULTS_LIMIT=25
+      - AUTHENTICATION_APIKEY_ENABLED=true
+      - AUTHENTICATION_APIKEY_ALLOWED_KEYS=hvac-dev-key-2024
+      - AUTHENTICATION_APIKEY_USERS=hvac-dev-user
+      - AUTHORIZATION_ADMINLIST_ENABLED=true
+      - AUTHORIZATION_ADMINLIST_USERS=hvac-dev-user
+      - PERSISTENCE_DATA_PATH=/var/lib/weaviate
+      - DEFAULT_VECTORIZER_MODULE=none
+      - ENABLE_MODULES=text2vec-openai,generative-openai
+      - CLUSTER_HOSTNAME=node1
+      - LOG_LEVEL=debug
+    ports:
+      - "8080:8080"
+    volumes:
+      - weaviate_dev_data:/var/lib/weaviate
+    networks:
+      - hvac-dev-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+  weaviate_dev_data:
+    driver: local
+
+networks:
+  hvac-dev-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+

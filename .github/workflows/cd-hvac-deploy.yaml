@@ -1,0 +1,337 @@
+name: CD HVAC Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/twenty-front/src/modules/hvac/**'
+      - 'packages/twenty-server/src/modules/hvac/**'
+  
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      force_deploy:
+        description: 'Force deployment (skip some checks)'
+        required: false
+        default: false
+        type: boolean
+      skip_tests:
+        description: 'Skip tests (not recommended for production)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '18.x'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/hvac-crm
+
+jobs:
+  # Determine deployment environment
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    steps:
+      - name: Determine environment
+        id: env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          else
+            echo "environment=development" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check if should deploy
+        id: check
+        run: |
+          # Only deploy if CI passed or force deploy is enabled
+          if [[ "${{ github.event.inputs.force_deploy }}" == "true" ]]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          else
+            # Check if CI workflow passed
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          fi
+
+  # Build and push Docker images
+  build-images:
+    needs: setup
+    if: needs.setup.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push HVAC CRM image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/production/Dockerfile.hvac
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=${{ needs.setup.outputs.environment }}
+            BUILD_VERSION=${{ github.sha }}
+
+  # Deploy to staging
+  deploy-staging:
+    needs: [setup, build-images]
+    if: needs.setup.outputs.environment == 'staging'
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Deploy to staging
+        run: |
+          chmod +x scripts/hvac-deploy.sh
+          ./scripts/hvac-deploy.sh \
+            --environment staging \
+            --mode docker \
+            --force \
+            ${{ github.event.inputs.skip_tests == 'true' && '--skip-tests' || '' }}
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_USER }}
+          STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          DOCKER_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Run smoke tests
+        run: |
+          # Wait for deployment to be ready
+          timeout 300 bash -c 'until curl -f ${{ secrets.STAGING_URL }}/health; do sleep 10; done'
+          
+          # Run basic smoke tests
+          curl -f ${{ secrets.STAGING_URL }}/api/health
+          curl -f ${{ secrets.STAGING_URL }}/api/hvac/health
+
+      - name: Notify staging deployment
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#hvac-crm-deployments'
+          text: |
+            🚀 HVAC CRM deployed to staging
+            Environment: staging
+            Commit: ${{ github.sha }}
+            URL: ${{ secrets.STAGING_URL }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Deploy to production
+  deploy-production:
+    needs: [setup, build-images]
+    if: needs.setup.outputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Create backup
+        run: |
+          # Create production backup before deployment
+          ssh -i ${{ secrets.PRODUCTION_SSH_KEY }} \
+              ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} \
+              "cd /opt/hvac-crm && ./scripts/backup.sh"
+
+      - name: Deploy to production
+        run: |
+          chmod +x scripts/hvac-deploy.sh
+          ./scripts/hvac-deploy.sh \
+            --environment production \
+            --mode vps \
+            --force \
+            ${{ github.event.inputs.skip_tests == 'true' && '--skip-tests' || '' }}
+        env:
+          PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
+          PRODUCTION_SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+          DOCKER_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Run production health checks
+        run: |
+          # Wait for deployment to be ready
+          timeout 600 bash -c 'until curl -f ${{ secrets.PRODUCTION_URL }}/health; do sleep 15; done'
+          
+          # Run comprehensive health checks
+          curl -f ${{ secrets.PRODUCTION_URL }}/api/health
+          curl -f ${{ secrets.PRODUCTION_URL }}/api/hvac/health
+          curl -f ${{ secrets.PRODUCTION_URL }}/api/hvac/metrics
+
+      - name: Run post-deployment tests
+        if: github.event.inputs.skip_tests != 'true'
+        run: |
+          # Run critical path tests against production
+          npm ci
+          npx playwright install chromium
+          npm run test:e2e:production:critical
+
+      - name: Notify production deployment
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#hvac-crm-deployments'
+          text: |
+            🎉 HVAC CRM deployed to production
+            Environment: production
+            Commit: ${{ github.sha }}
+            URL: ${{ secrets.PRODUCTION_URL }}
+            Deployed by: ${{ github.actor }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Rollback capability
+  rollback:
+    if: failure() && (needs.deploy-staging.result == 'failure' || needs.deploy-production.result == 'failure')
+    needs: [setup, deploy-staging, deploy-production]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Rollback deployment
+        run: |
+          echo "Deployment failed, initiating rollback..."
+          
+          # Get previous successful deployment
+          PREVIOUS_SHA=$(git log --format="%H" -n 2 | tail -1)
+          
+          # Rollback to previous version
+          ./scripts/hvac-deploy.sh \
+            --environment ${{ needs.setup.outputs.environment }} \
+            --mode docker \
+            --force
+        env:
+          ROLLBACK_TO: ${{ env.PREVIOUS_SHA }}
+
+      - name: Notify rollback
+        uses: 8398a7/action-slack@v3
+        with:
+          status: 'warning'
+          channel: '#hvac-crm-deployments'
+          text: |
+            ⚠️ HVAC CRM deployment failed - Rollback initiated
+            Environment: ${{ needs.setup.outputs.environment }}
+            Failed commit: ${{ github.sha }}
+            Rolled back to: ${{ env.PREVIOUS_SHA }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Update deployment status
+  update-status:
+    if: always()
+    needs: [setup, build-images, deploy-staging, deploy-production]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Update deployment status
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const environment = '${{ needs.setup.outputs.environment }}';
+            const deployJob = environment === 'production' ? 'deploy-production' : 'deploy-staging';
+            const deployResult = '${{ needs[deployJob].result }}';
+            
+            const status = deployResult === 'success' ? 'success' : 'failure';
+            const description = deployResult === 'success' 
+              ? `Successfully deployed to ${environment}` 
+              : `Failed to deploy to ${environment}`;
+
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: context.payload.deployment?.id || 0,
+              state: status,
+              description: description,
+              environment: environment,
+              target_url: environment === 'production' 
+                ? '${{ secrets.PRODUCTION_URL }}' 
+                : '${{ secrets.STAGING_URL }}'
+            });
+
+  # Performance monitoring post-deployment
+  performance-monitoring:
+    needs: [deploy-staging, deploy-production]
+    if: success() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup monitoring
+        run: |
+          # Setup performance monitoring for the deployed environment
+          ENVIRONMENT="${{ needs.setup.outputs.environment }}"
+          URL="${{ secrets[format('{0}_URL', upper(needs.setup.outputs.environment))] }}"
+          
+          # Run Lighthouse audit
+          npm install -g lighthouse
+          lighthouse $URL --output=json --output-path=lighthouse-report.json
+          
+          # Check performance metrics
+          PERFORMANCE_SCORE=$(cat lighthouse-report.json | jq '.categories.performance.score * 100')
+          
+          if (( $(echo "$PERFORMANCE_SCORE < 90" | bc -l) )); then
+            echo "⚠️ Performance score ($PERFORMANCE_SCORE) below threshold (90)"
+          else
+            echo "✅ Performance score ($PERFORMANCE_SCORE) meets requirements"
+          fi
+
+      - name: Upload performance report
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-report-${{ needs.setup.outputs.environment }}
+          path: lighthouse-report.json

@@ -1,4 +1,5 @@
-import { ConsoleLogger, DynamicModule, Global, Module } from '@nestjs/common';
+import { DynamicModule, Global, Module } from '@nestjs/common'; // Removed ConsoleLogger import
+import { ProductionJsonLogger } from './production-json.logger'; // Import new logger
 
 import { LoggerDriverType } from 'src/engine/core-modules/logger/interfaces';
 import { LOGGER_DRIVER } from 'src/engine/core-modules/logger/logger.constants';
@@ -20,7 +21,7 @@ export class LoggerModule extends ConfigurableModuleClass {
       provide: LOGGER_DRIVER,
       useValue:
         options.type === LoggerDriverType.CONSOLE
-          ? new ConsoleLogger()
+          ? new ProductionJsonLogger(undefined, { logLevels: options.logLevels })
           : undefined,
     };
     const dynamicModule = super.forRoot(options);
@@ -46,10 +47,10 @@ export class LoggerModule extends ConfigurableModuleClass {
 
         const logger =
           config?.type === LoggerDriverType.CONSOLE
-            ? new ConsoleLogger()
+            ? new ProductionJsonLogger(undefined, { logLevels })
             : undefined;
 
-        logger?.setLogLevels(logLevels);
+        // logger?.setLogLevels(logLevels); // Constructor of ProductionJsonLogger now handles this
 
         return logger;
       },

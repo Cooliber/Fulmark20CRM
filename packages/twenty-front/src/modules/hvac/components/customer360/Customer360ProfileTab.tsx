@@ -10,24 +10,20 @@
  * - PrimeReact/PrimeFlex UI consistency
  */
 
-import React, { useState, useCallback } from 'react';
-import { Card } from 'primereact/card';
+import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
+import { Card } from 'primereact/card';
+import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
-import { Dropdown } from 'primereact/dropdown';
 import { Message } from 'primereact/message';
-import { Badge } from 'primereact/badge';
 import { ProgressBar } from 'primereact/progressbar';
+import React, { useState } from 'react';
 
-// HVAC services and hooks
-import {
-  trackHVACUserAction,
-  Customer,
-  CustomerStatus,
-  CustomerType,
-  useCustomerValidation
-} from '../../index';
+// HVAC services and hooks - Direct imports to avoid circular dependencies
+import { useCustomerValidation } from '../../hooks/useCustomerValidation';
+import type { Customer, CustomerStatus, CustomerType } from '../../services/CustomerAPIService';
+import { trackHVACUserAction } from '../../utils/sentry-init';
 
 interface Customer360ProfileTabProps {
   customer: Customer;
