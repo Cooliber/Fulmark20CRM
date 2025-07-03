@@ -47,7 +47,7 @@ export interface LazyKanbanProps extends LazyComponentProps {
 export interface LazyCustomer360Props extends LazyComponentProps {
   customerId: string;
   initialTab?: string;
-  onTabChange?: (tabIndex: number) => void;
+  onTabChange?: (tab: string) => void;
 }
 
 // Utility function to preload components

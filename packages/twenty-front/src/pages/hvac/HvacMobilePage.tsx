@@ -22,7 +22,7 @@ import { Button } from 'twenty-ui/input';
 // HVAC Components - Using lazy loading for performance
 import {
     // HvacMobileDashboard, // REMOVED: Heavy component moved to lazy loading (~200KB)
-    HVACErrorBoundary,
+    HvacErrorBoundary,
     trackHVACUserAction,
     useHVACPerformanceMonitoring
 } from '~/modules/hvac';
@@ -217,7 +217,7 @@ export const HvacMobilePage: React.FC = () => {
           />
         )}
 
-        <HVACErrorBoundary>
+        <HvacErrorBoundary>
           <Suspense fallback={<MobileSkeleton />}>
             {/* REMOVED: HvacMobileDashboard - Heavy component moved to lazy loading */}
             <div className="p-4 text-center">
@@ -226,7 +226,7 @@ export const HvacMobilePage: React.FC = () => {
               <p>Redukcja bundle size o ~200KB</p>
             </div>
           </Suspense>
-        </HVACErrorBoundary>
+        </HvacErrorBoundary>
       </PageBody>
     </PageContainer>
   );

@@ -11,10 +11,11 @@
  */
 
 import React, { useState, useCallback, ReactNode } from 'react';
-import { Button } from 'primereact/button';
-import { ProgressSpinner } from 'primereact/progressspinner';
-import { Message } from 'primereact/message';
-import { Card } from 'primereact/card';
+import { Button } from 'twenty-ui/input';
+import { ProgressBar } from 'twenty-ui/feedback';
+import { Card } from 'twenty-ui/layout';
+import { IconRefresh, IconAlertTriangle } from 'twenty-ui/display';
+import styled from '@emotion/styled';
 
 // HVAC monitoring
 import { reportHVACError, addHVACBreadcrumb } from '../../config/sentry.config';

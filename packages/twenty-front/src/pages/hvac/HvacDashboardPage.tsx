@@ -19,7 +19,7 @@ import { IconApps, IconTool } from 'twenty-ui/display';
 // HVAC Components - Using lazy loading for performance
 import {
     // HvacDashboard, // REMOVED: Heavy component moved to lazy loading (~500KB)
-    HVACErrorBoundary,
+    HvacErrorBoundary,
     HvacPerformanceDashboard,
     useHVACPerformanceMonitoring
 } from '~/modules/hvac';
@@ -45,7 +45,7 @@ export const HvacDashboardPage: React.FC = () => {
       </PageHeader>
       
       <PageBody>
-        <HVACErrorBoundary>
+        <HvacErrorBoundary>
           <div className="space-y-6">
             {/* Performance Dashboard - Only in development */}
             {process.env.NODE_ENV === 'development' && (
@@ -72,7 +72,7 @@ export const HvacDashboardPage: React.FC = () => {
               </div>
             </Suspense>
           </div>
-        </HVACErrorBoundary>
+        </HvacErrorBoundary>
       </PageBody>
     </PageContainer>
   );

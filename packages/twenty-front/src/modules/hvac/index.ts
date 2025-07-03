@@ -10,8 +10,8 @@
 // TEMPORARY: Direct imports until packages are properly configured
 // TODO: Replace with proper package imports after Nx configuration
 
-// Core functionality - Temporarily using relative imports
-export * from '../../hvac-core/src';
+// Core functionality - Using workspace package imports
+export * from 'hvac-core';
 
 // Remaining components that haven't been moved yet
 export { HvacCustomerList } from './components/HvacCustomerList';
@@ -47,13 +47,14 @@ export { Customer360CommunicationTabEnhanced } from './components/customer360/Cu
 //     type LoadingStrategy, type OptimizationConfig
 // } from './services/BundleOptimizationService';
 
-// Advanced Lazy Loading Hooks
-export {
-    useIdlePreload, useLazyComponent,
-    useLazyIntersectionObserver, type LazyComponentState,
-    type UseLazyComponentOptions,
-    type UseLazyComponentReturn
-} from './hooks/useLazyComponent';
+// Advanced Lazy Loading Hooks - TEMPORARILY DISABLED
+// TODO: Implement useLazyComponent hook for advanced lazy loading
+// export {
+//     useIdlePreload, useLazyComponent,
+//     useLazyIntersectionObserver, type LazyComponentState,
+//     type UseLazyComponentOptions,
+//     type UseLazyComponentReturn
+// } from './hooks/useLazyComponent';
 
 // REMOVED: Performance Monitoring Services - Heavy dependency (~100KB)
 // Moved to lazy loading to reduce main bundle size
@@ -84,7 +85,7 @@ export {
     type CircuitBreakerMetrics, type CircuitBreakerState
 } from './services/CircuitBreakerService';
 export {
-    RetryService, apiRetryService, criticalRetryService, networkRetryService, searchRetryService, type RetryConfig,
+    apiRetryService, criticalRetryService, networkRetryService, RetryService, searchRetryService, type RetryConfig,
     type RetryResult, type RetryStrategy
 } from './services/RetryService';
 
@@ -155,22 +156,21 @@ export {
 
 // Enhanced Authentication Services
 export {
-    HvacAuthService, HvacPermission, HvacUserRole, hvacAuthService, type HvacAuthConfig, type HvacAuthToken,
+    HvacAuthService, hvacAuthService, HvacPermission, HvacUserRole, type HvacAuthConfig, type HvacAuthToken,
     type HvacUser,
     type HvacUserProfile
 } from './services/HvacAuthService';
 
 // Services
 export {
-    CompanySize, ContactMethod, CustomerAPIService, CustomerStatus,
-    CustomerType, PaymentMethod, RiskLevel, customerAPIService, type Contract, type Customer, type Customer360Data, type CustomerAddress, type CustomerInsights, type EmergencyContact, type Equipment,
+    CompanySize, ContactMethod, CustomerAPIService, customerAPIService, CustomerStatus,
+    CustomerType, PaymentMethod, RiskLevel, type Contract, type Customer, type Customer360Data, type CustomerAddress, type CustomerInsights, type EmergencyContact, type Equipment,
     type ServiceTicket
 } from './services/CustomerAPIService';
 
 export {
-    PolishBusinessValidationService, VATCategory, polishBusinessValidationService, type NIPValidationResult,
-    type REGONValidationResult,
-    type VATCalculation, type ValidationResult
+    PolishBusinessValidationService, polishBusinessValidationService, VATCategory, type NIPValidationResult,
+    type REGONValidationResult, type ValidationResult, type VATCalculation
 } from './services/PolishBusinessValidationService';
 
 export {
@@ -226,7 +226,7 @@ export {
 
 // Enhanced Lazy Loading Components
 export {
-    HvacErrorFallback, HvacLoadingSpinner, LazyHvacAnalytics, LazyHvacCustomers, LazyHvacEquipment, LazyHvacFinances, LazyHvacInspections, LazyHvacInventory, LazyHvacQuotes, LazyHvacServiceTickets, LazyHvacTechnicians, createLazyComponent, useHvacPreloader, type LazyComponentProps,
+    createLazyComponent, HvacErrorFallback, HvacLoadingSpinner, LazyHvacAnalytics, LazyHvacCustomers, LazyHvacEquipment, LazyHvacFinances, LazyHvacInspections, LazyHvacInventory, LazyHvacQuotes, LazyHvacServiceTickets, LazyHvacTechnicians, useHvacPreloader, type LazyComponentProps,
     type LazyLoadError
 } from './components/HvacLazyComponents';
 
@@ -261,64 +261,68 @@ export {
     useServerSideFilter
 } from './hooks/useServerSideFilter';
 
-export {
-    useEquipmentManagement
-} from './hooks/useEquipmentManagement';
+// TEMPORARILY DISABLED - TODO: Implement missing hooks
+// export {
+//     useEquipmentManagement
+// } from './hooks/useEquipmentManagement';
 
-export {
-    useCommunicationTimeline
-} from './hooks/useCommunicationTimeline';
+// export {
+//     useCommunicationTimeline
+// } from './hooks/useCommunicationTimeline';
 
-export {
-    useDataLoader
-} from './hooks/useDataLoader';
+// export {
+//     useDataLoader
+// } from './hooks/useDataLoader';
 
-export {
-    useCustomerDataFlow
-} from './hooks/useCustomerDataFlow';
+// export {
+//     useCustomerDataFlow
+// } from './hooks/useCustomerDataFlow';
 
-export {
-    useQuoteManagement
-} from './hooks/useQuoteManagement';
+// export {
+//     useQuoteManagement
+// } from './hooks/useQuoteManagement';
 
-export {
-    useKanbanFlow
-} from './hooks/useKanbanFlow';
+// export {
+//     useKanbanFlow
+// } from './hooks/useKanbanFlow';
 
-export {
-    useDataPipeline
-} from './hooks/useDataPipeline';
+// export {
+//     useDataPipeline
+// } from './hooks/useDataPipeline';
 
-// Service Planner Hooks
-export {
-    useHvacScheduling
-} from './hooks/useHvacScheduling';
+// Service Planner Hooks - TEMPORARILY DISABLED
+// TODO: Implement HVAC scheduling and dispatch hooks
+// export {
+//     useHvacScheduling
+// } from './hooks/useHvacScheduling';
 
-export {
-    useHvacDispatch
-} from './hooks/useHvacDispatch';
+// export {
+//     useHvacDispatch
+// } from './hooks/useHvacDispatch';
 
-export {
-    useHvacTechnicians
-} from './hooks/useHvacTechnicians';
+// export {
+//     useHvacTechnicians
+// } from './hooks/useHvacTechnicians';
 
-export {
-    useHvacMaintenance
-} from './hooks/useHvacMaintenance';
+// export {
+//     useHvacMaintenance
+// } from './hooks/useHvacMaintenance';
 
-export {
-    useHvacMobileTechnician
-} from './hooks/useHvacMobileTechnician';
+// export {
+//     useHvacMobileTechnician
+// } from './hooks/useHvacMobileTechnician';
 
-// Audio Transcription Hooks - NEW
-export {
-    useHvacAudioTranscription
-} from './hooks/useHvacAudioTranscription';
+// Audio Transcription Hooks - NEW - TEMPORARILY DISABLED
+// TODO: Implement audio transcription hooks
+// export {
+//     useHvacAudioTranscription
+// } from './hooks/useHvacAudioTranscription';
 
-// Polish Compliance Hooks - NEW
-export {
-    useHvacPolishCompliance
-} from './hooks/useHvacPolishCompliance';
+// Polish Compliance Hooks - NEW - TEMPORARILY DISABLED
+// TODO: Implement Polish compliance hooks
+// export {
+//     useHvacPolishCompliance
+// } from './hooks/useHvacPolishCompliance';
 
 // Dashboard Components - Use lazy versions for bundle optimization
 // export {
@@ -330,7 +334,8 @@ export {
 // Error Handling & Monitoring
 export { HvacErrorBoundary } from './components/error/HvacErrorBoundary';
 export type { HvacErrorBoundaryProps } from './components/error/HvacErrorBoundary';
-export { HVACErrorBoundary, useHVACErrorReporting, withHVACErrorBoundary } from './components/HVACErrorBoundary';
+// TODO: Implement HVACErrorBoundary component
+// export { HVACErrorBoundary, withHVACErrorBoundary } from './components/HVACErrorBoundary';
 
 // Fault Tolerance Components
 export {
@@ -338,14 +343,15 @@ export {
     HVACSuspenseWrapper
 } from './components/fault-tolerance';
 
-// Performance Monitoring & Optimization
+// Performance Monitoring & Optimization - PLACEHOLDER IMPLEMENTATION
 export {
-    PERFORMANCE_THRESHOLDS, useHVACPerformanceMonitoring
-} from './hooks/useHVACPerformanceMonitoring';
+    PERFORMANCE_THRESHOLDS, trackHVACUserAction, useHVACPerformanceMonitoring, useHVACErrorReporting
+} from './utils/placeholder-functions';
 
-export {
-    useHVACDebouncedPerformance
-} from './hooks/useHVACDebouncedPerformance';
+// TODO: Implement full performance monitoring hooks
+// export {
+//     useHVACDebouncedPerformance
+// } from './hooks/useHVACDebouncedPerformance';
 
 // Performance Components
 export { HvacPerformanceDashboard, PerformanceMonitor } from './components/performance';
@@ -358,17 +364,16 @@ export type {
     PerformanceMetrics
 } from './services/HvacPerformanceOptimizer';
 
-// Sentry Configuration & Utilities
-export {
-    HVACErrorContexts, clearHVACUserSession, initializeHVACSentry, isHVACSentryInitialized, trackHVACAPICall, trackHVACNavigation, trackHVACUserAction, trackPolishBusinessOperation, updateHVACUserContext
-} from './utils/sentry-init';
+// Sentry Configuration & Utilities - TEMPORARILY DISABLED
+// TODO: Implement Sentry utilities
+// export { clearHVACUserSession, HVACErrorContexts, initializeHVACSentry, isHVACSentryInitialized, trackHVACAPICall, trackHVACNavigation, trackHVACUserAction, trackPolishBusinessOperation, updateHVACUserContext } from './utils/sentry-init';
 
-export {
-    HVACErrorContexts as ErrorContexts,
-    PolishBusinessTags, addHVACBreadcrumb, clearHVACUserContext, reportHVACError,
-    reportHVACMessage,
-    reportPolishBusinessError, setHVACUserContext, startHVACTransaction
-} from './config/sentry.config';
+// export {
+//     addHVACBreadcrumb, clearHVACUserContext, HVACErrorContexts as ErrorContexts,
+//     PolishBusinessTags, reportHVACError,
+//     reportHVACMessage,
+//     reportPolishBusinessError, setHVACUserContext, startHVACTransaction
+// } from './config/sentry.config';
 
 // Types
 export type HvacServiceTicket = {
@@ -399,12 +404,13 @@ export type HvacSearchResult = {
 // Error handling types
 export type { HVACErrorContext } from './config/sentry.config';
 
-// Unified Types - Canonical type definitions
-export type {
-    ActiveDispatch, ChecklistItem, RouteOptimization, ScheduledJob, Technician, TechnicianJob,
-    Communication as UnifiedCommunication,
-    Customer as UnifiedCustomer, CustomerAddress as UnifiedCustomerAddress, Equipment as UnifiedEquipment, MaintenanceRecord as UnifiedMaintenanceRecord
-} from './types/unified';
+// Unified Types - Canonical type definitions - TEMPORARILY DISABLED
+// TODO: Implement unified types
+// export type {
+//     ActiveDispatch, ChecklistItem, RouteOptimization, ScheduledJob, Technician, TechnicianJob,
+//     Communication as UnifiedCommunication,
+//     Customer as UnifiedCustomer, CustomerAddress as UnifiedCustomerAddress, Equipment as UnifiedEquipment, MaintenanceRecord as UnifiedMaintenanceRecord
+// } from './types/unified';
 
 export type HvacSearchFilters = {
   type?: string;

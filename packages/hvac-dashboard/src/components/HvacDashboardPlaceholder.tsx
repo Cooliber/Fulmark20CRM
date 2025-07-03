@@ -10,13 +10,26 @@
  * - PrimeReact/PrimeFlex UI consistency
  */
 
-// Replaced PrimeReact with Twenty UI for bundle optimization
+// Replaced PrimeReact with SOTA HvacIconBridge system for bundle optimization
 import React from 'react';
-import { IconChartCandle as IconChartBar, IconTool } from 'twenty-ui/display';
-import { Button } from 'twenty-ui/input';
+import { HvacAnalyticsIcon, HvacEquipmentIcon } from './icons/HvacIconBridge';
+const Button: React.FC<{
+  children: React.ReactNode;
+  onClick?: () => void;
+  className?: string;
+}> = ({ children, onClick, className }) => (
+  <button
+    onClick={onClick}
+    className={`px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 ${className || ''}`}
+  >
+    {children}
+  </button>
+);
 
-// HVAC Monitoring
-import { trackHVACUserAction } from '../../index';
+// HVAC Monitoring - Placeholder function
+const trackHVACUserAction = (action: string, context: string, data?: Record<string, unknown>) => {
+  console.log('HVAC User Action:', { action, context, data });
+};
 
 // Types
 interface HvacDashboardPlaceholderProps {
@@ -28,10 +41,10 @@ interface HvacDashboardPlaceholderProps {
   onAction?: () => void;
 }
 
-// Icon mapping
+// Icon mapping - Using SOTA HvacIconBridge system
 const iconMap = {
-  equipment: IconTool,
-  analytics: IconChartBar,
+  equipment: HvacEquipmentIcon,
+  analytics: HvacAnalyticsIcon,
 };
 
 // Action mapping for tracking
@@ -86,11 +99,11 @@ export const HvacDashboardPlaceholder: React.FC<HvacDashboardPlaceholderProps> =
 
       {/* Action Button */}
       <Button
-        label={actionLabel}
-        icon={type === 'equipment' ? 'pi pi-bell' : 'pi pi-chart-line'}
         className="p-button-outlined"
         onClick={handleActionClick}
-      />
+      >
+        {actionLabel}
+      </Button>
     </div>
   );
 };

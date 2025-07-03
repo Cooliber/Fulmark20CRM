@@ -13,7 +13,11 @@
 import { motion } from 'framer-motion';
 import { Card } from 'primereact/card';
 import React from 'react';
-import { IconCalendar, IconSearch, IconTag as IconTicket, IconTool } from 'twenty-ui/display';
+// Placeholder icons
+const IconCalendar = () => <span>📅</span>;
+const IconSearch = () => <span>🔍</span>;
+const IconTicket = () => <span>🎫</span>;
+const IconTool = () => <span>🔧</span>;
 
 // Types
 interface StatItem {

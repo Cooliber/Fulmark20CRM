@@ -19,7 +19,7 @@ import { SearchHeader } from './search/SearchHeader';
 import { type SearchResult } from './search/SearchResults';
 
 // HVAC Performance Monitoring
-import { useHVACDebouncedPerformance } from '../hooks/useHVACPerformanceMonitoring';
+import { useHVACPerformanceMonitoring } from '../utils/placeholder-functions';
 
 // GraphQL Queries
 const HVAC_SEMANTIC_SEARCH = gql`
@@ -103,7 +103,7 @@ export const HvacSemanticSearch: React.FC<HvacSemanticSearchProps> = ({
   const [useWeaviate, setUseWeaviate] = useState(true);
 
   // Performance monitoring
-  const { debouncedMeasure } = useHVACDebouncedPerformance();
+  const { addPerformanceBreadcrumb } = useHVACPerformanceMonitoring();
 
   // GraphQL hooks
   const { data: searchData, loading: searchLoading, refetch: refetchSearch } = useQuery(
@@ -139,23 +139,30 @@ export const HvacSemanticSearch: React.FC<HvacSemanticSearchProps> = ({
   const handleSearch = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim()) return;
 
-    await debouncedMeasure(
-      'semantic_search',
-      'SEMANTIC_SEARCH',
-      async () => {
-        await refetchSearch({
-          input: {
-            query: searchQuery,
-            filters,
-            limit: 20,
-          },
-          useWeaviate,
-        });
-      },
-      300, // 300ms debounce
-      { query: searchQuery.substring(0, 50), useWeaviate }
-    );
-  }, [filters, useWeaviate, refetchSearch, debouncedMeasure]);
+    addPerformanceBreadcrumb('semantic_search_start', {
+      query: searchQuery.substring(0, 50),
+      useWeaviate
+    });
+
+    try {
+      await refetchSearch({
+        input: {
+          query: searchQuery,
+          filters,
+          limit: 20,
+        },
+        useWeaviate,
+      });
+
+      addPerformanceBreadcrumb('semantic_search_success', {
+        query: searchQuery.substring(0, 50)
+      });
+    } catch (error) {
+      addPerformanceBreadcrumb('semantic_search_error', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }, [filters, useWeaviate, refetchSearch, addPerformanceBreadcrumb]);
 
   const handleQueryChange = useCallback((newQuery: string) => {
     setQuery(newQuery);

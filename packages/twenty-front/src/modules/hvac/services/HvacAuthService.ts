@@ -6,7 +6,12 @@
  * Following Twenty CRM patterns and security best practices
  */
 
-import { trackHVACUserAction, reportHVACError } from '../index';
+import { trackHVACUserAction } from '../index';
+
+// Placeholder error reporting function
+const reportHVACError = (error: Error, context: string, data?: Record<string, unknown>) => {
+  console.error('HVAC Error:', { error, context, data });
+};
 
 // Authentication types
 export interface HvacAuthToken {

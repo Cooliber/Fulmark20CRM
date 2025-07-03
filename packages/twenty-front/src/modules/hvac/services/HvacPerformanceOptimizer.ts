@@ -11,8 +11,9 @@
  * - Performance monitoring and alerting
  */
 
-import { trackHVACUserAction } from '../utils/sentry-init';
-import { HVACErrorContext } from '../config/sentry.config';
+import { trackHVACUserAction } from '../utils/placeholder-functions';
+// TODO: Implement proper Sentry configuration
+// import { HVACErrorContext } from '../config/sentry.config';
 
 // Performance optimization configuration
 interface OptimizationConfig {

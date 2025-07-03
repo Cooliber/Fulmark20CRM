@@ -12,7 +12,15 @@
 
 import { Button } from 'primereact/button';
 import React from 'react';
-import { IconChartCandle as IconChartBar, IconSearch, IconTag as IconTicket, IconTool } from 'twenty-ui/display';
+import {
+  HvacIcon,
+  HvacOverviewIcon,
+  HvacSearchIcon,
+  HvacTicketsIcon,
+  HvacEquipmentIcon,
+  HvacMaintenanceIcon,
+  HvacAnalyticsIcon
+} from './icons/HvacIconBridge';
 
 // Types - Updated to match HVAC state management
 export type TabType = 'overview' | 'search' | 'tickets' | 'equipment' | 'maintenance' | 'analytics';
@@ -28,14 +36,14 @@ interface HvacDashboardHeaderProps {
   onTabChange: (tab: TabType) => void;
 }
 
-// Tab configuration
+// Tab configuration - Using SOTA HvacIconBridge system
 const tabs: Tab[] = [
-  { id: 'overview', label: 'Przegląd', icon: IconChartBar },
-  { id: 'search', label: 'Wyszukiwanie', icon: IconSearch },
-  { id: 'tickets', label: 'Zgłoszenia', icon: IconTicket },
-  { id: 'equipment', label: 'Sprzęt', icon: IconTool },
-  { id: 'maintenance', label: 'Konserwacja', icon: IconTool },
-  { id: 'analytics', label: 'Analityka', icon: IconChartBar },
+  { id: 'overview', label: 'Przegląd', icon: HvacOverviewIcon },
+  { id: 'search', label: 'Wyszukiwanie', icon: HvacSearchIcon },
+  { id: 'tickets', label: 'Zgłoszenia', icon: HvacTicketsIcon },
+  { id: 'equipment', label: 'Sprzęt', icon: HvacEquipmentIcon },
+  { id: 'maintenance', label: 'Konserwacja', icon: HvacMaintenanceIcon },
+  { id: 'analytics', label: 'Analityka', icon: HvacAnalyticsIcon },
 ];
 
 // PrimeFlex classes

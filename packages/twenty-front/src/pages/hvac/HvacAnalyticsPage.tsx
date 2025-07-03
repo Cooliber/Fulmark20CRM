@@ -21,7 +21,7 @@ import { IconChartCandle } from 'twenty-ui/display';
 
 // HVAC Components - Using lazy loading for performance
 import {
-    HVACErrorBoundary,
+    HvacErrorBoundary,
     // LazyAnalyticsDashboard, // REMOVED: Heavy component (~900KB Chart.js + D3.js)
     trackHVACUserAction,
     useHVACPerformanceMonitoring
@@ -97,7 +97,7 @@ export const HvacAnalyticsPage: React.FC = () => {
       </PageHeader>
       
       <PageBody>
-        <HVACErrorBoundary>
+        <HvacErrorBoundary>
           <Suspense fallback={<AnalyticsSkeleton />}>
             {/* REMOVED: LazyAnalyticsDashboard - Heavy component (~900KB Chart.js + D3.js) */}
             <div className="p-4 text-center">
@@ -106,7 +106,7 @@ export const HvacAnalyticsPage: React.FC = () => {
               <p>Redukcja bundle size o ~900KB (Chart.js + D3.js)</p>
             </div>
           </Suspense>
-        </HVACErrorBoundary>
+        </HvacErrorBoundary>
       </PageBody>
     </PageContainer>
   );

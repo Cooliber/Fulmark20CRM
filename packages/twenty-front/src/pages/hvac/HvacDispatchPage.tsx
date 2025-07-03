@@ -21,12 +21,8 @@ import { IconClockHour8, IconMap, IconUsers } from 'twenty-ui/display';
 
 // HVAC Components - Using lazy loading for performance
 import {
-    // HvacDispatchPanel, // REMOVED: Heavy component moved to lazy loading
-    HVACErrorBoundary,
     trackHVACUserAction,
-    useHvacDispatch,
-    useHVACPerformanceMonitoring,
-    useHvacTechnicians
+    useHVACPerformanceMonitoring
 } from '~/modules/hvac';
 
 // Loading component
@@ -153,7 +149,7 @@ export const HvacDispatchPage: React.FC = () => {
       </PageHeader>
       
       <PageBody>
-        <HVACErrorBoundary>
+        <HvacErrorBoundary>
           <Suspense fallback={<DispatchSkeleton />}>
             {/* REMOVED: HvacDispatchPanel - Heavy component moved to lazy loading */}
             <div className="p-4 text-center">
@@ -162,7 +158,7 @@ export const HvacDispatchPage: React.FC = () => {
               <p>Bundle size reduced by ~150KB</p>
             </div>
           </Suspense>
-        </HVACErrorBoundary>
+        </HvacErrorBoundary>
       </PageBody>
     </PageContainer>
   );

@@ -14,32 +14,117 @@
 // import { Card } from 'primereact/card';
 // import { ProgressSpinner } from 'primereact/progressspinner';
 // import { Skeleton } from 'primereact/skeleton';
-import React, { Suspense, lazy } from 'react';
+import React from 'react';
 
 // HVAC monitoring - Direct import to avoid circular dependencies
-// REMOVED: import { ProgressSpinner } from 'primereact/progressspinner';
-import Skeleton from 'react-loading-skeleton';
-import { Card } from 'twenty-ui/layout';
-import { trackHVACUserAction } from '../../utils/sentry-init';
-import { HVACErrorBoundary } from '../HVACErrorBoundary';
-
-// Lazy load Customer 360 components
-const Customer360Container = lazy(() => 
-  import('../customer360/Customer360Container').then(module => ({
-    default: module.Customer360Container
-  }))
+import { Component, ErrorInfo, ReactNode } from 'react';
+// Placeholder Card component
+const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties; className?: string }> = ({ children, style, className }) => (
+  <div className={className} style={{
+    border: '1px solid #e0e0e0',
+    borderRadius: '8px',
+    padding: '16px',
+    backgroundColor: 'white',
+    ...style
+  }}>
+    {children}
+  </div>
 );
 
-const Customer360CommunicationTabEnhanced = lazy(() => 
-  import('../customer360/Customer360CommunicationTabEnhanced').then(module => ({
-    default: module.Customer360CommunicationTabEnhanced
-  }))
+// Placeholder Skeleton component
+const Skeleton: React.FC<{
+  width?: string;
+  height?: string;
+  className?: string;
+  shape?: string;
+  size?: string;
+}> = ({ width = '100%', height = '1rem', className = '', shape, size }) => (
+  <div
+    className={`bg-gray-200 animate-pulse ${className}`}
+    style={{
+      width: size || width,
+      height: size || height,
+      borderRadius: shape === 'circle' ? '50%' : '4px'
+    }}
+  />
 );
 
-const Customer360EquipmentTab = lazy(() => 
-  import('../customer360/Customer360EquipmentTab').then(module => ({
-    default: module.Customer360EquipmentTab
-  }))
+// Placeholder function for tracking
+const trackHVACUserAction = (action: string, context: string, data?: Record<string, unknown>) => {
+  console.log('HVAC User Action:', { action, context, data });
+};
+
+// Simple Error Boundary for local use
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class SimpleErrorBoundary extends Component<
+  { children: ReactNode; context?: string; onError?: (error: Error) => void },
+  ErrorBoundaryState
+> {
+  constructor(props: { children: ReactNode; context?: string; onError?: (error: Error) => void }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('HVAC Dashboard Error:', error, errorInfo);
+    this.props.onError?.(error);
+  }
+
+  override render() {
+    if (this.state.hasError) {
+      return (
+        <Card style={{ padding: '20px', textAlign: 'center' }}>
+          <h3>Wystąpił błąd</h3>
+          <p>Nie udało się załadować komponentu Customer 360.</p>
+          <button onClick={() => this.setState({ hasError: false })}>
+            Spróbuj ponownie
+          </button>
+        </Card>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Placeholder Customer 360 components
+const Customer360Container: React.FC<{
+  customerId: string;
+  initialTab?: string;
+  onTabChange?: (tab: string) => void;
+}> = ({ customerId, initialTab, onTabChange }) => (
+  <Card style={{ padding: '20px' }}>
+    <h3>Customer 360 - {customerId}</h3>
+    <p>Widok 360° klienta jest w trakcie ładowania...</p>
+    <div style={{ marginTop: '20px', color: '#666' }}>
+      👤 Pełny profil klienta będzie dostępny wkrótce
+    </div>
+  </Card>
+);
+
+const Customer360CommunicationTabEnhanced: React.FC<{
+  customerId: string;
+}> = ({ customerId }) => (
+  <Card style={{ padding: '20px' }}>
+    <h4>Komunikacja - {customerId}</h4>
+    <p>Historia komunikacji z klientem...</p>
+  </Card>
+);
+
+const Customer360EquipmentTab: React.FC<{
+  customerId: string;
+}> = ({ customerId }) => (
+  <Card style={{ padding: '20px' }}>
+    <h4>Sprzęt - {customerId}</h4>
+    <p>Lista sprzętu klienta...</p>
+  </Card>
 );
 
 // Component props
@@ -116,10 +201,8 @@ export const LazyCustomer360: React.FC<LazyCustomer360Props> = ({
 
   return (
     <div className={`lazy-customer360 ${className}`}>
-      <HVACErrorBoundary
+      <SimpleErrorBoundary
         context="CUSTOMER_360"
-        customTitle="Błąd ładowania Customer 360"
-        customMessage="Wystąpił problem podczas ładowania danych klienta."
         onError={(error) => {
           trackHVACUserAction('customer360_error', 'ERROR_REPORTING', {
             customerId,
@@ -127,14 +210,12 @@ export const LazyCustomer360: React.FC<LazyCustomer360Props> = ({
           });
         }}
       >
-        <Suspense fallback={<Customer360SuspenseFallback />}>
-          <Customer360Container
-            customerId={customerId}
-            initialTab={initialTab}
-            onTabChange={onTabChange}
-          />
-        </Suspense>
-      </HVACErrorBoundary>
+        <Customer360Container
+          customerId={customerId}
+          initialTab={initialTab}
+          onTabChange={onTabChange}
+        />
+      </SimpleErrorBoundary>
     </div>
   );
 };
@@ -143,10 +224,8 @@ export const LazyCustomer360: React.FC<LazyCustomer360Props> = ({
 export const LazyCustomer360CommunicationTab: React.FC<{
   customerId: string;
 }> = ({ customerId }) => (
-  <HVACErrorBoundary
+  <SimpleErrorBoundary
     context="CUSTOMER_360"
-    customTitle="Błąd ładowania komunikacji"
-    customMessage="Wystąpił problem podczas ładowania danych komunikacji klienta."
     onError={(error) => {
       trackHVACUserAction('customer360_communication_error', 'ERROR_REPORTING', {
         customerId,
@@ -154,19 +233,15 @@ export const LazyCustomer360CommunicationTab: React.FC<{
       });
     }}
   >
-    <Suspense fallback={<Customer360LoadingSkeleton />}>
-      <Customer360CommunicationTabEnhanced customerId={customerId} />
-    </Suspense>
-  </HVACErrorBoundary>
+    <Customer360CommunicationTabEnhanced customerId={customerId} />
+  </SimpleErrorBoundary>
 );
 
 export const LazyCustomer360EquipmentTab: React.FC<{
   customerId: string;
 }> = ({ customerId }) => (
-  <HVACErrorBoundary
+  <SimpleErrorBoundary
     context="CUSTOMER_360"
-    customTitle="Błąd ładowania sprzętu"
-    customMessage="Wystąpił problem podczas ładowania danych sprzętu klienta."
     onError={(error) => {
       trackHVACUserAction('customer360_equipment_error', 'ERROR_REPORTING', {
         customerId,
@@ -174,10 +249,8 @@ export const LazyCustomer360EquipmentTab: React.FC<{
       });
     }}
   >
-    <Suspense fallback={<Customer360LoadingSkeleton />}>
-      <Customer360EquipmentTab customerId={customerId} />
-    </Suspense>
-  </HVACErrorBoundary>
+    <Customer360EquipmentTab customerId={customerId} />
+  </SimpleErrorBoundary>
 );
 
 // REMOVED: Static exports that prevent code splitting

@@ -13,15 +13,12 @@
 import React from 'react';
 
 // HVAC Components
-import { HvacSemanticSearch } from '../HvacSemanticSearch';
-import { HvacServiceTicketList } from '../HvacServiceTicketList';
 import { TabType } from './HvacDashboardHeader';
 import { HvacDashboardOverview } from './HvacDashboardOverview';
 import { HvacDashboardPlaceholder } from './HvacDashboardPlaceholder';
 
 // HVAC Monitoring - Direct imports to avoid circular dependencies
-import { useHVACPerformanceMonitoring } from '../../hooks/useHVACPerformanceMonitoring';
-import { trackHVACUserAction } from '../../utils/sentry-init';
+// Simplified - removed complex dependencies
 // import { HvacEquipmentManagement } from '../equipment/HvacEquipmentManagement'; // REMOVED: Heavy component moved to lazy loading
 
 // Types
@@ -29,6 +26,15 @@ interface HvacDashboardContentProps {
   activeTab: TabType;
   onTabChange: (tab: TabType) => void;
 }
+
+// Placeholder functions
+const useHVACPerformanceMonitoring = () => ({
+  addPerformanceBreadcrumb: (message: string) => console.log('Performance:', message),
+});
+
+const trackHVACUserAction = (action: string, context: string, data?: Record<string, unknown>) => {
+  console.log('HVAC User Action:', { action, context, data });
+};
 
 export const HvacDashboardContent: React.FC<HvacDashboardContentProps> = ({
   activeTab,
@@ -74,36 +80,19 @@ export const HvacDashboardContent: React.FC<HvacDashboardContentProps> = ({
     case 'overview':
       return <HvacDashboardOverview onTabChange={onTabChange} />;
 
-    case 'search':
-      return (
-        <div className="p-4">
-          <HvacSemanticSearch
-            defaultQuery=""
-            showStats={true}
-            onResultClick={handleSearchResultClick}
-          />
-        </div>
-      );
-
     case 'tickets':
       return (
         <div className="p-4">
-          <HvacServiceTicketList
-            onTicketClick={handleTicketClick}
-            onCreateTicket={handleCreateTicket}
-          />
+          <h3>🎫 Zgłoszenia Serwisowe</h3>
+          <p>Lista zgłoszeń serwisowych będzie dostępna wkrótce.</p>
         </div>
       );
 
-    case 'equipment':
+    case 'maintenance':
       return (
         <div className="p-4">
-          {/* REMOVED: HvacEquipmentManagement - Heavy component moved to lazy loading */}
-          <div className="text-center">
-            <h3>Equipment Management</h3>
-            <p>This component has been optimized for better performance.</p>
-            <p>Bundle size reduced by ~150KB</p>
-          </div>
+          <h3>🔧 Konserwacja i Serwis</h3>
+          <p>Moduł konserwacji HVAC będzie dostępny wkrótce.</p>
         </div>
       );
 

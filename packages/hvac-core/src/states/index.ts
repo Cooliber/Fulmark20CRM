@@ -11,7 +11,7 @@
 import { atom } from 'recoil';
 
 // Basic types for core states
-export type HvacDashboardTab = 'overview' | 'tickets' | 'maintenance' | 'analytics';
+export type HvacDashboardTab = 'overview' | 'search' | 'tickets' | 'equipment' | 'maintenance' | 'analytics';
 
 export type HvacDashboardStats = {
   totalTickets: number;

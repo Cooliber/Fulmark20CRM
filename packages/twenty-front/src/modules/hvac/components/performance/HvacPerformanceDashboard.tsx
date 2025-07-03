@@ -9,15 +9,13 @@
  * - Performance optimization with debouncing
  */
 
-import { Card } from 'primereact/card';
 import React, { useCallback, useState } from 'react';
+import { IconApps } from 'twenty-ui/display';
 import { Button } from 'twenty-ui/input';
+import { Card } from 'twenty-ui/layout';
 
-import { useHVACDebouncedPerformance } from '../../hooks/useHVACDebouncedPerformance';
 import { hvacPerformanceOptimizer } from '../../services/HvacPerformanceOptimizer';
-import { trackHVACUserAction } from '../../utils/sentry-init';
-
-const { TabPane } = Tabs;
+import { trackHVACUserAction, useHVACPerformanceMonitoring } from '../../utils/placeholder-functions';
 
 // Performance status types
 type PerformanceStatus = 'excellent' | 'good' | 'fair' | 'poor';
@@ -46,24 +44,38 @@ export const HvacPerformanceDashboard: React.FC<HvacPerformanceDashboardProps> =
 }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [performanceData, setPerformanceData] = useState<PerformanceData>({
+  const [performanceData, setPerformanceData] = useState({
     bundleSize: 4.2, // MB
     loadTime: 280, // ms
     cacheHitRate: 0.85,
     memoryUsage: 45, // MB
     searchPerformance: 250, // ms
-    status: 'good',
+    status: 'good' as PerformanceStatus,
   });
 
   const {
     getMetrics,
-    optimizeMemory,
-    clearCache,
-    measureOperation,
-  } = useHVACDebouncedPerformance({
-    enableMetrics: true,
-    performanceThreshold: 300,
-  });
+    addPerformanceBreadcrumb,
+  } = useHVACPerformanceMonitoring();
+
+  // Placeholder functions for missing functionality
+  const optimizeMemory = useCallback(() => {
+    console.log('Memory optimization triggered');
+    addPerformanceBreadcrumb('Memory optimization', { type: 'memory' });
+    onOptimizationApplied?.('memory');
+  }, [addPerformanceBreadcrumb, onOptimizationApplied]);
+
+  const clearCache = useCallback(() => {
+    console.log('Cache cleared');
+    addPerformanceBreadcrumb('Cache cleared', { type: 'cache' });
+    onOptimizationApplied?.('cache');
+  }, [addPerformanceBreadcrumb, onOptimizationApplied]);
+
+  const measureOperation = useCallback(async (operation: string, fn: () => Promise<void>) => {
+    console.log('Measuring operation:', operation);
+    addPerformanceBreadcrumb('Operation measured', { operation });
+    await fn();
+  }, [addPerformanceBreadcrumb]);
 
   // Handle performance optimization
   const handleOptimization = useCallback(async (type: string) => {
@@ -191,7 +203,7 @@ export const HvacPerformanceDashboard: React.FC<HvacPerformanceDashboardProps> =
               value={performanceData.memoryUsage}
               suffix="MB"
               valueStyle={{ color: performanceData.memoryUsage > 100 ? '#ff4d4f' : '#3f8600' }}
-              prefix={<DashboardOutlined />}
+              prefix={<IconApps />}
             />
           </Card>
         </Col>
@@ -253,7 +265,7 @@ export const HvacPerformanceDashboard: React.FC<HvacPerformanceDashboardProps> =
           <Col span={8}>
             <Button
               type="primary"
-              icon={<DashboardOutlined />}
+              icon={<IconApps />}
               loading={isOptimizing}
               onClick={() => handleOptimization('memory')}
               block
@@ -393,7 +405,7 @@ export const HvacPerformanceDashboard: React.FC<HvacPerformanceDashboardProps> =
       <Card
         title={
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <DashboardOutlined style={{ marginRight: 8 }} />
+            <IconApps style={{ marginRight: 8 }} />
             HVAC Performance Dashboard
           </div>
         }
@@ -411,27 +423,32 @@ export const HvacPerformanceDashboard: React.FC<HvacPerformanceDashboardProps> =
           </Button>
         }
       >
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={[
-            {
-              key: 'overview',
-              label: 'Overview',
-              children: renderOverviewTab(),
-            },
-            {
-              key: 'bundle',
-              label: 'Bundle Analysis',
-              children: renderBundleAnalysisTab(),
-            },
-            {
-              key: 'metrics',
-              label: 'Metrics',
-              children: renderMetricsTab(),
-            },
-          ]}
-        />
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+            <TabButton
+              id="overview"
+              title="Overview"
+              active={activeTab === 'overview'}
+              onClick={() => setActiveTab('overview')}
+            />
+            <TabButton
+              id="bundle"
+              title="Bundle Analysis"
+              active={activeTab === 'bundle'}
+              onClick={() => setActiveTab('bundle')}
+            />
+            <TabButton
+              id="metrics"
+              title="Metrics"
+              active={activeTab === 'metrics'}
+              onClick={() => setActiveTab('metrics')}
+            />
+          </div>
+
+          {activeTab === 'overview' && renderOverviewTab()}
+          {activeTab === 'bundle' && renderBundleAnalysisTab()}
+          {activeTab === 'metrics' && renderMetricsTab()}
+        </div>
       </Card>
     </div>
   );

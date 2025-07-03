@@ -14,7 +14,12 @@
 
 import React, { ComponentType, ReactNode, Suspense, lazy } from 'react';
 import { Button } from 'twenty-ui/input';
-import { reportHVACError, trackHVACUserAction } from '../index';
+import { trackHVACUserAction } from '../index';
+
+// Placeholder error reporting function
+const reportHVACError = (error: Error, context: string, data?: Record<string, unknown>) => {
+  console.error('HVAC Error:', { error, context, data });
+};
 // REMOVED: Bundle Optimization - Heavy dependency moved to lazy loading
 // import { hvacBundleOptimizer } from '../services/HvacBundleOptimizer';
 

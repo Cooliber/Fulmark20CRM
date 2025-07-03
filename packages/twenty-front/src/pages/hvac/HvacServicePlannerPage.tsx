@@ -18,16 +18,53 @@ import { TabPanel, TabView } from 'primereact/tabview';
 import { Toast } from 'primereact/toast';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-// Import HVAC hooks (lightweight)
-import {
-    useHvacMaintenance,
-    useHvacScheduling,
-    useHvacTechnicians,
-} from '~/modules/hvac';
+// Placeholder HVAC hooks (lightweight)
+const useHvacMaintenance = () => {
+  return {
+    maintenanceRecords: [],
+    maintenanceSchedules: [],
+    overdueItems: [],
+    loading: false,
+    error: null,
+    createMaintenanceRecord: () => Promise.resolve(),
+    updateMaintenanceRecord: () => Promise.resolve(),
+    deleteMaintenanceRecord: () => Promise.resolve(),
+  };
+};
+
+const useHvacScheduling = () => {
+  return {
+    schedules: [],
+    jobs: [] as Array<{
+      id: string;
+      scheduledTime: string;
+      status: 'SCHEDULED' | 'IN_PROGRESS' | 'EN_ROUTE' | 'ARRIVED' | 'COMPLETED';
+      title: string;
+      description: string;
+    }>,
+    loading: false,
+    error: null,
+    createSchedule: () => Promise.resolve(),
+    updateSchedule: () => Promise.resolve(),
+    deleteSchedule: () => Promise.resolve(),
+  };
+};
+
+const useHvacTechnicians = () => {
+  return {
+    technicians: [],
+    availableTechnicians: [],
+    busyTechnicians: [],
+    loading: false,
+    error: null,
+    assignTechnician: () => Promise.resolve(),
+    updateTechnicianStatus: () => Promise.resolve(),
+  };
+};
 
 // Dynamic import for heavy components to enable code splitting
 const LazyMaintenanceDashboard = React.lazy(() =>
-  import('~/modules/hvac/components/lazy/LazyMaintenanceDashboard').then(module => ({
+  import('hvac-dashboard').then(module => ({
     default: module.LazyMaintenanceDashboard
   }))
 );

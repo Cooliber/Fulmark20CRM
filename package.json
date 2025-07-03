@@ -388,6 +388,11 @@
       "packages/twenty-website",
       "packages/twenty-e2e-testing",
       "packages/twenty-shared",
+      "packages/hvac-core",
+      "packages/hvac-dashboard",
+      "packages/hvac-analytics",
+      "packages/hvac-equipment",
+      "packages/twenty-hvac-server",
       "tools/eslint-rules"
     ]
   }
