@@ -12,12 +12,16 @@
 
 import { PageBody } from '@/ui/layout/page/components/PageBody';
 import { PageContainer } from '@/ui/layout/page/components/PageContainer';
+import React, { Suspense, useState, useCallback, useRef, useEffect } from 'react';
 import { PageHeader } from '@/ui/layout/page/components/PageHeader';
-import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { IconCircleOff, IconPhone, IconWorld } from 'twenty-ui/display';
-import { Button } from 'twenty-ui/input';
-// Replaced PrimeReact components with TwentyCRM native alternatives
-// This reduces bundle size by ~200KB
+import { PageBody } from '@/ui/layout/page/components/PageBody';
+import { PageContainer } from '@/ui/layout/page/components/PageContainer';
+import { IconPhone, IconMap, IconWorld, IconCircleOff } from 'twenty-ui/display';
+import { Button } from 'primereact/button';
+import { Badge } from 'primereact/badge';
+import { Toast } from 'primereact/toast';
+import { Message } from 'primereact/message';
+>>>>>>> 718ab07c9 (fix(hvac): Fix HVAC navigation integration and icon imports)
 
 // HVAC Components - Using lazy loading for performance
 import {

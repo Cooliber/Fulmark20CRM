@@ -14,6 +14,7 @@ import { NavigationDrawerSectionTitle } from '@/ui/navigation/navigation-drawer/
 import { useNavigationSection } from '@/ui/navigation/navigation-drawer/hooks/useNavigationSection';
 import React from 'react';
 import { useRecoilValue } from 'recoil';
+import { HvacObjectsDebugger } from '../debug/HvacObjectsDebugger';
 
 // HVAC object names that should appear in this section
 const HVAC_OBJECT_NAMES = [

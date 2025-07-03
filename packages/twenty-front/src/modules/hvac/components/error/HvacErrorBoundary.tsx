@@ -8,7 +8,7 @@
 
 import styled from '@emotion/styled';
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { IconAlertTriangle, IconRefresh } from 'twenty-ui/display';
+import { IconAlertTriangle, IconBug, IconHome, IconRefresh } from 'twenty-ui/display';
 import { Button } from 'twenty-ui/input';
 import { Card, CardContent, CardHeader } from 'twenty-ui/layout';
 

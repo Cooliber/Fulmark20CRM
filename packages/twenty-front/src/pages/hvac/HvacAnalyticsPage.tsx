@@ -12,12 +12,15 @@
 
 import { PageBody } from '@/ui/layout/page/components/PageBody';
 import { PageContainer } from '@/ui/layout/page/components/PageContainer';
+import React, { Suspense, useState, useCallback } from 'react';
 import { PageHeader } from '@/ui/layout/page/components/PageHeader';
-import { IconRefresh } from 'twenty-ui/display';
-import { Button } from 'twenty-ui/input';
-// Replaced PrimeReact components with TwentyCRM native alternatives
-import React, { Suspense, useCallback, useState } from 'react';
-import { IconChartCandle } from 'twenty-ui/display';
+import { PageBody } from '@/ui/layout/page/components/PageBody';
+import { PageContainer } from '@/ui/layout/page/components/PageContainer';
+import { IconChartCandle, IconChartCandle as IconAnalyze, IconRefresh } from 'twenty-ui/display';
+import { Button } from 'primereact/button';
+import { Toast } from 'primereact/toast';
+import { useRef } from 'react';
+>>>>>>> 718ab07c9 (fix(hvac): Fix HVAC navigation integration and icon imports)
 
 // HVAC Components - Using lazy loading for performance
 import {

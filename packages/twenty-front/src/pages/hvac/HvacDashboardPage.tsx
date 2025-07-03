@@ -14,7 +14,7 @@ import { PageBody } from '@/ui/layout/page/components/PageBody';
 import { PageContainer } from '@/ui/layout/page/components/PageContainer';
 import { PageHeader } from '@/ui/layout/page/components/PageHeader';
 import React, { Suspense } from 'react';
-import { IconApps, IconTool } from 'twenty-ui/display';
+import { IconTool, IconApps } from 'twenty-ui/display';
 
 // HVAC Components - Using lazy loading for performance
 import {
