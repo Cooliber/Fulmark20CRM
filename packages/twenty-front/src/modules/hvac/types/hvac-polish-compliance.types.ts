@@ -230,17 +230,5 @@ export interface PolishHVACMarketData {
   }>;
 }
 
-// Export all types
-export type {
-  PolishBusinessNumbers,
-  NIPValidationResult,
-  REGONValidationResult,
-  PolishAddress,
-  EnergyProviderInfo,
-  CertificationInfo,
-  PolishComplianceCheck,
-  PolishInvoiceRequirements,
-  PolishCustomerData,
-  PolishHVACRegulations,
-  PolishHVACMarketData,
-};
+// Re-export types from hvac-core to avoid conflicts
+export type * from 'hvac-core/types/hvac-polish-compliance.types';

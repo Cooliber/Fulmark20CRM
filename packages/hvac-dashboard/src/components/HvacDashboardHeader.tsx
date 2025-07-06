@@ -10,16 +10,14 @@
  * - PrimeReact/PrimeFlex UI consistency
  */
 
-import { Button } from 'primereact/button';
 import React from 'react';
 import {
-  HvacIcon,
-  HvacOverviewIcon,
-  HvacSearchIcon,
-  HvacTicketsIcon,
-  HvacEquipmentIcon,
-  HvacMaintenanceIcon,
-  HvacAnalyticsIcon
+    HvacAnalyticsIcon,
+    HvacEquipmentIcon,
+    HvacMaintenanceIcon,
+    HvacOverviewIcon,
+    HvacSearchIcon,
+    HvacTicketsIcon
 } from './icons/HvacIconBridge';
 
 // Types - Updated to match HVAC state management
@@ -74,17 +72,18 @@ export const HvacDashboardHeader: React.FC<HvacDashboardHeaderProps> = ({
       {/* Tab Navigation */}
       <div className={headerClasses.tabContainer}>
         {tabs.map((tab) => (
-          <Button
+          <button
             key={tab.id}
-            label={tab.label}
-            icon={<tab.icon size={16} />}
-            className={`p-button-text ${
-              activeTab === tab.id 
-                ? 'p-button-primary' 
-                : 'p-button-secondary'
+            className={`flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition-colors ${
+              activeTab === tab.id
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
             onClick={() => onTabChange(tab.id)}
-          />
+          >
+            <tab.icon size={16} />
+            {tab.label}
+          </button>
         ))}
       </div>
     </div>

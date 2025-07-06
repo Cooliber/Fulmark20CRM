@@ -12,24 +12,14 @@
 
 import { PageBody } from '@/ui/layout/page/components/PageBody';
 import { PageContainer } from '@/ui/layout/page/components/PageContainer';
-import React, { Suspense, useState, useCallback } from 'react';
 import { PageHeader } from '@/ui/layout/page/components/PageHeader';
-import { PageBody } from '@/ui/layout/page/components/PageBody';
-import { PageContainer } from '@/ui/layout/page/components/PageContainer';
-import { IconChartCandle, IconChartCandle as IconAnalyze, IconRefresh } from 'twenty-ui/display';
-import { Button } from 'primereact/button';
-import { Toast } from 'primereact/toast';
-import { useRef } from 'react';
->>>>>>> 718ab07c9 (fix(hvac): Fix HVAC navigation integration and icon imports)
+import React, { Suspense, useCallback, useState } from 'react';
+import { IconChartCandle, IconRefresh } from 'twenty-ui/display';
+import { Button } from 'twenty-ui/input';
 
 // HVAC Components - Using lazy loading for performance
-import {
-    HvacErrorBoundary,
-    // LazyAnalyticsDashboard, // REMOVED: Heavy component (~900KB Chart.js + D3.js)
-    trackHVACUserAction,
-    useHVACPerformanceMonitoring
-} from '~/modules/hvac';
-import { toast } from '~/modules/hvac/components/ui/PrimeReactReplacements';
+import { HvacErrorBoundary } from '@/hvac/components/error/HvacErrorBoundary';
+import { trackHVACUserAction, useHVACPerformanceMonitoring } from '@/hvac/utils/placeholder-functions';
 
 // Loading component
 const AnalyticsSkeleton = () => (
@@ -53,28 +43,20 @@ export const HvacAnalyticsPage: React.FC = () => {
   // Handle refresh
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    
+
     trackHVACUserAction('analytics_refresh', 'ANALYTICS', {
       timestamp: new Date().toISOString(),
     });
 
+    addPerformanceBreadcrumb('Analytics refresh started');
+
     try {
       // Simulate refresh delay
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.show({
-        severity: 'success',
-        summary: 'Odświeżono',
-        detail: 'Dane analityczne zostały zaktualizowane',
-        life: 3000,
-      });
+
+      console.log('Dane analityczne zostały zaktualizowane');
     } catch (error) {
-      toast.show({
-        severity: 'error',
-        summary: 'Błąd',
-        detail: 'Nie udało się odświeżyć danych',
-        life: 5000,
-      });
+      console.error('Nie udało się odświeżyć danych:', error);
     } finally {
       setIsRefreshing(false);
     }

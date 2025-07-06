@@ -211,18 +211,5 @@ export interface AudioConfig {
   qualityThreshold: number; // minimum confidence
 }
 
-// Export all types for easy importing
-export type {
-  AudioFile,
-  AudioMetadata,
-  TranscriptionRequest,
-  TranscriptionResult,
-  TranscriptionSegment,
-  SpeakerInfo,
-  HvacTermExtraction,
-  AudioProcessingJob,
-  AudioSearchQuery,
-  AudioSearchResult,
-  AudioAnalytics,
-  AudioConfig,
-};
+// Re-export types from hvac-core to avoid conflicts
+export type * from 'hvac-core/types/hvac-audio.types';

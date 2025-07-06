@@ -12,24 +12,14 @@
 
 import { PageBody } from '@/ui/layout/page/components/PageBody';
 import { PageContainer } from '@/ui/layout/page/components/PageContainer';
-import React, { Suspense, useState, useCallback, useRef, useEffect } from 'react';
 import { PageHeader } from '@/ui/layout/page/components/PageHeader';
-import { PageBody } from '@/ui/layout/page/components/PageBody';
-import { PageContainer } from '@/ui/layout/page/components/PageContainer';
-import { IconPhone, IconMap, IconWorld, IconCircleOff } from 'twenty-ui/display';
-import { Button } from 'primereact/button';
-import { Badge } from 'primereact/badge';
-import { Toast } from 'primereact/toast';
-import { Message } from 'primereact/message';
->>>>>>> 718ab07c9 (fix(hvac): Fix HVAC navigation integration and icon imports)
+import React, { Suspense, useCallback, useEffect, useState } from 'react';
+import { IconCircleOff, IconPhone, IconWorld } from 'twenty-ui/display';
+import { Button } from 'twenty-ui/input';
 
 // HVAC Components - Using lazy loading for performance
-import {
-    // HvacMobileDashboard, // REMOVED: Heavy component moved to lazy loading (~200KB)
-    HvacErrorBoundary,
-    trackHVACUserAction,
-    useHVACPerformanceMonitoring
-} from '~/modules/hvac';
+import { HvacErrorBoundary } from '@/hvac/components/error/HvacErrorBoundary';
+import { trackHVACUserAction, useHVACPerformanceMonitoring } from '@/hvac/utils/placeholder-functions';
 
 // Loading component
 const MobileSkeleton = () => (
@@ -44,19 +34,13 @@ const MobileSkeleton = () => (
 );
 
 export const HvacMobilePage: React.FC = () => {
-  // Refs
-  const toast = useRef<Toast>(null);
-
   // State
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle');
 
   // Performance monitoring
-  const { getMetrics } = useHVACPerformanceMonitoring({
-    enableMetrics: true,
-    performanceThreshold: 300,
-  });
+  const { getMetrics } = useHVACPerformanceMonitoring();
 
   // Monitor online status
   useEffect(() => {
@@ -67,12 +51,7 @@ export const HvacMobilePage: React.FC = () => {
     
     const handleOffline = () => {
       setIsOnline(false);
-      toast.current?.show({
-        severity: 'warn',
-        summary: 'Tryb offline',
-        detail: 'Aplikacja działa w trybie offline. Dane będą zsynchronizowane po przywróceniu połączenia.',
-        life: 5000,
-      });
+      console.warn('Aplikacja działa w trybie offline. Dane będą zsynchronizowane po przywróceniu połączenia.');
     };
 
     window.addEventListener('online', handleOnline);
@@ -87,17 +66,12 @@ export const HvacMobilePage: React.FC = () => {
   // Handle sync
   const handleSync = useCallback(async () => {
     if (!isOnline) {
-      toast.current?.show({
-        severity: 'warn',
-        summary: 'Brak połączenia',
-        detail: 'Synchronizacja wymaga połączenia z internetem',
-        life: 3000,
-      });
+      console.warn('Synchronizacja wymaga połączenia z internetem');
       return;
     }
 
     setSyncStatus('syncing');
-    
+
     trackHVACUserAction('mobile_sync', 'MOBILE', {
       timestamp: new Date().toISOString(),
       isOnline,
@@ -106,29 +80,19 @@ export const HvacMobilePage: React.FC = () => {
     try {
       // Simulate sync delay
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       setSyncStatus('idle');
-      toast.current?.show({
-        severity: 'success',
-        summary: 'Zsynchronizowano',
-        detail: 'Dane zostały pomyślnie zsynchronizowane',
-        life: 3000,
-      });
+      console.log('Dane zostały pomyślnie zsynchronizowane');
     } catch (error) {
       setSyncStatus('error');
-      toast.current?.show({
-        severity: 'error',
-        summary: 'Błąd synchronizacji',
-        detail: 'Nie udało się zsynchronizować danych',
-        life: 5000,
-      });
+      console.error('Nie udało się zsynchronizować danych:', error);
     }
   }, [isOnline]);
 
   // Handle refresh
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    
+
     trackHVACUserAction('mobile_refresh', 'MOBILE', {
       timestamp: new Date().toISOString(),
       isOnline,
@@ -136,20 +100,9 @@ export const HvacMobilePage: React.FC = () => {
 
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.current?.show({
-        severity: 'success',
-        summary: 'Odświeżono',
-        detail: 'Interfejs mobilny został zaktualizowany',
-        life: 3000,
-      });
+      console.log('Interfejs mobilny został zaktualizowany');
     } catch (error) {
-      toast.current?.show({
-        severity: 'error',
-        summary: 'Błąd',
-        detail: 'Nie udało się odświeżyć interfejsu',
-        life: 5000,
-      });
+      console.error('Nie udało się odświeżyć interfejsu:', error);
     } finally {
       setIsRefreshing(false);
     }
@@ -157,8 +110,6 @@ export const HvacMobilePage: React.FC = () => {
 
   return (
     <PageContainer>
-      <Toast ref={toast} />
-      
       <PageHeader title="Mobilny HVAC" Icon={IconPhone}>
         <div className="flex items-center gap-4">
           {/* Connection status */}
@@ -178,47 +129,39 @@ export const HvacMobilePage: React.FC = () => {
 
           {/* Sync status */}
           {syncStatus === 'syncing' && (
-            <Badge value="Synchronizacja..." severity="info" />
+            <span className="text-blue-600 text-sm">Synchronizacja...</span>
           )}
-          
+
           <div className="flex gap-2">
             <Button
-              icon="pi pi-sync"
-              label="Synchronizuj"
-              className="p-button-outlined p-button-sm"
+              title="Synchronizuj"
               onClick={handleSync}
-              loading={syncStatus === 'syncing'}
+              isLoading={syncStatus === 'syncing'}
               disabled={!isOnline}
             />
-            
+
             <Button
-              icon="pi pi-refresh"
-              label="Odśwież"
-              className="p-button-outlined p-button-sm"
+              title="Odśwież"
               onClick={handleRefresh}
-              loading={isRefreshing}
+              isLoading={isRefreshing}
             />
           </div>
         </div>
       </PageHeader>
-      
+
       <PageBody>
         {/* Offline warning */}
         {!isOnline && (
-          <Message 
-            severity="warn" 
-            text="Aplikacja działa w trybie offline. Niektóre funkcje mogą być ograniczone."
-            className="mb-4"
-          />
+          <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded text-yellow-800">
+            Aplikacja działa w trybie offline. Niektóre funkcje mogą być ograniczone.
+          </div>
         )}
 
         {/* Sync error */}
         {syncStatus === 'error' && (
-          <Message 
-            severity="error" 
-            text="Wystąpił błąd podczas synchronizacji. Spróbuj ponownie."
-            className="mb-4"
-          />
+          <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded text-red-800">
+            Wystąpił błąd podczas synchronizacji. Spróbuj ponownie.
+          </div>
         )}
 
         <HvacErrorBoundary>

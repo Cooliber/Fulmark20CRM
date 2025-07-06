@@ -12,20 +12,14 @@
 
 import { PageBody } from '@/ui/layout/page/components/PageBody';
 import { PageContainer } from '@/ui/layout/page/components/PageContainer';
-import React, { Suspense, useState, useCallback, useRef } from 'react';
 import { PageHeader } from '@/ui/layout/page/components/PageHeader';
-import { PageBody } from '@/ui/layout/page/components/PageBody';
-import { PageContainer } from '@/ui/layout/page/components/PageContainer';
-import { IconUsers, IconMap, IconClockHour8 } from 'twenty-ui/display';
-import { Button } from 'primereact/button';
-import { Badge } from 'primereact/badge';
-import { Toast } from 'primereact/toast';
+import React, { Suspense, useCallback, useState } from 'react';
+import { IconClockHour8, IconMap, IconUsers } from 'twenty-ui/display';
+import { Button } from 'twenty-ui/input';
 
 // HVAC Components - Using lazy loading for performance
-import {
-    trackHVACUserAction,
-    useHVACPerformanceMonitoring
-} from '~/modules/hvac';
+import { HvacErrorBoundary } from '@/hvac/components/error/HvacErrorBoundary';
+import { trackHVACUserAction, useHVACPerformanceMonitoring } from '@/hvac/utils/placeholder-functions';
 
 // Loading component
 const DispatchSkeleton = () => (
@@ -40,31 +34,21 @@ const DispatchSkeleton = () => (
 );
 
 export const HvacDispatchPage: React.FC = () => {
-  // Refs
-  const toast = useRef<Toast>(null);
-
   // State
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Custom hooks
-  const {
-    pendingJobs,
-    activeJobs,
-    emergencyJobs,
-    loading: dispatchLoading,
-  } = useHvacDispatch();
+  // Mock data - placeholder for real hooks
+  const pendingJobs = [];
+  const activeJobs = [];
+  const emergencyJobs = [];
+  const dispatchLoading = false;
 
-  const {
-    availableTechnicians,
-    busyTechnicians,
-    loading: techniciansLoading,
-  } = useHvacTechnicians();
+  const availableTechnicians = [];
+  const busyTechnicians = [];
+  const techniciansLoading = false;
 
   // Performance monitoring
-  const { getMetrics } = useHVACPerformanceMonitoring({
-    enableMetrics: true,
-    performanceThreshold: 300,
-  });
+  const { getMetrics } = useHVACPerformanceMonitoring();
 
   // Handle refresh
   const handleRefresh = useCallback(async () => {
@@ -80,20 +64,10 @@ export const HvacDispatchPage: React.FC = () => {
     try {
       // Simulate refresh delay
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.current?.show({
-        severity: 'success',
-        summary: 'Odświeżono',
-        detail: 'Status dyspozytorni został zaktualizowany',
-        life: 3000,
-      });
+
+      console.log('Status dyspozytorni został zaktualizowany');
     } catch (error) {
-      toast.current?.show({
-        severity: 'error',
-        summary: 'Błąd',
-        detail: 'Nie udało się odświeżyć statusu',
-        life: 5000,
-      });
+      console.error('Nie udało się odświeżyć statusu:', error);
     } finally {
       setIsRefreshing(false);
     }
@@ -106,8 +80,6 @@ export const HvacDispatchPage: React.FC = () => {
 
   return (
     <PageContainer>
-      <Toast ref={toast} />
-      
       <PageHeader title="Dyspozytornia HVAC" Icon={IconUsers}>
         <div className="flex items-center gap-4">
           {/* Real-time stats */}
@@ -115,37 +87,38 @@ export const HvacDispatchPage: React.FC = () => {
             <div className="flex items-center gap-1">
               <IconClockHour8 size={16} className="text-orange-500" />
               <span>Oczekujące:</span>
-              <Badge value={pendingJobs.length} severity="warning" />
+              <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">{pendingJobs.length}</span>
             </div>
 
             <div className="flex items-center gap-1">
               <IconMap size={16} className="text-blue-500" />
               <span>Aktywne:</span>
-              <Badge value={activeJobs.length} severity="info" />
+              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">{activeJobs.length}</span>
             </div>
-            
+
             {emergencyJobs.length > 0 && (
               <div className="flex items-center gap-1">
                 <span className="text-red-500">🚨 Awarie:</span>
-                <Badge value={emergencyJobs.length} severity="danger" />
+                <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">{emergencyJobs.length}</span>
               </div>
             )}
             
             <div className="flex items-center gap-1">
               <span>Wykorzystanie:</span>
-              <Badge 
-                value={`${utilizationRate}%`} 
-                severity={utilizationRate > 80 ? 'danger' : utilizationRate > 60 ? 'warning' : 'success'} 
-              />
+              <span className={`px-2 py-1 rounded text-xs ${
+                utilizationRate > 80 ? 'bg-red-100 text-red-800' :
+                utilizationRate > 60 ? 'bg-yellow-100 text-yellow-800' :
+                'bg-green-100 text-green-800'
+              }`}>
+                {utilizationRate}%
+              </span>
             </div>
           </div>
-          
+
           <Button
-            icon="pi pi-refresh"
-            label="Odśwież"
-            className="p-button-outlined p-button-sm"
+            title="Odśwież"
             onClick={handleRefresh}
-            loading={isRefreshing || dispatchLoading || techniciansLoading}
+            isLoading={isRefreshing || dispatchLoading || techniciansLoading}
           />
         </div>
       </PageHeader>

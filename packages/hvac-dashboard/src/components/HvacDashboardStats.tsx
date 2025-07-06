@@ -11,7 +11,6 @@
  */
 
 import { motion } from 'framer-motion';
-import { Card } from 'primereact/card';
 import React from 'react';
 // Placeholder icons
 const IconCalendar = () => <span>📅</span>;
@@ -72,11 +71,11 @@ export const HvacDashboardStats: React.FC<HvacDashboardStatsProps> = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.1 }}
         >
-          <Card className="h-full">
-            <div className="flex align-items-center gap-3">
+          <div className="bg-white rounded-lg shadow-sm border p-4 h-full">
+            <div className="flex items-center gap-3">
               {/* Icon */}
               <div
-                className="flex align-items-center justify-content-center w-3rem h-3rem border-round"
+                className="flex items-center justify-center w-12 h-12 rounded"
                 style={{
                   backgroundColor: `${stat.color}20`,
                   color: stat.color
@@ -84,18 +83,18 @@ export const HvacDashboardStats: React.FC<HvacDashboardStatsProps> = ({
               >
                 <stat.icon size={24} />
               </div>
-              
+
               {/* Content */}
               <div className="flex-1">
-                <div className="text-2xl font-bold text-900 mb-1">
+                <div className="text-2xl font-bold text-gray-900 mb-1">
                   {stat.value}
                 </div>
-                <div className="text-sm text-600">
+                <div className="text-sm text-gray-600">
                   {stat.label}
                 </div>
               </div>
             </div>
-          </Card>
+          </div>
         </motion.div>
       ))}
     </div>

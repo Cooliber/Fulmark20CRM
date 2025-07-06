@@ -13,11 +13,8 @@
  * - Progressive Component Loading
  */
 
-// Core Components - Critical Priority (Always loaded)
-export { HvacDashboard } from './components/HvacDashboard';
-export { HvacDashboardContent } from './components/HvacDashboardContent';
+// Core Components - Critical Priority (Always loaded) - REDUCED FOR BUNDLE SIZE
 export { HvacDashboardHeader } from './components/HvacDashboardHeader';
-export { HvacDashboardOverview } from './components/HvacDashboardOverview';
 
 // SOTA Icon System
 export * from './components/icons/HvacIconBridge';
@@ -36,19 +33,19 @@ export {
 
 // SOTA Performance Engine
 export {
-    HvacPerformanceEngine,
+    HVAC_PERFORMANCE_CONFIG, HvacPerformanceEngine,
     hvacPerformanceEngine,
-    useHvacPerformance,
-    HVAC_PERFORMANCE_CONFIG
+    useHvacPerformance
 } from './performance/HvacPerformanceEngine';
 
-// Legacy Lazy Components - Maintained for compatibility
-export { preloadHeavyComponents } from './lazy';
-export { LazyAnalyticsDashboard } from './lazy/LazyAnalyticsDashboard';
-export { LazyCustomer360 } from './lazy/LazyCustomer360';
-export { LazyKanbanBoard } from './lazy/LazyKanbanBoard';
-export { LazyMaintenanceDashboard } from './lazy/LazyMaintenanceDashboard';
-export { PRIMEREACT_BUNDLE_SAVINGS, preloadCriticalPrimeReactComponents } from './lazy/LazyPrimeReactComponents';
+// Legacy Lazy Components - REMOVED FOR BUNDLE SIZE OPTIMIZATION
+// All components now use dynamic imports only
+// export { preloadHeavyComponents } from './lazy';
+// export { LazyAnalyticsDashboard } from './lazy/LazyAnalyticsDashboard';
+// export { LazyCustomer360 } from './lazy/LazyCustomer360';
+// export { LazyKanbanBoard } from './lazy/LazyKanbanBoard';
+// export { LazyMaintenanceDashboard } from './lazy/LazyMaintenanceDashboard';
+export { PRIMEREACT_BUNDLE_SAVINGS } from './lazy/LazyPrimeReactComponents';
 
 // SOTA Dashboard Configuration
 export const HVAC_DASHBOARD_INFO = {
