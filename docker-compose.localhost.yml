@@ -12,7 +12,7 @@ services:
     build:
       context: .
       dockerfile: packages/twenty-docker/twenty/Dockerfile
-      target: development
+      target: twenty
     container_name: hvac-twenty-server-dev
     restart: unless-stopped
     environment:
