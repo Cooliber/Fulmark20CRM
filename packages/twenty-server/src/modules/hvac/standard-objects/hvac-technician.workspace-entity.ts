@@ -1,20 +1,18 @@
-import { Relation } from 'src/engine/workspace-manager/workspace-sync-metadata/interfaces/relation.interface';
+import { msg } from '@lingui/macro';
 
-import { FieldMetadataType } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
-import { RelationMetadataType } from 'src/engine/metadata-modules/relation-metadata/relation-metadata.entity';
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
 import { WorkspaceEntity } from 'src/engine/twenty-orm/decorators/workspace-entity.decorator';
 import { WorkspaceField } from 'src/engine/twenty-orm/decorators/workspace-field.decorator';
 import { WorkspaceIsNotAuditLogged } from 'src/engine/twenty-orm/decorators/workspace-is-not-audit-logged.decorator';
 import { WorkspaceIsSystem } from 'src/engine/twenty-orm/decorators/workspace-is-system.decorator';
-import { WorkspaceRelation } from 'src/engine/twenty-orm/decorators/workspace-relation.decorator';
+import { FieldMetadataType } from 'twenty-shared/types';
 
 @WorkspaceEntity({
   standardId: 'hvac-technician',
   namePlural: 'hvacTechnicians',
-  labelSingular: 'HVAC Technician',
-  labelPlural: 'HVAC Technicians',
-  description: 'HVAC service technicians',
+  labelSingular: msg`HVAC Technician`,
+  labelPlural: msg`HVAC Technicians`,
+  description: msg`HVAC service technicians`,
   icon: 'IconUser',
 })
 @WorkspaceIsSystem()
@@ -23,8 +21,8 @@ export class HvacTechnicianWorkspaceEntity extends BaseWorkspaceEntity {
   @WorkspaceField({
     standardId: 'firstName',
     type: FieldMetadataType.TEXT,
-    label: 'First Name',
-    description: 'Technician first name',
+    label: msg`First Name`,
+    description: msg`Technician first name`,
     icon: 'IconUser',
   })
   firstName: string;
@@ -32,8 +30,8 @@ export class HvacTechnicianWorkspaceEntity extends BaseWorkspaceEntity {
   @WorkspaceField({
     standardId: 'lastName',
     type: FieldMetadataType.TEXT,
-    label: 'Last Name',
-    description: 'Technician last name',
+    label: msg`Last Name`,
+    description: msg`Technician last name`,
     icon: 'IconUser',
   })
   lastName: string;
@@ -41,8 +39,8 @@ export class HvacTechnicianWorkspaceEntity extends BaseWorkspaceEntity {
   @WorkspaceField({
     standardId: 'email',
     type: FieldMetadataType.EMAIL,
-    label: 'Email',
-    description: 'Technician email address',
+    label: msg`Email`,
+    description: msg`Technician email address`,
     icon: 'IconMail',
   })
   email: string;
@@ -50,8 +48,8 @@ export class HvacTechnicianWorkspaceEntity extends BaseWorkspaceEntity {
   @WorkspaceField({
     standardId: 'phone',
     type: FieldMetadataType.PHONE,
-    label: 'Phone',
-    description: 'Technician phone number',
+    label: msg`Phone`,
+    description: msg`Technician phone number`,
     icon: 'IconPhone',
   })
   phone: string;
@@ -59,8 +57,8 @@ export class HvacTechnicianWorkspaceEntity extends BaseWorkspaceEntity {
   @WorkspaceField({
     standardId: 'employeeId',
     type: FieldMetadataType.TEXT,
-    label: 'Employee ID',
-    description: 'Unique employee identifier',
+    label: msg`Employee ID`,
+    description: msg`Unique employee identifier`,
     icon: 'IconHash',
   })
   employeeId: string;
@@ -68,40 +66,40 @@ export class HvacTechnicianWorkspaceEntity extends BaseWorkspaceEntity {
   @WorkspaceField({
     standardId: 'specialization',
     type: FieldMetadataType.SELECT,
-    label: 'Specialization',
-    description: 'Technician specialization',
+    label: msg`Specialization`,
+    description: msg`Technician specialization`,
     icon: 'IconTool',
     options: [
       { value: 'hvac_general', label: 'HVAC General', position: 0, color: 'blue' },
       { value: 'heating', label: 'Heating', position: 1, color: 'red' },
-      { value: 'cooling', label: 'Cooling', position: 2, color: 'cyan' },
+      { value: 'cooling', label: 'Cooling', position: 2, color: 'blue' },
       { value: 'ventilation', label: 'Ventilation', position: 3, color: 'green' },
       { value: 'refrigeration', label: 'Refrigeration', position: 4, color: 'purple' },
     ],
-    defaultValue: 'hvac_general',
+    defaultValue: "'hvac_general'",
   })
   specialization: string;
 
   @WorkspaceField({
     standardId: 'status',
     type: FieldMetadataType.SELECT,
-    label: 'Status',
-    description: 'Technician status',
+    label: msg`Status`,
+    description: msg`Technician status`,
     icon: 'IconCircleDot',
     options: [
       { value: 'active', label: 'Active', position: 0, color: 'green' },
       { value: 'on_leave', label: 'On Leave', position: 1, color: 'yellow' },
       { value: 'inactive', label: 'Inactive', position: 2, color: 'red' },
     ],
-    defaultValue: 'active',
+    defaultValue: "'active'",
   })
   status: string;
 
   @WorkspaceField({
     standardId: 'hireDate',
     type: FieldMetadataType.DATE_TIME,
-    label: 'Hire Date',
-    description: 'Technician hire date',
+    label: msg`Hire Date`,
+    description: msg`Technician hire date`,
     icon: 'IconCalendar',
   })
   hireDate: Date;
@@ -109,8 +107,8 @@ export class HvacTechnicianWorkspaceEntity extends BaseWorkspaceEntity {
   @WorkspaceField({
     standardId: 'certifications',
     type: FieldMetadataType.TEXT,
-    label: 'Certifications',
-    description: 'Technician certifications',
+    label: msg`Certifications`,
+    description: msg`Technician certifications`,
     icon: 'IconCertificate',
   })
   certifications: string;
@@ -118,8 +116,8 @@ export class HvacTechnicianWorkspaceEntity extends BaseWorkspaceEntity {
   @WorkspaceField({
     standardId: 'hourlyRate',
     type: FieldMetadataType.NUMBER,
-    label: 'Hourly Rate',
-    description: 'Technician hourly rate',
+    label: msg`Hourly Rate`,
+    description: msg`Technician hourly rate`,
     icon: 'IconCurrencyDollar',
   })
   hourlyRate: number;
