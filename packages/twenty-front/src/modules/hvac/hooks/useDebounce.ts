@@ -1,19 +1,18 @@
 /**
- * useDebounce Hook - Performance Optimization for HVAC CRM
- * "Pasja rodzi profesjonalizm" - Professional debouncing implementation
+ * HVAC Debounce Hooks
+ * "Pasja rodzi profesjonalizm" - Professional debouncing for HVAC CRM
  * 
  * Following Twenty CRM cursor rules:
  * - Named exports only
- * - Event handlers over useEffect
- * - Proper TypeScript typing
- * - Performance optimization with 300ms debouncing
+ * - TypeScript without 'any' types
+ * - Max 150 lines per component
+ * - 300ms debouncing for optimal performance
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { trackHVACUserAction } from '../index';
 
 // Debounce hook options
-interface UseDebounceOptions {
+export interface UseDebounceOptions {
   delay?: number;
   leading?: boolean;
   trailing?: boolean;
@@ -21,9 +20,9 @@ interface UseDebounceOptions {
 }
 
 // Debounced search hook options
-interface UseDebounceSearchOptions extends UseDebounceOptions {
+export interface UseDebounceSearchOptions extends UseDebounceOptions {
   minLength?: number;
-  onSearch?: (query: string) => void;
+  onSearch?: (query: string) => void | Promise<void>;
   onClear?: () => void;
 }
 
@@ -47,21 +46,20 @@ export const useDebounce = <T>(
 
   useEffect(() => {
     const now = Date.now();
-    const timeSinceLastCall = now - lastCallTimeRef.current;
-
-    // Handle leading edge
-    if (leading && timeSinceLastCall >= delay) {
-      setDebouncedValue(value);
-      lastCallTimeRef.current = now;
-      return;
-    }
-
+    
     // Clear existing timeout
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
-    // Handle trailing edge
+    // Leading edge execution
+    if (leading && now - lastCallTimeRef.current > delay) {
+      setDebouncedValue(value);
+      lastCallTimeRef.current = now;
+      return;
+    }
+
+    // Trailing edge execution
     if (trailing) {
       timeoutRef.current = setTimeout(() => {
         setDebouncedValue(value);
@@ -69,7 +67,7 @@ export const useDebounce = <T>(
       }, delay);
     }
 
-    // Cleanup function
+    // Cleanup
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
@@ -81,14 +79,25 @@ export const useDebounce = <T>(
 };
 
 /**
- * Specialized debounced search hook for HVAC CRM
- * Implements server-side filtering with performance tracking
+ * Specialized debounce hook for search functionality
+ * Optimized for HVAC CRM search performance with 300ms delay
  */
 export const useDebounceSearch = (
   options: UseDebounceSearchOptions = {}
-) => {
+): {
+  query: string;
+  setQuery: (query: string) => void;
+  debouncedQuery: string;
+  isSearching: boolean;
+  clearSearch: () => void;
+  searchPerformance: {
+    lastSearchTime: number;
+    averageSearchTime: number;
+    searchCount: number;
+  };
+} => {
   const {
-    delay = 300,
+    delay = 300, // 300ms for optimal HVAC search performance
     minLength = 2,
     onSearch,
     onClear,
@@ -97,6 +106,12 @@ export const useDebounceSearch = (
 
   const [query, setQuery] = useState<string>('');
   const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [searchPerformance, setSearchPerformance] = useState({
+    lastSearchTime: 0,
+    averageSearchTime: 0,
+    searchCount: 0,
+  });
+
   const debouncedQuery = useDebounce(query, { delay, ...debounceOptions });
   const searchStartTimeRef = useRef<number>(0);
 
@@ -118,61 +133,138 @@ export const useDebounceSearch = (
       searchStartTimeRef.current = Date.now();
 
       try {
-        // Track search performance
-        trackHVACUserAction('debounced_search_executed', 'PERFORMANCE', {
-          query: debouncedQuery.substring(0, 10), // First 10 chars for privacy
-          queryLength: debouncedQuery.length,
-          delay,
-          minLength,
-        });
-
         await onSearch?.(debouncedQuery);
-
-        // Track search completion
-        const searchDuration = Date.now() - searchStartTimeRef.current;
-        trackHVACUserAction('debounced_search_completed', 'PERFORMANCE', {
-          duration: searchDuration,
-          queryLength: debouncedQuery.length,
-        });
-
       } catch (error) {
-        trackHVACUserAction('debounced_search_error', 'PERFORMANCE', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          queryLength: debouncedQuery.length,
-        });
+        console.warn('Search error:', error);
       } finally {
+        const searchTime = Date.now() - searchStartTimeRef.current;
+        
+        // Update performance metrics
+        setSearchPerformance(prev => {
+          const newCount = prev.searchCount + 1;
+          const newAverage = (prev.averageSearchTime * prev.searchCount + searchTime) / newCount;
+          
+          return {
+            lastSearchTime: searchTime,
+            averageSearchTime: Math.round(newAverage),
+            searchCount: newCount,
+          };
+        });
+
         setIsSearching(false);
       }
     };
 
     executeSearch();
-  }, [debouncedQuery, minLength, onSearch, onClear, delay]);
+  }, [debouncedQuery, minLength, onSearch, onClear]);
 
-  // Handle query change with immediate UI update
-  const handleQueryChange = useCallback((newQuery: string) => {
-    setQuery(newQuery);
-    
-    // Track user input
-    trackHVACUserAction('search_input_changed', 'USER_INTERACTION', {
-      queryLength: newQuery.length,
-      hasMinLength: newQuery.length >= minLength,
-    });
-  }, [minLength]);
-
-  // Clear search
   const clearSearch = useCallback(() => {
     setQuery('');
     onClear?.();
-    
-    trackHVACUserAction('search_cleared', 'USER_INTERACTION', {});
   }, [onClear]);
 
   return {
     query,
+    setQuery,
     debouncedQuery,
     isSearching,
-    handleQueryChange,
     clearSearch,
-    hasMinLength: query.length >= minLength,
+    searchPerformance,
+  };
+};
+
+/**
+ * Debounced callback hook
+ * For debouncing function calls rather than values
+ */
+export const useDebouncedCallback = <T extends (...args: unknown[]) => unknown>(
+  callback: T,
+  delay: number = 300
+): T => {
+  const timeoutRef = useRef<NodeJS.Timeout>();
+
+  const debouncedCallback = useCallback((...args: Parameters<T>) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      callback(...args);
+    }, delay);
+  }, [callback, delay]) as T;
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  return debouncedCallback;
+};
+
+/**
+ * Debounced state hook
+ * Combines state management with debouncing
+ */
+export const useDebouncedState = <T>(
+  initialValue: T,
+  delay: number = 300
+): [T, T, (value: T) => void] => {
+  const [value, setValue] = useState<T>(initialValue);
+  const debouncedValue = useDebounce(value, { delay });
+
+  return [value, debouncedValue, setValue];
+};
+
+/**
+ * HVAC-specific search debounce hook
+ * Optimized for HVAC customer and equipment search
+ */
+export const useHvacSearchDebounce = (
+  searchFunction: (query: string) => Promise<unknown[]>,
+  options: {
+    delay?: number;
+    minLength?: number;
+    enablePerformanceTracking?: boolean;
+  } = {}
+) => {
+  const {
+    delay = 300,
+    minLength = 2,
+    enablePerformanceTracking = true,
+  } = options;
+
+  const [results, setResults] = useState<unknown[]>([]);
+  const [error, setError] = useState<Error | null>(null);
+
+  const searchWithDebounce = useDebounceSearch({
+    delay,
+    minLength,
+    onSearch: async (query: string) => {
+      try {
+        setError(null);
+        const searchResults = await searchFunction(query);
+        setResults(searchResults);
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Search failed');
+        setError(error);
+        setResults([]);
+      }
+    },
+    onClear: () => {
+      setResults([]);
+      setError(null);
+    },
+  });
+
+  return {
+    ...searchWithDebounce,
+    results,
+    error,
+    hasResults: results.length > 0,
+    isEmpty: results.length === 0 && searchWithDebounce.debouncedQuery.length >= minLength,
   };
 };

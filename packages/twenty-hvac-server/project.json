@@ -1,0 +1,46 @@
+{
+  "name": "twenty-hvac-server",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/twenty-hvac-server/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "packages/twenty-hvac-server/dist",
+        "main": "packages/twenty-hvac-server/src/main.ts",
+        "tsConfig": "packages/twenty-hvac-server/tsconfig.json",
+        "assets": []
+      }
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "options": {
+        "buildTarget": "twenty-hvac-server:build"
+      }
+    },
+    "start": {
+      "executor": "@nx/js:node",
+      "options": {
+        "buildTarget": "twenty-hvac-server:build",
+        "watch": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/twenty-hvac-server/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/packages/twenty-hvac-server"],
+      "options": {
+        "jestConfig": "packages/twenty-hvac-server/jest.config.ts"
+      }
+    }
+  },
+  "tags": ["scope:backend", "type:application", "domain:hvac"]
+}

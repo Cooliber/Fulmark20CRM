@@ -32,7 +32,7 @@
     "@nestjs/core": "^9.0.0",
     "@nestjs/event-emitter": "^2.0.3",
     "@nestjs/jwt": "^10.0.3",
-    "@nestjs/passport": "^9.0.3",
+    "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^9.0.0",
     "@nestjs/serve-static": "^4.0.1",
     "@nestjs/terminus": "^11.0.0",
@@ -335,7 +335,7 @@
     "supertest": "^6.1.3",
     "ts-jest": "^29.1.1",
     "ts-loader": "^9.2.3",
-    "ts-node": "10.9.1",
+    "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.17.0",
     "vite": "^6.3.5",
@@ -364,7 +364,17 @@
   "version": "0.2.1",
   "nx": {},
   "scripts": {
-    "start": "npx concurrently --kill-others 'npx nx run-many -t start -p twenty-server twenty-front' 'npx wait-on tcp:3000 && npx nx run twenty-server:worker'"
+    "start": "npx concurrently --kill-others 'npx nx run-many -t start -p twenty-server twenty-front' 'npx wait-on tcp:3000 && npx nx run twenty-server:worker'",
+    "test:hvac": "cd packages/twenty-e2e-testing && npm run test:hvac",
+    "test:hvac:dashboard": "cd packages/twenty-e2e-testing && npm run test:hvac:dashboard",
+    "test:hvac:search": "cd packages/twenty-e2e-testing && npm run test:hvac:search",
+    "test:hvac:planner": "cd packages/twenty-e2e-testing && npm run test:hvac:planner",
+    "test:hvac:dispatch": "cd packages/twenty-e2e-testing && npm run test:hvac:dispatch",
+    "test:hvac:mobile": "cd packages/twenty-e2e-testing && npm run test:hvac:mobile",
+    "test:hvac:errors": "cd packages/twenty-e2e-testing && npm run test:hvac:errors",
+    "test:hvac:all": "cd packages/twenty-e2e-testing && npm run test:hvac",
+    "test:hvac:headed": "cd packages/twenty-e2e-testing && npm run test:hvac:headed",
+    "test:hvac:report": "cd packages/twenty-e2e-testing && npm run test:hvac:report"
   },
   "workspaces": {
     "packages": [
@@ -378,6 +388,11 @@
       "packages/twenty-website",
       "packages/twenty-e2e-testing",
       "packages/twenty-shared",
+      "packages/hvac-core",
+      "packages/hvac-dashboard",
+      "packages/hvac-analytics",
+      "packages/hvac-equipment",
+      "packages/twenty-hvac-server",
       "tools/eslint-rules"
     ]
   }

@@ -11,21 +11,10 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
-import { Badge } from 'primereact/badge';
-import { Tag } from 'primereact/tag';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
-import { Toast } from 'primereact/toast';
-import { ConfirmDialog } from 'primereact/confirmdialog';
-import { Dialog } from 'primereact/dialog';
-import { Dropdown } from 'primereact/dropdown';
-import { InputTextarea } from 'primereact/inputtextarea';
-import { Timeline } from 'primereact/timeline';
-import { ProgressBar } from 'primereact/progressbar';
-import { Chip } from 'primereact/chip';
-import { classNames } from 'primereact/utils';
+// Replaced PrimeReact with TwentyCRM native components for bundle optimization
+import { Button } from 'twenty-ui/input';
+import { HvacCard, HvacTable } from '../ui/HvacNativeComponents';
+import { Dropdown, ConfirmDialog, toast } from '../ui/PrimeReactReplacements';
 import { useHvacDispatch } from '../../hooks/useHvacDispatch';
 import { useHvacTechnicians } from '../../hooks/useHvacTechnicians';
 

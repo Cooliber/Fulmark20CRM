@@ -11,12 +11,38 @@
  */
 
 import React, { useState, useEffect, ReactNode } from 'react';
-import { Toast } from 'primereact/toast';
-import { Message } from 'primereact/message';
-import { Button } from 'primereact/button';
+import { Button } from 'twenty-ui/input';
+import { IconRefresh, IconAlertTriangle } from 'twenty-ui/display';
+import styled from '@emotion/styled';
 
 // HVAC monitoring
 import { addHVACBreadcrumb, reportHVACMessage } from '../../config/sentry.config';
+
+// Styled components for TwentyCRM design
+const StyledOfflineMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: ${({ theme }) => theme.spacing(3)};
+  margin-bottom: ${({ theme }) => theme.spacing(3)};
+  background-color: ${({ theme }) => theme.background.secondary};
+  border: 1px solid ${({ theme }) => theme.border.color.medium};
+  border-radius: ${({ theme }) => theme.border.radius.md};
+  color: ${({ theme }) => theme.font.color.primary};
+`;
+
+const StyledMessageContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing(2)};
+`;
+
+const StyledToastContainer = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+`;
 
 // Types
 interface HVACNetworkMonitorProps {
@@ -44,7 +70,7 @@ export const HVACNetworkMonitor: React.FC<HVACNetworkMonitorProps> = ({
     wasOffline: false,
   });
 
-  const toastRef = React.useRef<Toast>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Handle network status changes
   useEffect(() => {
@@ -64,14 +90,10 @@ export const HVACNetworkMonitor: React.FC<HVACNetworkMonitorProps> = ({
           { previouslyOffline: prev.wasOffline }
         );
 
-        // Show success toast if was offline
+        // Show success message if was offline
         if (!prev.isOnline) {
-          toastRef.current?.show({
-            severity: 'success',
-            summary: 'Połączenie przywrócone',
-            detail: 'Połączenie z internetem zostało przywrócone.',
-            life: 3000,
-          });
+          setToastMessage('Połączenie z internetem zostało przywrócone.');
+          setTimeout(() => setToastMessage(null), 3000);
 
           reportHVACMessage(
             'Network connection restored',
@@ -101,13 +123,9 @@ export const HVACNetworkMonitor: React.FC<HVACNetworkMonitorProps> = ({
           'warning'
         );
 
-        // Show warning toast
-        toastRef.current?.show({
-          severity: 'warn',
-          summary: 'Brak połączenia',
-          detail: 'Utracono połączenie z internetem.',
-          life: 5000,
-        });
+        // Show warning message
+        setToastMessage('Utracono połączenie z internetem.');
+        setTimeout(() => setToastMessage(null), 5000);
 
         reportHVACMessage(
           'Network connection lost',
@@ -183,37 +201,40 @@ export const HVACNetworkMonitor: React.FC<HVACNetworkMonitorProps> = ({
         }
       })
       .catch(() => {
-        toastRef.current?.show({
-          severity: 'error',
-          summary: 'Sprawdzanie połączenia',
-          detail: 'Nadal brak połączenia z internetem.',
-          life: 3000,
-        });
+        setToastMessage('Nadal brak połączenia z internetem.');
+        setTimeout(() => setToastMessage(null), 3000);
       });
   };
 
   return (
     <>
-      <Toast ref={toastRef} position="top-right" />
-      
+      {/* Toast message */}
+      {toastMessage && (
+        <StyledToastContainer>
+          <StyledOfflineMessage>
+            <StyledMessageContent>
+              <IconAlertTriangle size={16} />
+              <span>{toastMessage}</span>
+            </StyledMessageContent>
+          </StyledOfflineMessage>
+        </StyledToastContainer>
+      )}
+
       {/* Offline message */}
       {!networkState.isOnline && showOfflineMessage && (
-        <Message
-          severity="warn"
-          className="w-full mb-3"
-          content={
-            <div className="flex justify-content-between align-items-center w-full">
-              <span>{offlineMessage}</span>
-              <Button
-                label="Sprawdź połączenie"
-                icon="pi pi-refresh"
-                size="small"
-                className="p-button-outlined p-button-sm"
-                onClick={handleRetryConnection}
-              />
-            </div>
-          }
-        />
+        <StyledOfflineMessage>
+          <StyledMessageContent>
+            <IconAlertTriangle size={16} />
+            <span>{offlineMessage}</span>
+          </StyledMessageContent>
+          <Button
+            title="Sprawdź połączenie"
+            Icon={IconRefresh}
+            variant="secondary"
+            size="small"
+            onClick={handleRetryConnection}
+          />
+        </StyledOfflineMessage>
       )}
 
       {children}

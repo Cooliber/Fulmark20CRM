@@ -11,30 +11,12 @@
  * - Offline support
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
-import { InputText } from 'primereact/inputtext';
-import { InputTextarea } from 'primereact/inputtextarea';
-import { InputNumber } from 'primereact/inputnumber';
-import { Checkbox } from 'primereact/checkbox';
-import { Dropdown } from 'primereact/dropdown';
-import { FileUpload } from 'primereact/fileupload';
-import { Image } from 'primereact/image';
-import { Badge } from 'primereact/badge';
-import { Tag } from 'primereact/tag';
-import { Chip } from 'primereact/chip';
-import { ProgressBar } from 'primereact/progressbar';
-import { Toast } from 'primereact/toast';
-import { ConfirmDialog } from 'primereact/confirmdialog';
-import { TabView, TabPanel } from 'primereact/tabview';
-import { Timeline } from 'primereact/timeline';
-import { Divider } from 'primereact/divider';
-import { Panel } from 'primereact/panel';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
-import { Toolbar } from 'primereact/toolbar';
-import { classNames } from 'primereact/utils';
+// Replaced PrimeReact with TwentyCRM native components for bundle optimization
+import { Button } from 'twenty-ui/input';
+import { HvacCard, HvacTable } from '../ui/HvacNativeComponents';
+import { InputText, ConfirmDialog, toast } from '../ui/PrimeReactReplacements';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+
 
 // Types
 interface TechnicianJob {
@@ -107,6 +89,18 @@ export const HvacMobileWorkOrder: React.FC<WorkOrderProps> = ({
   onStatusUpdate,
   onClose,
 }) => {
+  const hvacApiService = new HvacApiIntegrationService();
+  const hvacAnalyticsService = new HvacAnalyticsEngineService();
+
+  useEffect(() => {
+    // Fetch maintenance records on component mount
+    const fetchMaintenanceRecords = async () => {
+      const records = await hvacApiService.getMaintenanceRecords();
+      console.log('Fetched maintenance records:', records);
+    };
+
+    fetchMaintenanceRecords();
+  }, [hvacApiService]);
   // Refs
   const toast = useRef<Toast>(null);
   const fileUploadRef = useRef<FileUpload>(null);
@@ -182,7 +176,7 @@ export const HvacMobileWorkOrder: React.FC<WorkOrderProps> = ({
       // Validate required fields
       const requiredItems = checklist.filter(item => item.required);
       const incompleteRequired = requiredItems.filter(item => !item.completed);
-      
+
       if (incompleteRequired.length > 0) {
         toast.current?.show({
           severity: 'warn',
@@ -220,8 +214,11 @@ export const HvacMobileWorkOrder: React.FC<WorkOrderProps> = ({
         followUpDate: followUpDate || undefined,
       };
 
+      // Create maintenance record
+      await hvacApiService.createMaintenanceRecord(workOrderData);
+
       await onComplete(job.id, workOrderData);
-      
+
       toast.current?.show({
         severity: 'success',
         summary: 'Zlecenie ukończone',
@@ -252,6 +249,7 @@ export const HvacMobileWorkOrder: React.FC<WorkOrderProps> = ({
     followUpRequired,
     followUpDate,
     onComplete,
+    hvacApiService,
   ]);
 
   // Render checklist item

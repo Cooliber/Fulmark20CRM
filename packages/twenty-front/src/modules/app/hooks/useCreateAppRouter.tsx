@@ -9,9 +9,9 @@ import { BlankLayout } from '@/ui/layout/page/components/BlankLayout';
 import { DefaultLayout } from '@/ui/layout/page/components/DefaultLayout';
 
 import {
-  createBrowserRouter,
-  createRoutesFromElements,
-  Route,
+    createBrowserRouter,
+    createRoutesFromElements,
+    Route,
 } from 'react-router-dom';
 import { Authorize } from '~/pages/auth/Authorize';
 import { PasswordReset } from '~/pages/auth/PasswordReset';
@@ -27,7 +27,14 @@ import { CreateWorkspace } from '~/pages/onboarding/CreateWorkspace';
 import { InviteTeam } from '~/pages/onboarding/InviteTeam';
 import { PaymentSuccess } from '~/pages/onboarding/PaymentSuccess';
 import { SyncEmails } from '~/pages/onboarding/SyncEmails';
-import { HvacServicePlannerPage } from '~/pages/hvac/HvacServicePlannerPage';
+// HVAC Pages - Professional HVAC CRM Integration
+import {
+    HvacAnalyticsPage,
+    HvacDashboardPage,
+    HvacDispatchPage,
+    HvacMobilePage,
+    HvacServicePlannerPage
+} from '~/pages/hvac';
 
 export const useCreateAppRouter = (
   isFunctionSettingsEnabled?: boolean,
@@ -62,7 +69,13 @@ export const useCreateAppRouter = (
           />
           <Route path={AppPath.BookCall} element={<BookCall />} />
           <Route path={indexAppPath.getIndexAppPath()} element={<></>} />
+
+          {/* HVAC Routes - Professional HVAC CRM */}
+          <Route path={AppPath.HvacDashboard} element={<HvacDashboardPage />} />
           <Route path={AppPath.HvacServicePlanner} element={<HvacServicePlannerPage />} />
+          <Route path={AppPath.HvacAnalytics} element={<HvacAnalyticsPage />} />
+          <Route path={AppPath.HvacDispatch} element={<HvacDispatchPage />} />
+          <Route path={AppPath.HvacMobile} element={<HvacMobilePage />} />
           <Route path={AppPath.RecordIndexPage} element={<RecordIndexPage />} />
           <Route path={AppPath.RecordShowPage} element={<RecordShowPage />} />
           <Route

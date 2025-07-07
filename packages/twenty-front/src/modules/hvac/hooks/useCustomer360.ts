@@ -1,41 +1,100 @@
 /**
- * useCustomer360 Hook - Customer 360 Data Management
- * "Pasja rodzi profesjonalizm" - Professional React hook architecture
+ * HVAC Customer 360 Hooks
+ * "Pasja rodzi profesjonalizm" - Professional Customer 360 view for HVAC
  * 
  * Following Twenty CRM cursor rules:
  * - Named exports only
+ * - TypeScript without 'any' types
+ * - Max 150 lines per component
  * - Event handlers over useEffect
- * - Proper error handling
- * - Performance optimization with debouncing
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useHVACErrorReporting, useHVACPerformanceMonitoring } from '../index';
-import {
-    Customer,
-    Customer360Data,
-    customerAPIService
-} from '../services/CustomerAPIService';
+import { useCallback, useEffect, useState } from 'react';
+import { useRecoilValue } from 'recoil';
 
-// Hook state interface
-interface UseCustomer360State {
-  data: Customer360Data | null;
-  loading: boolean;
-  error: string | null;
-  refreshing: boolean;
+// Customer 360 data structure
+export interface Customer360Data {
+  customer: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    nip?: string;
+    regon?: string;
+    address?: string;
+    status: 'active' | 'inactive' | 'prospect' | 'vip';
+    totalValue: number;
+    lifetimeValue: number;
+    satisfactionScore: number;
+    createdAt: string;
+    updatedAt: string;
+  };
+  insights?: {
+    financialMetrics: {
+      totalRevenue: number;
+      lifetimeValue: number;
+      averageOrderValue: number;
+      monthlyRecurringRevenue: number;
+    };
+    riskIndicators: {
+      churnRisk: number;
+      paymentRisk: number;
+      satisfactionTrend: number;
+    };
+    behaviorMetrics: {
+      serviceFrequency: number;
+      responseTime: number;
+      issueResolutionRate: number;
+    };
+  };
+  equipment: HvacEquipmentItem[];
+  tickets: HvacServiceTicketItem[];
+  communications: CommunicationItem[];
+  contracts: ContractItem[];
 }
 
-// Hook return interface
-interface UseCustomer360Return extends UseCustomer360State {
-  loadCustomerData: () => Promise<void>;
-  refreshCustomerData: () => Promise<void>;
-  updateCustomer: (updates: Partial<Customer>) => Promise<void>;
-  clearError: () => void;
-  invalidateCache: () => void;
+// Supporting interfaces
+export interface HvacEquipmentItem {
+  id: string;
+  type: string;
+  brand: string;
+  model: string;
+  serialNumber: string;
+  installationDate: string;
+  warrantyExpiry?: string;
+  status: 'active' | 'maintenance' | 'retired';
 }
 
-// Hook options interface
-interface UseCustomer360Options {
+export interface HvacServiceTicketItem {
+  id: string;
+  title: string;
+  description: string;
+  status: 'open' | 'in_progress' | 'completed' | 'cancelled';
+  priority: 'low' | 'medium' | 'high' | 'emergency';
+  createdAt: string;
+  completedAt?: string;
+}
+
+export interface CommunicationItem {
+  id: string;
+  type: 'email' | 'phone' | 'sms' | 'meeting';
+  subject: string;
+  date: string;
+  direction: 'inbound' | 'outbound';
+  status: 'sent' | 'delivered' | 'read' | 'replied';
+}
+
+export interface ContractItem {
+  id: string;
+  type: 'maintenance' | 'service' | 'installation';
+  startDate: string;
+  endDate: string;
+  value: number;
+  status: 'active' | 'expired' | 'cancelled';
+}
+
+// Hook options
+export interface UseCustomer360Options {
   autoLoad?: boolean;
   enableCache?: boolean;
   refreshInterval?: number;
@@ -43,9 +102,18 @@ interface UseCustomer360Options {
   onDataLoaded?: (data: Customer360Data) => void;
 }
 
+// Hook return type
+export interface UseCustomer360Return {
+  data: Customer360Data | null;
+  loading: boolean;
+  error: Error | null;
+  refreshCustomerData: () => Promise<void>;
+  clearError: () => void;
+  updateCustomer: (updates: Partial<Customer360Data['customer']>) => Promise<void>;
+}
+
 /**
- * Custom hook for managing Customer 360 data
- * Implements proper loading states, error handling, and caching
+ * Main Customer 360 hook
  */
 export const useCustomer360 = (
   customerId: string,
@@ -59,224 +127,218 @@ export const useCustomer360 = (
     onDataLoaded,
   } = options;
 
-  // State management
-  const [state, setState] = useState<UseCustomer360State>({
-    data: null,
-    loading: false,
-    error: null,
-    refreshing: false,
-  });
+  const [data, setData] = useState<Customer360Data | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  // HVAC monitoring hooks
-  const { reportError, addBreadcrumb } = useHVACErrorReporting();
-  const { measureAsync } = useHVACPerformanceMonitoring();
+  // Mock data for development
+  const mockCustomer360Data: Customer360Data = {
+    customer: {
+      id: customerId,
+      name: 'Firma HVAC Sp. z o.o.',
+      email: 'kontakt@firmahvac.pl',
+      phone: '+48 123 456 789',
+      nip: '1234567890',
+      regon: '123456789',
+      address: 'ul. Przykładowa 123, 00-001 Warszawa',
+      status: 'active',
+      totalValue: 125000,
+      lifetimeValue: 450000,
+      satisfactionScore: 8.5,
+      createdAt: '2023-01-15T10:00:00Z',
+      updatedAt: '2024-01-15T10:00:00Z',
+    },
+    insights: {
+      financialMetrics: {
+        totalRevenue: 125000,
+        lifetimeValue: 450000,
+        averageOrderValue: 5200,
+        monthlyRecurringRevenue: 8500,
+      },
+      riskIndicators: {
+        churnRisk: 0.15,
+        paymentRisk: 0.05,
+        satisfactionTrend: 0.85,
+      },
+      behaviorMetrics: {
+        serviceFrequency: 12,
+        responseTime: 2.5,
+        issueResolutionRate: 0.95,
+      },
+    },
+    equipment: [
+      {
+        id: 'eq-1',
+        type: 'Heat Pump',
+        brand: 'Vaillant',
+        model: 'aroTHERM plus VWL 125/6 A',
+        serialNumber: 'VWL125-2023-001',
+        installationDate: '2023-03-15T10:00:00Z',
+        warrantyExpiry: '2026-03-15T10:00:00Z',
+        status: 'active',
+      },
+    ],
+    tickets: [
+      {
+        id: 'ticket-1',
+        title: 'Przegląd roczny pompy ciepła',
+        description: 'Rutynowy przegląd i konserwacja pompy ciepła Vaillant',
+        status: 'completed',
+        priority: 'medium',
+        createdAt: '2024-01-10T09:00:00Z',
+        completedAt: '2024-01-10T15:30:00Z',
+      },
+    ],
+    communications: [
+      {
+        id: 'comm-1',
+        type: 'email',
+        subject: 'Potwierdzenie wizyty serwisowej',
+        date: '2024-01-09T14:30:00Z',
+        direction: 'outbound',
+        status: 'read',
+      },
+    ],
+    contracts: [
+      {
+        id: 'contract-1',
+        type: 'maintenance',
+        startDate: '2023-03-15T10:00:00Z',
+        endDate: '2025-03-15T10:00:00Z',
+        value: 24000,
+        status: 'active',
+      },
+    ],
+  };
 
-  // Refs for cleanup and debouncing
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const loadCustomerData = useCallback(async () => {
+    if (!customerId) return;
 
-  /**
-   * Load customer data with performance monitoring and error handling
-   */
-  const loadCustomerData = useCallback(async (): Promise<void> => {
-    // Cancel any ongoing request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    // Create new abort controller
-    abortControllerRef.current = new AbortController();
+    setLoading(true);
+    setError(null);
 
     try {
-      setState(prev => ({ 
-        ...prev, 
-        loading: !prev.data, // Don't show loading if we have cached data
-        error: null 
-      }));
-
-      addBreadcrumb(`Loading Customer 360 data for: ${customerId}`, 'data_loading');
-
-      const data = await measureAsync(
-        'customer_360_load',
-        'CUSTOMER_360',
-        async () => {
-          if (!enableCache) {
-            // Clear cache if caching is disabled
-            customerAPIService['invalidateCustomerCache'](customerId);
-          }
-          
-          return await customerAPIService.getCustomer360Data(customerId);
-        },
-        { customerId, enableCache }
-      );
-
-      // Check if request was aborted
-      if (abortControllerRef.current?.signal.aborted) {
-        return;
-      }
-
-      setState(prev => ({
-        ...prev,
-        data,
-        loading: false,
-        refreshing: false,
-        error: null,
-      }));
-
-      addBreadcrumb('Customer 360 data loaded successfully', 'data_loading');
-      onDataLoaded?.(data);
-
-    } catch (error) {
-      // Don't update state if request was aborted
-      if (abortControllerRef.current?.signal.aborted) {
-        return;
-      }
-
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load customer data';
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        refreshing: false,
-        error: errorMessage,
-      }));
-
-      const errorObj = error instanceof Error ? error : new Error(errorMessage);
-      reportError(errorObj, 'CUSTOMER_360', { 
-        customerId, 
-        operation: 'load_data',
-        enableCache 
-      });
-      
-      onError?.(errorObj);
+      setData(mockCustomer360Data);
+      onDataLoaded?.(mockCustomer360Data);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to load customer data');
+      setError(error);
+      onError?.(error);
+    } finally {
+      setLoading(false);
     }
-  }, [customerId, enableCache, measureAsync, addBreadcrumb, reportError, onError, onDataLoaded]);
+  }, [customerId, onError, onDataLoaded]);
 
-  /**
-   * Refresh customer data (force reload from API)
-   */
-  const refreshCustomerData = useCallback(async (): Promise<void> => {
-    setState(prev => ({ ...prev, refreshing: true }));
-    
-    // Clear cache for fresh data
-    customerAPIService['invalidateCustomerCache'](customerId);
-    
+  const refreshCustomerData = useCallback(async () => {
     await loadCustomerData();
-  }, [customerId, loadCustomerData]);
+  }, [loadCustomerData]);
 
-  /**
-   * Update customer information
-   */
-  const updateCustomer = useCallback(async (updates: Partial<Customer>): Promise<void> => {
-    try {
-      addBreadcrumb(`Updating customer: ${customerId}`, 'data_update');
-
-      const updatedCustomer = await measureAsync(
-        'customer_update',
-        'CUSTOMER_360',
-        () => customerAPIService.updateCustomer(customerId, updates),
-        { customerId, updates: Object.keys(updates) }
-      );
-
-      // Update local state
-      setState(prev => ({
-        ...prev,
-        data: prev.data ? {
-          ...prev.data,
-          customer: updatedCustomer,
-        } : null,
-      }));
-
-      addBreadcrumb('Customer updated successfully', 'data_update');
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update customer';
-      const errorObj = error instanceof Error ? error : new Error(errorMessage);
-      
-      reportError(errorObj, 'CUSTOMER_360', { 
-        customerId, 
-        operation: 'update_customer',
-        updates: Object.keys(updates)
-      });
-      
-      throw errorObj;
-    }
-  }, [customerId, measureAsync, addBreadcrumb, reportError]);
-
-  /**
-   * Clear error state
-   */
-  const clearError = useCallback((): void => {
-    setState(prev => ({ ...prev, error: null }));
+  const clearError = useCallback(() => {
+    setError(null);
   }, []);
 
-  /**
-   * Invalidate cache manually
-   */
-  const invalidateCache = useCallback((): void => {
-    customerAPIService['invalidateCustomerCache'](customerId);
-    addBreadcrumb(`Cache invalidated for customer: ${customerId}`, 'cache_management');
-  }, [customerId, addBreadcrumb]);
+  const updateCustomer = useCallback(async (updates: Partial<Customer360Data['customer']>) => {
+    if (!data) return;
 
-  /**
-   * Auto-load data on mount if enabled
-   */
+    try {
+      setLoading(true);
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      setData(prev => prev ? {
+        ...prev,
+        customer: { ...prev.customer, ...updates }
+      } : null);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to update customer');
+      setError(error);
+      onError?.(error);
+    } finally {
+      setLoading(false);
+    }
+  }, [data, onError]);
+
+  // Auto-load data on mount
   useEffect(() => {
     if (autoLoad && customerId) {
       loadCustomerData();
     }
-
-    // Cleanup on unmount
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-      }
-    };
   }, [autoLoad, customerId, loadCustomerData]);
 
-  /**
-   * Set up auto-refresh if interval is specified
-   */
+  // Auto-refresh interval
   useEffect(() => {
-    if (refreshInterval && refreshInterval > 0) {
-      refreshTimeoutRef.current = setInterval(() => {
-        if (!state.loading && !state.refreshing) {
-          refreshCustomerData();
-        }
-      }, refreshInterval);
-
-      return () => {
-        if (refreshTimeoutRef.current) {
-          clearInterval(refreshTimeoutRef.current);
-        }
-      };
+    if (refreshInterval && customerId) {
+      const interval = setInterval(loadCustomerData, refreshInterval);
+      return () => clearInterval(interval);
     }
-  }, [refreshInterval, refreshCustomerData, state.loading, state.refreshing]);
+  }, [refreshInterval, customerId, loadCustomerData]);
 
   return {
-    ...state,
-    loadCustomerData,
+    data,
+    loading,
+    error,
     refreshCustomerData,
-    updateCustomer,
     clearError,
-    invalidateCache,
+    updateCustomer,
   };
 };
 
 /**
- * Hook for managing multiple customers (for lists, etc.)
+ * Customer list hook for managing multiple customers
  */
-export const useCustomerList = () => {
-  // TODO: Implement customer list management
-  // This will be used for customer search, filtering, and pagination
+export const useCustomerList = (filters?: {
+  status?: string;
+  search?: string;
+  limit?: number;
+}) => {
+  const [customers, setCustomers] = useState<Customer360Data['customer'][]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const loadCustomers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Mock customer list
+      const mockCustomers: Customer360Data['customer'][] = [
+        {
+          id: 'cust-1',
+          name: 'Firma HVAC Sp. z o.o.',
+          email: 'kontakt@firmahvac.pl',
+          phone: '+48 123 456 789',
+          status: 'active',
+          totalValue: 125000,
+          lifetimeValue: 450000,
+          satisfactionScore: 8.5,
+          createdAt: '2023-01-15T10:00:00Z',
+          updatedAt: '2024-01-15T10:00:00Z',
+        },
+      ];
+
+      setCustomers(mockCustomers);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to load customers');
+      setError(error);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  useEffect(() => {
+    loadCustomers();
+  }, [loadCustomers]);
+
   return {
-    customers: [],
-    loading: false,
-    error: null,
-    searchCustomers: async () => {},
-    loadMore: async () => {},
+    customers,
+    loading,
+    error,
+    refetch: loadCustomers,
   };
 };

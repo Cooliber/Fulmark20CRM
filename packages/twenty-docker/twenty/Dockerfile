@@ -15,6 +15,13 @@ COPY ./packages/twenty-ui/package.json /app/packages/twenty-ui/
 COPY ./packages/twenty-shared/package.json /app/packages/twenty-shared/
 COPY ./packages/twenty-front/package.json /app/packages/twenty-front/
 
+# HVAC Modules - "Pasja rodzi profesjonalizm"
+COPY ./packages/hvac-core/package.json /app/packages/hvac-core/
+COPY ./packages/hvac-dashboard/package.json /app/packages/hvac-dashboard/
+COPY ./packages/hvac-analytics/package.json /app/packages/hvac-analytics/
+COPY ./packages/hvac-equipment/package.json /app/packages/hvac-equipment/
+COPY ./packages/twenty-hvac-server/package.json /app/packages/twenty-hvac-server/
+
 # Install all dependencies
 RUN yarn && yarn cache clean && npx nx reset
 
@@ -27,6 +34,9 @@ COPY ./packages/twenty-emails /app/packages/twenty-emails
 COPY ./packages/twenty-shared /app/packages/twenty-shared
 COPY ./packages/twenty-server /app/packages/twenty-server
 
+# HVAC Server Module - "Pasja rodzi profesjonalizm"
+COPY ./packages/twenty-hvac-server /app/packages/twenty-hvac-server
+
 RUN npx nx run twenty-server:build
 RUN mv /app/packages/twenty-server/dist /app/packages/twenty-server/build
 RUN npx nx run twenty-server:build:packageJson
@@ -34,7 +44,7 @@ RUN mv /app/packages/twenty-server/dist/package.json /app/packages/twenty-server
 RUN rm -rf /app/packages/twenty-server/dist
 RUN mv /app/packages/twenty-server/build /app/packages/twenty-server/dist
 
-RUN yarn workspaces focus --production twenty-emails twenty-shared twenty-server
+RUN yarn workspaces focus --production twenty-emails twenty-shared twenty-server twenty-hvac-server hvac-core hvac-dashboard hvac-analytics hvac-equipment
 
 
 # Build the front
@@ -45,6 +55,12 @@ ARG REACT_APP_SERVER_BASE_URL
 COPY ./packages/twenty-front /app/packages/twenty-front
 COPY ./packages/twenty-ui /app/packages/twenty-ui
 COPY ./packages/twenty-shared /app/packages/twenty-shared
+
+# HVAC Frontend Modules - "Pasja rodzi profesjonalizm"
+COPY ./packages/hvac-core /app/packages/hvac-core
+COPY ./packages/hvac-dashboard /app/packages/hvac-dashboard
+COPY ./packages/hvac-analytics /app/packages/hvac-analytics
+COPY ./packages/hvac-equipment /app/packages/hvac-equipment
 RUN npx nx build twenty-front
 
 
@@ -82,6 +98,13 @@ RUN mkdir -p /app/.local-storage /app/packages/twenty-server/.local-storage && \
 
 # Use non root user with uid 1000
 USER 1000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+# Note: Adjust the port and /health endpoint if different for the main twenty-server.
+# Common alternatives: /api/health, /status, or a specific port if not 3000.
+
+EXPOSE 3000
 
 CMD ["node", "dist/src/main"]
 ENTRYPOINT ["/app/entrypoint.sh"]

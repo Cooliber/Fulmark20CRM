@@ -1,8 +1,8 @@
 import { CurrentWorkspaceMemberFavoritesFolders } from '@/favorites/components/CurrentWorkspaceMemberFavoritesFolders';
 import { WorkspaceFavorites } from '@/favorites/components/WorkspaceFavorites';
+import { HvacNavigationSection, HvacObjectsNavigationSection } from '@/hvac/components/navigation';
 import { NavigationDrawerOpenedSection } from '@/object-metadata/components/NavigationDrawerOpenedSection';
 import { RemoteNavigationDrawerSection } from '@/object-metadata/components/RemoteNavigationDrawerSection';
-import { HvacNavigationSection } from '@/hvac/components/navigation/HvacNavigationSection';
 import styled from '@emotion/styled';
 
 const StyledScrollableItemsContainer = styled.div`
@@ -16,6 +16,7 @@ export const MainNavigationDrawerScrollableItems = () => {
     <StyledScrollableItemsContainer>
       <NavigationDrawerOpenedSection />
       <HvacNavigationSection />
+      <HvacObjectsNavigationSection />
       <CurrentWorkspaceMemberFavoritesFolders />
       <WorkspaceFavorites />
       <RemoteNavigationDrawerSection />

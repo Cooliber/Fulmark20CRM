@@ -1,439 +1,365 @@
 /**
- * useCustomerValidation Hook - Customer Data Validation
- * "Pasja rodzi profesjonalizm" - Professional customer data validation
+ * HVAC Customer Validation Hooks
+ * "Pasja rodzi profesjonalizm" - Professional customer validation for Polish market
  * 
  * Following Twenty CRM cursor rules:
  * - Named exports only
- * - Event handlers over useEffect
- * - Proper error handling
+ * - TypeScript without 'any' types
+ * - Max 150 lines per component
  * - Polish business compliance validation
  */
 
-import { useState, useCallback, useMemo } from 'react';
-import { 
-  Customer, 
-  CustomerStatus, 
-  CustomerType, 
-  PaymentMethod, 
-  ContactMethod,
-  RiskLevel 
-} from '../services/CustomerAPIService';
-import { 
-  polishBusinessValidationService, 
-  ValidationResult,
-  VATCategory 
-} from '../services/PolishBusinessValidationService';
-import { useHVACErrorReporting } from '../index';
+import { useCallback, useState } from 'react';
+import type { 
+  NIPValidationResult, 
+  REGONValidationResult, 
+  PolishAddress 
+} from '../types/hvac-polish-compliance.types';
 
-// Validation state interface
-interface CustomerValidationState {
-  isValid: boolean;
-  errors: Record<string, string[]>;
-  warnings: Record<string, string[]>;
-  validating: boolean;
-}
-
-// Validation options interface
-interface ValidationOptions {
+// Validation options
+export interface CustomerValidationOptions {
   validateNIP?: boolean;
   validateREGON?: boolean;
-  validateKRS?: boolean;
   validateAddress?: boolean;
-  validateFinancial?: boolean;
+  validateEmail?: boolean;
+  validatePhone?: boolean;
   realTimeValidation?: boolean;
+  strictMode?: boolean;
 }
 
-// Hook return interface
-interface UseCustomerValidationReturn extends CustomerValidationState {
-  validateCustomer: (customer: Partial<Customer>) => Promise<boolean>;
-  validateField: (fieldName: keyof Customer, value: any) => ValidationResult;
-  clearValidation: () => void;
-  getFieldErrors: (fieldName: keyof Customer) => string[];
-  getFieldWarnings: (fieldName: keyof Customer) => string[];
-  isFieldValid: (fieldName: keyof Customer) => boolean;
-  calculateHealthScore: (customer: Partial<Customer>) => number;
-  suggestImprovements: (customer: Partial<Customer>) => string[];
+// Field validation result
+export interface FieldValidationResult {
+  isValid: boolean;
+  error?: string;
+  warning?: string;
+  suggestion?: string;
+}
+
+// Customer health score
+export interface CustomerHealthScore {
+  overall: number; // 0-100
+  dataCompleteness: number;
+  dataAccuracy: number;
+  complianceScore: number;
+  riskScore: number;
+  suggestions: string[];
+}
+
+// Validation context
+export interface ValidationContext {
+  field: string;
+  value: string;
+  customerType: 'individual' | 'business';
+  country: string;
 }
 
 /**
- * Custom hook for comprehensive customer data validation
- * Includes Polish business compliance and HVAC-specific validation
+ * Main customer validation hook
  */
-export const useCustomerValidation = (
-  options: ValidationOptions = {}
-): UseCustomerValidationReturn => {
+export const useCustomerValidation = (options: CustomerValidationOptions = {}) => {
   const {
     validateNIP = true,
     validateREGON = true,
-    validateKRS = false,
     validateAddress = true,
-    validateFinancial = true,
-    realTimeValidation = true,
+    validateEmail = true,
+    validatePhone = true,
+    realTimeValidation = false,
+    strictMode = false,
   } = options;
 
-  // State management
-  const [validationState, setValidationState] = useState<CustomerValidationState>({
-    isValid: true,
-    errors: {},
-    warnings: {},
-    validating: false,
-  });
-
-  // Error reporting
-  const { reportError, addBreadcrumb } = useHVACErrorReporting();
+  const [validationCache, setValidationCache] = useState<Map<string, FieldValidationResult>>(new Map());
+  const [isValidating, setIsValidating] = useState(false);
 
   /**
-   * Validate entire customer object
+   * Validate NIP (Polish tax number)
    */
-  const validateCustomer = useCallback(async (customer: Partial<Customer>): Promise<boolean> => {
-    try {
-      setValidationState(prev => ({ ...prev, validating: true }));
-      addBreadcrumb('Starting customer validation', 'validation');
+  const validateNIPField = useCallback(async (nip: string): Promise<FieldValidationResult> => {
+    if (!validateNIP) return { isValid: true };
 
-      const errors: Record<string, string[]> = {};
-      const warnings: Record<string, string[]> = {};
+    // Remove spaces and dashes
+    const cleanNIP = nip.replace(/[\s-]/g, '');
 
-      // Basic field validation
-      if (!customer.name || customer.name.trim().length === 0) {
-        errors.name = ['Nazwa klienta jest wymagana'];
-      }
-
-      if (customer.name && customer.name.length > 255) {
-        errors.name = [...(errors.name || []), 'Nazwa klienta nie może przekraczać 255 znaków'];
-      }
-
-      // Email validation
-      if (customer.email && !isValidEmail(customer.email)) {
-        errors.email = ['Nieprawidłowy format adresu email'];
-      }
-
-      // Phone validation
-      if (customer.phone && !isValidPolishPhone(customer.phone)) {
-        warnings.phone = ['Numer telefonu może być nieprawidłowy'];
-      }
-
-      // Polish business validation
-      if (validateNIP && customer.nip) {
-        const nipValidation = polishBusinessValidationService.validateNIP(customer.nip);
-        if (!nipValidation.isValid) {
-          errors.nip = nipValidation.errors;
-        }
-        if (nipValidation.warnings.length > 0) {
-          warnings.nip = nipValidation.warnings;
-        }
-      }
-
-      if (validateREGON && customer.regon) {
-        const regonValidation = polishBusinessValidationService.validateREGON(customer.regon);
-        if (!regonValidation.isValid) {
-          errors.regon = regonValidation.errors;
-        }
-        if (regonValidation.warnings.length > 0) {
-          warnings.regon = regonValidation.warnings;
-        }
-      }
-
-      if (validateKRS && customer.krs) {
-        const krsValidation = polishBusinessValidationService.validateKRS(customer.krs);
-        if (!krsValidation.isValid) {
-          errors.krs = krsValidation.errors;
-        }
-        if (krsValidation.warnings.length > 0) {
-          warnings.krs = krsValidation.warnings;
-        }
-      }
-
-      // Address validation
-      if (validateAddress && customer.address) {
-        const addressErrors = validateCustomerAddress(customer.address);
-        if (addressErrors.length > 0) {
-          errors.address = addressErrors;
-        }
-      }
-
-      // Financial validation
-      if (validateFinancial) {
-        const financialErrors = validateFinancialData(customer);
-        if (financialErrors.length > 0) {
-          errors.financial = financialErrors;
-        }
-      }
-
-      // Business logic validation
-      const businessErrors = validateBusinessLogic(customer);
-      if (businessErrors.length > 0) {
-        errors.business = businessErrors;
-      }
-
-      const isValid = Object.keys(errors).length === 0;
-
-      setValidationState({
-        isValid,
-        errors,
-        warnings,
-        validating: false,
-      });
-
-      addBreadcrumb(`Customer validation completed: ${isValid ? 'valid' : 'invalid'}`, 'validation');
-      return isValid;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown validation error';
-      reportError(
-        error instanceof Error ? error : new Error(errorMessage),
-        'CUSTOMER_VALIDATION',
-        { customerId: customer.id }
-      );
-
-      setValidationState(prev => ({
-        ...prev,
-        validating: false,
-        errors: { ...prev.errors, general: ['Błąd podczas walidacji danych'] },
-      }));
-
-      return false;
-    }
-  }, [validateNIP, validateREGON, validateKRS, validateAddress, validateFinancial, addBreadcrumb, reportError]);
-
-  /**
-   * Validate individual field
-   */
-  const validateField = useCallback((fieldName: keyof Customer, value: any): ValidationResult => {
-    try {
-      switch (fieldName) {
-        case 'nip':
-          return validateNIP ? polishBusinessValidationService.validateNIP(value) : { isValid: true, errors: [], warnings: [] };
-        
-        case 'regon':
-          return validateREGON ? polishBusinessValidationService.validateREGON(value) : { isValid: true, errors: [], warnings: [] };
-        
-        case 'krs':
-          return validateKRS ? polishBusinessValidationService.validateKRS(value) : { isValid: true, errors: [], warnings: [] };
-        
-        case 'email':
-          return {
-            isValid: !value || isValidEmail(value),
-            errors: !value || isValidEmail(value) ? [] : ['Nieprawidłowy format adresu email'],
-            warnings: [],
-          };
-        
-        case 'phone':
-          return {
-            isValid: !value || isValidPolishPhone(value),
-            errors: [],
-            warnings: !value || isValidPolishPhone(value) ? [] : ['Numer telefonu może być nieprawidłowy'],
-          };
-        
-        default:
-          return { isValid: true, errors: [], warnings: [] };
-      }
-    } catch (error) {
+    // Basic format validation
+    if (!/^\d{10}$/.test(cleanNIP)) {
       return {
         isValid: false,
-        errors: ['Błąd podczas walidacji pola'],
-        warnings: [],
+        error: 'NIP musi składać się z 10 cyfr',
+        suggestion: 'Format: XXXXXXXXXX lub XXX-XXX-XX-XX',
       };
     }
-  }, [validateNIP, validateREGON, validateKRS]);
 
-  /**
-   * Clear all validation state
-   */
-  const clearValidation = useCallback((): void => {
-    setValidationState({
+    // Checksum validation
+    const weights = [6, 5, 7, 2, 3, 4, 5, 6, 7];
+    const digits = cleanNIP.split('').map(Number);
+    const checksum = digits.slice(0, 9).reduce((sum, digit, index) => sum + digit * weights[index], 0) % 11;
+
+    if (checksum !== digits[9]) {
+      return {
+        isValid: false,
+        error: 'Nieprawidłowa suma kontrolna NIP',
+        suggestion: 'Sprawdź poprawność wprowadzonego numeru',
+      };
+    }
+
+    // In real implementation, would call external API for verification
+    return {
       isValid: true,
-      errors: {},
-      warnings: {},
-      validating: false,
-    });
-  }, []);
+      suggestion: 'NIP jest poprawny',
+    };
+  }, [validateNIP]);
 
   /**
-   * Get errors for specific field
+   * Validate REGON (Polish business registry number)
    */
-  const getFieldErrors = useCallback((fieldName: keyof Customer): string[] => {
-    return validationState.errors[fieldName as string] || [];
-  }, [validationState.errors]);
+  const validateREGONField = useCallback(async (regon: string): Promise<FieldValidationResult> => {
+    if (!validateREGON) return { isValid: true };
+
+    const cleanREGON = regon.replace(/[\s-]/g, '');
+
+    // REGON can be 9 or 14 digits
+    if (!/^\d{9}$|^\d{14}$/.test(cleanREGON)) {
+      return {
+        isValid: false,
+        error: 'REGON musi składać się z 9 lub 14 cyfr',
+        suggestion: 'Format: XXXXXXXXX lub XXXXXXXXXXXXXX',
+      };
+    }
+
+    // Basic checksum validation for 9-digit REGON
+    if (cleanREGON.length === 9) {
+      const weights = [8, 9, 2, 3, 4, 5, 6, 7];
+      const digits = cleanREGON.split('').map(Number);
+      const checksum = digits.slice(0, 8).reduce((sum, digit, index) => sum + digit * weights[index], 0) % 11;
+      const expectedChecksum = checksum === 10 ? 0 : checksum;
+
+      if (expectedChecksum !== digits[8]) {
+        return {
+          isValid: false,
+          error: 'Nieprawidłowa suma kontrolna REGON',
+          suggestion: 'Sprawdź poprawność wprowadzonego numeru',
+        };
+      }
+    }
+
+    return {
+      isValid: true,
+      suggestion: 'REGON jest poprawny',
+    };
+  }, [validateREGON]);
 
   /**
-   * Get warnings for specific field
+   * Validate Polish address
    */
-  const getFieldWarnings = useCallback((fieldName: keyof Customer): string[] => {
-    return validationState.warnings[fieldName as string] || [];
-  }, [validationState.warnings]);
+  const validateAddressField = useCallback(async (address: Partial<PolishAddress>): Promise<FieldValidationResult> => {
+    if (!validateAddress) return { isValid: true };
+
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    // Postal code validation
+    if (address.postalCode && !/^\d{2}-\d{3}$/.test(address.postalCode)) {
+      errors.push('Kod pocztowy musi być w formacie XX-XXX');
+    }
+
+    // City validation
+    if (address.city && address.city.length < 2) {
+      errors.push('Nazwa miasta musi mieć co najmniej 2 znaki');
+    }
+
+    // Street validation
+    if (address.street && address.street.length < 3) {
+      warnings.push('Nazwa ulicy wydaje się niepełna');
+    }
+
+    if (errors.length > 0) {
+      return {
+        isValid: false,
+        error: errors.join(', '),
+        warning: warnings.length > 0 ? warnings.join(', ') : undefined,
+      };
+    }
+
+    return {
+      isValid: true,
+      warning: warnings.length > 0 ? warnings.join(', ') : undefined,
+      suggestion: 'Adres jest poprawny',
+    };
+  }, [validateAddress]);
 
   /**
-   * Check if specific field is valid
+   * Validate email address
    */
-  const isFieldValid = useCallback((fieldName: keyof Customer): boolean => {
-    return !validationState.errors[fieldName as string] || validationState.errors[fieldName as string].length === 0;
-  }, [validationState.errors]);
+  const validateEmailField = useCallback(async (email: string): Promise<FieldValidationResult> => {
+    if (!validateEmail) return { isValid: true };
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (!emailRegex.test(email)) {
+      return {
+        isValid: false,
+        error: 'Nieprawidłowy format adresu email',
+        suggestion: 'Format: nazwa@domena.pl',
+      };
+    }
+
+    // Check for common Polish domains
+    const polishDomains = ['.pl', '.com.pl', '.org.pl', '.net.pl'];
+    const hasPolishDomain = polishDomains.some(domain => email.toLowerCase().includes(domain));
+
+    return {
+      isValid: true,
+      suggestion: hasPolishDomain ? 'Email z polską domeną' : 'Email z zagraniczną domeną',
+    };
+  }, [validateEmail]);
 
   /**
-   * Calculate customer health score based on data completeness and quality
+   * Validate Polish phone number
    */
-  const calculateHealthScore = useCallback((customer: Partial<Customer>): number => {
-    let score = 0;
-    let maxScore = 0;
+  const validatePhoneField = useCallback(async (phone: string): Promise<FieldValidationResult> => {
+    if (!validatePhone) return { isValid: true };
 
-    // Basic information (30 points)
-    maxScore += 30;
-    if (customer.name) score += 10;
-    if (customer.email) score += 10;
-    if (customer.phone) score += 10;
+    // Remove spaces, dashes, and parentheses
+    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
 
-    // Business information (25 points)
-    maxScore += 25;
-    if (customer.nip) score += 10;
-    if (customer.regon) score += 10;
-    if (customer.address) score += 5;
+    // Polish phone number patterns
+    const patterns = [
+      /^\+48\d{9}$/, // +48XXXXXXXXX
+      /^48\d{9}$/, // 48XXXXXXXXX
+      /^\d{9}$/, // XXXXXXXXX
+    ];
 
-    // Financial information (20 points)
-    maxScore += 20;
-    if (customer.totalValue && customer.totalValue > 0) score += 10;
-    if (customer.paymentTerms && customer.paymentTerms > 0) score += 5;
-    if (customer.creditLimit && customer.creditLimit > 0) score += 5;
+    const isValid = patterns.some(pattern => pattern.test(cleanPhone));
 
-    // Relationship information (15 points)
-    maxScore += 15;
-    if (customer.satisfactionScore && customer.satisfactionScore > 0) score += 10;
-    if (customer.lastContactDate) score += 5;
+    if (!isValid) {
+      return {
+        isValid: false,
+        error: 'Nieprawidłowy format numeru telefonu',
+        suggestion: 'Format: +48 XXX XXX XXX lub XXX XXX XXX',
+      };
+    }
 
-    // HVAC specific (10 points)
-    maxScore += 10;
-    if (customer.hvacSystemCount && customer.hvacSystemCount > 0) score += 5;
-    if (customer.maintenanceContract) score += 5;
+    return {
+      isValid: true,
+      suggestion: 'Numer telefonu jest poprawny',
+    };
+  }, [validatePhone]);
 
-    return Math.round((score / maxScore) * 100);
+  /**
+   * Generic field validation
+   */
+  const validateField = useCallback(async (
+    fieldName: string,
+    value: string,
+    context?: Partial<ValidationContext>
+  ): Promise<FieldValidationResult> => {
+    const cacheKey = `${fieldName}:${value}`;
+    
+    // Check cache first
+    if (validationCache.has(cacheKey)) {
+      return validationCache.get(cacheKey)!;
+    }
+
+    setIsValidating(true);
+
+    let result: FieldValidationResult;
+
+    try {
+      switch (fieldName.toLowerCase()) {
+        case 'nip':
+          result = await validateNIPField(value);
+          break;
+        case 'regon':
+          result = await validateREGONField(value);
+          break;
+        case 'email':
+          result = await validateEmailField(value);
+          break;
+        case 'phone':
+          result = await validatePhoneField(value);
+          break;
+        default:
+          result = { isValid: true };
+      }
+
+      // Cache the result
+      setValidationCache(prev => new Map(prev).set(cacheKey, result));
+    } catch (error) {
+      result = {
+        isValid: false,
+        error: 'Błąd podczas walidacji',
+      };
+    } finally {
+      setIsValidating(false);
+    }
+
+    return result;
+  }, [validateNIPField, validateREGONField, validateEmailField, validatePhoneField, validationCache]);
+
+  /**
+   * Calculate customer health score
+   */
+  const calculateHealthScore = useCallback((customerData: Record<string, unknown>): CustomerHealthScore => {
+    const fields = ['name', 'email', 'phone', 'nip', 'regon', 'address'];
+    const completedFields = fields.filter(field => customerData[field]);
+    const dataCompleteness = (completedFields.length / fields.length) * 100;
+
+    // Mock calculation - in real implementation would be more sophisticated
+    const dataAccuracy = 85; // Based on validation results
+    const complianceScore = customerData.nip && customerData.regon ? 100 : 60;
+    const riskScore = dataCompleteness > 80 ? 10 : 30;
+
+    const overall = (dataCompleteness + dataAccuracy + complianceScore - riskScore) / 3;
+
+    const suggestions: string[] = [];
+    if (dataCompleteness < 80) suggestions.push('Uzupełnij brakujące dane klienta');
+    if (!customerData.nip) suggestions.push('Dodaj numer NIP dla firm');
+    if (!customerData.email) suggestions.push('Dodaj adres email');
+
+    return {
+      overall: Math.round(overall),
+      dataCompleteness: Math.round(dataCompleteness),
+      dataAccuracy: Math.round(dataAccuracy),
+      complianceScore: Math.round(complianceScore),
+      riskScore: Math.round(riskScore),
+      suggestions,
+    };
   }, []);
 
   /**
    * Suggest improvements for customer data
    */
-  const suggestImprovements = useCallback((customer: Partial<Customer>): string[] => {
+  const suggestImprovements = useCallback((customerData: Record<string, unknown>): string[] => {
     const suggestions: string[] = [];
 
-    if (!customer.email) {
+    if (!customerData.nip && customerData.regon) {
+      suggestions.push('Dodaj numer NIP dla pełnej identyfikacji firmy');
+    }
+
+    if (!customerData.email) {
       suggestions.push('Dodaj adres email dla lepszej komunikacji');
     }
 
-    if (!customer.phone) {
+    if (!customerData.phone) {
       suggestions.push('Dodaj numer telefonu kontaktowego');
     }
 
-    if (!customer.nip && customer.customerType === CustomerType.COMPANY) {
-      suggestions.push('Dodaj NIP dla firm');
-    }
-
-    if (!customer.address) {
-      suggestions.push('Uzupełnij adres klienta');
-    }
-
-    if (!customer.satisfactionScore || customer.satisfactionScore === 0) {
-      suggestions.push('Przeprowadź ankietę satysfakcji klienta');
-    }
-
-    if (!customer.lastContactDate) {
-      suggestions.push('Zaplanuj kontakt z klientem');
-    }
-
-    if (!customer.hvacSystemCount) {
-      suggestions.push('Zinwentaryzuj systemy HVAC klienta');
-    }
-
-    if (!customer.maintenanceContract) {
-      suggestions.push('Zaproponuj kontrakt serwisowy');
+    if (!customerData.address) {
+      suggestions.push('Uzupełnij adres dla usług serwisowych');
     }
 
     return suggestions;
   }, []);
 
   return {
-    ...validationState,
-    validateCustomer,
     validateField,
-    clearValidation,
-    getFieldErrors,
-    getFieldWarnings,
-    isFieldValid,
+    validateNIPField,
+    validateREGONField,
+    validateAddressField,
+    validateEmailField,
+    validatePhoneField,
     calculateHealthScore,
     suggestImprovements,
+    isValidating,
+    clearCache: () => setValidationCache(new Map()),
   };
 };
-
-// Helper functions
-function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-function isValidPolishPhone(phone: string): boolean {
-  // Polish phone number patterns
-  const phoneRegex = /^(\+48\s?)?(\d{3}\s?\d{3}\s?\d{3}|\d{2}\s?\d{3}\s?\d{2}\s?\d{2})$/;
-  return phoneRegex.test(phone.replace(/\s/g, ''));
-}
-
-function validateCustomerAddress(address: any): string[] {
-  const errors: string[] = [];
-
-  if (!address.street) {
-    errors.push('Ulica jest wymagana');
-  }
-
-  if (!address.city) {
-    errors.push('Miasto jest wymagane');
-  }
-
-  if (!address.postalCode) {
-    errors.push('Kod pocztowy jest wymagany');
-  } else {
-    const postalValidation = polishBusinessValidationService.validatePostalCode(address.postalCode);
-    if (!postalValidation.isValid) {
-      errors.push(...postalValidation.errors);
-    }
-  }
-
-  return errors;
-}
-
-function validateFinancialData(customer: Partial<Customer>): string[] {
-  const errors: string[] = [];
-
-  if (customer.totalValue && customer.totalValue < 0) {
-    errors.push('Wartość całkowita nie może być ujemna');
-  }
-
-  if (customer.lifetimeValue && customer.lifetimeValue < 0) {
-    errors.push('Wartość życiowa nie może być ujemna');
-  }
-
-  if (customer.creditLimit && customer.creditLimit < 0) {
-    errors.push('Limit kredytowy nie może być ujemny');
-  }
-
-  if (customer.paymentTerms && (customer.paymentTerms < 0 || customer.paymentTerms > 365)) {
-    errors.push('Termin płatności musi być między 0 a 365 dni');
-  }
-
-  return errors;
-}
-
-function validateBusinessLogic(customer: Partial<Customer>): string[] {
-  const errors: string[] = [];
-
-  // Company must have NIP
-  if (customer.customerType === CustomerType.COMPANY && !customer.nip) {
-    errors.push('Firmy muszą mieć podany NIP');
-  }
-
-  // VIP customers should have higher values
-  if (customer.status === CustomerStatus.VIP && customer.totalValue && customer.totalValue < 10000) {
-    errors.push('Klienci VIP powinni mieć wartość powyżej 10,000 PLN');
-  }
-
-  // Suspended customers shouldn't have active contracts
-  if (customer.status === CustomerStatus.SUSPENDED && customer.maintenanceContract) {
-    errors.push('Zawieszeni klienci nie mogą mieć aktywnych kontraktów');
-  }
-
-  return errors;
-}

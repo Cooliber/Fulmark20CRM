@@ -1,0 +1,249 @@
+# HVAC Module Complete Structure Documentation
+
+## 🏗️ **HVAC Frontend Architecture** (`/packages/twenty-front/src/modules/hvac/`)
+
+### **Core Components Structure**
+```
+hvac/
+├── components/
+│   ├── dashboard/
+│   │   ├── HvacDashboard.tsx              # Main dashboard container
+│   │   ├── HvacDashboardTabs.tsx          # Tab navigation component
+│   │   ├── HvacOverviewTab.tsx            # Overview statistics tab
+│   │   ├── HvacSearchTab.tsx              # Semantic search tab
+│   │   ├── HvacTicketsTab.tsx             # Service tickets tab
+│   │   ├── HvacEquipmentTab.tsx           # Equipment management tab
+│   │   └── index.ts                       # Dashboard exports
+│   ├── navigation/
+│   │   ├── HvacNavigationSection.tsx      # Main HVAC navigation
+│   │   ├── HvacObjectsNavigationSection.tsx # HVAC objects in nav
+│   │   └── index.ts                       # Navigation exports
+│   ├── search/
+│   │   ├── HvacSemanticSearch.tsx         # AI-powered search
+│   │   ├── HvacSearchResults.tsx          # Search results display
+│   │   ├── HvacSearchFilters.tsx          # Search filtering
+│   │   └── index.ts                       # Search exports
+│   ├── service-planner/
+│   │   ├── HvacServicePlanner.tsx         # Service planning tool
+│   │   ├── HvacScheduleView.tsx           # Calendar/schedule view
+│   │   ├── HvacTechnicianAssignment.tsx   # Technician assignment
+│   │   └── index.ts                       # Planner exports
+│   ├── dispatch/
+│   │   ├── HvacDispatchPanel.tsx          # Dispatch management
+│   │   ├── HvacWorkOrderQueue.tsx         # Work order queue
+│   │   ├── HvacTechnicianStatus.tsx       # Technician status
+│   │   └── index.ts                       # Dispatch exports
+│   ├── mobile/
+│   │   ├── HvacMobileMaintenance.tsx      # Mobile maintenance
+│   │   ├── HvacFieldReports.tsx           # Field reporting
+│   │   ├── HvacOfflineSync.tsx            # Offline synchronization
+│   │   └── index.ts                       # Mobile exports
+│   ├── analytics/
+│   │   ├── HvacAnalyticsDashboard.tsx     # Analytics overview
+│   │   ├── HvacPerformanceMetrics.tsx     # Performance tracking
+│   │   ├── HvacReports.tsx                # Report generation
+│   │   └── index.ts                       # Analytics exports
+│   └── shared/
+│       ├── HvacErrorBoundary.tsx          # Error handling
+│       ├── HvacLoadingSpinner.tsx         # Loading states
+│       ├── HvacNotifications.tsx          # Notification system
+│       └── index.ts                       # Shared exports
+├── hooks/
+│   ├── useHvacSemanticSearch.ts           # Semantic search hook
+│   ├── useHvacServiceTickets.ts           # Service tickets hook
+│   ├── useHvacEquipment.ts                # Equipment management hook
+│   ├── useHvacTechnicians.ts              # Technician management hook
+│   ├── useHvacAnalytics.ts                # Analytics data hook
+│   ├── useHvacNotifications.ts            # Notifications hook
+│   └── index.ts                           # Hooks exports
+├── states/
+│   ├── hvacDashboardState.ts              # Dashboard state
+│   ├── hvacSearchState.ts                 # Search state
+│   ├── hvacServicePlannerState.ts         # Service planner state
+│   ├── hvacDispatchState.ts               # Dispatch state
+│   ├── hvacMobileState.ts                 # Mobile state
+│   ├── hvacAnalyticsState.ts              # Analytics state
+│   └── index.ts                           # States exports
+├── types/
+│   ├── hvac-dashboard.types.ts            # Dashboard types
+│   ├── hvac-search.types.ts               # Search types
+│   ├── hvac-service.types.ts              # Service types
+│   ├── hvac-equipment.types.ts            # Equipment types
+│   ├── hvac-technician.types.ts           # Technician types
+│   ├── hvac-analytics.types.ts            # Analytics types
+│   └── index.ts                           # Types exports
+├── utils/
+│   ├── hvacFormatters.ts                  # Data formatters
+│   ├── hvacValidators.ts                  # Input validation
+│   ├── hvacCalculations.ts                # Business calculations
+│   ├── hvacConstants.ts                   # Constants and enums
+│   └── index.ts                           # Utils exports
+└── index.ts                               # Main module exports
+```
+
+### **HVAC Pages Structure** (`/packages/twenty-front/src/pages/hvac/`)
+```
+hvac/
+├── HvacServicePlannerPage.tsx             # Service planner page
+├── HvacDashboardPage.tsx                  # Dashboard page
+├── HvacAnalyticsPage.tsx                  # Analytics page
+├── HvacDispatchPage.tsx                   # Dispatch page
+├── HvacMobilePage.tsx                     # Mobile page
+└── index.ts                               # Pages exports
+```
+
+## 🔧 **HVAC Backend Architecture** (`/packages/twenty-server/src/modules/hvac/`)
+
+### **Core Backend Structure**
+```
+hvac/
+├── resolvers/
+│   ├── hvac-semantic-search.resolver.ts   # Semantic search GraphQL
+│   ├── hvac-service-tickets.resolver.ts   # Service tickets GraphQL
+│   ├── hvac-equipment.resolver.ts         # Equipment GraphQL
+│   ├── hvac-technicians.resolver.ts       # Technicians GraphQL
+│   ├── hvac-analytics.resolver.ts         # Analytics GraphQL
+│   └── index.ts                           # Resolvers exports
+├── services/
+│   ├── hvac-api-integration.service.ts    # External API integration
+│   ├── hvac-weaviate.service.ts           # Vector database service
+│   ├── hvac-data-sync.service.ts          # Data synchronization
+│   ├── hvac-cache.service.ts              # Caching service
+│   ├── hvac-notification.service.ts       # Notification service
+│   ├── hvac-analytics.service.ts          # Analytics service
+│   ├── hvac-scheduling.service.ts         # Scheduling service
+│   └── index.ts                           # Services exports
+├── standard-objects/
+│   ├── hvac-equipment.workspace-entity.ts # Equipment entity
+│   ├── hvac-service-ticket.workspace-entity.ts # Service ticket entity
+│   ├── hvac-technician.workspace-entity.ts # Technician entity
+│   ├── hvac-maintenance-record.workspace-entity.ts # Maintenance entity
+│   └── index.ts                           # Entities exports
+├── guards/
+│   ├── hvac-permissions.guard.ts          # HVAC permissions
+│   ├── hvac-feature-flags.guard.ts        # Feature flags
+│   └── index.ts                           # Guards exports
+├── dto/
+│   ├── hvac-search.dto.ts                 # Search DTOs
+│   ├── hvac-service.dto.ts                # Service DTOs
+│   ├── hvac-equipment.dto.ts              # Equipment DTOs
+│   ├── hvac-analytics.dto.ts              # Analytics DTOs
+│   └── index.ts                           # DTOs exports
+├── types/
+│   ├── hvac-api.types.ts                  # API types
+│   ├── hvac-weaviate.types.ts             # Weaviate types
+│   ├── hvac-service.types.ts              # Service types
+│   └── index.ts                           # Types exports
+├── utils/
+│   ├── hvac-validators.ts                 # Input validators
+│   ├── hvac-transformers.ts               # Data transformers
+│   ├── hvac-constants.ts                  # Constants
+│   └── index.ts                           # Utils exports
+├── hvac.module.ts                         # Main HVAC module
+└── index.ts                               # Module exports
+```
+
+## 🧪 **HVAC Testing Structure** (`/packages/twenty-e2e-testing/tests/hvac/`)
+
+### **E2E Tests Structure**
+```
+hvac/
+├── hvac-dashboard.spec.ts                 # Dashboard E2E tests
+├── hvac-semantic-search.spec.ts           # Search E2E tests
+├── hvac-service-planner.spec.ts           # Service planner E2E tests
+├── hvac-dispatch-panel.spec.ts            # Dispatch E2E tests
+├── hvac-mobile-maintenance.spec.ts        # Mobile E2E tests
+├── hvac-error-handling.spec.ts            # Error handling E2E tests
+├── hvac-performance.spec.ts               # Performance E2E tests
+└── fixtures/
+    ├── hvac-test-data.ts                  # Test data fixtures
+    ├── hvac-mock-responses.ts             # Mock API responses
+    └── hvac-test-helpers.ts               # Test helper functions
+```
+
+### **Page Object Models** (`/packages/twenty-e2e-testing/lib/pom/hvac/`)
+```
+hvac/
+├── HvacDashboardPage.ts                   # Dashboard POM
+├── HvacSemanticSearchPage.ts              # Search POM
+├── HvacServicePlannerPage.ts              # Service planner POM
+├── HvacDispatchPanelPage.ts               # Dispatch POM
+├── HvacMobileMaintenancePage.ts           # Mobile POM
+└── index.ts                               # POM exports
+```
+
+## 🔗 **HVAC Integration Points**
+
+### **Navigation Integration**
+- `MainNavigationDrawerScrollableItems.tsx` - Includes HvacNavigationSection
+- `HvacNavigationSection.tsx` - Main HVAC navigation
+- `HvacObjectsNavigationSection.tsx` - HVAC objects in navigation
+
+### **Routing Integration**
+- `/hvac/service-planner` - Service planner route
+- `/hvac/dashboard` - Dashboard route
+- `/hvac/analytics` - Analytics route
+- `/hvac/dispatch` - Dispatch route
+- `/hvac/mobile` - Mobile route
+
+### **State Management Integration**
+- Recoil atoms for HVAC state
+- Integration with Twenty's global state
+- Persistent state for user preferences
+
+### **GraphQL Integration**
+- HVAC resolvers in main GraphQL schema
+- Type definitions for HVAC objects
+- Mutations and queries for HVAC operations
+
+### **Permission System Integration**
+- HvacPermissionsGuard for access control
+- Role-based permissions (technician, supervisor, manager, admin)
+- Feature flag integration
+
+## 🎯 **HVAC Business Logic**
+
+### **Core Features**
+1. **Semantic Search** - AI-powered search across HVAC data
+2. **Service Planning** - Intelligent scheduling and routing
+3. **Dispatch Management** - Real-time technician coordination
+4. **Mobile Maintenance** - Field service mobile app
+5. **Analytics Dashboard** - Performance insights and reporting
+6. **Equipment Tracking** - Asset management and maintenance
+
+### **Polish Market Integration**
+- Polish language support (labels, messages)
+- Integration with Polish HVAC manufacturers (Vaillant, Viessmann, Bosch)
+- Polish energy provider integration (PGE, Tauron, Enea)
+- Local compliance and regulations
+
+### **Philosophy: "Pasja rodzi profesjonalizm"**
+- Professional-grade tools for HVAC technicians
+- Intuitive UX designed for field workers
+- Reliable offline capabilities
+- Comprehensive error handling and recovery
+
+## 📋 **Implementation Status**
+
+### ✅ **Completed (85%)**
+- Backend services and resolvers
+- GraphQL schema integration
+- Workspace entities and metadata
+- Frontend components and navigation
+- State management setup
+- Basic permission system
+
+### ⚠️ **In Progress (15%)**
+- E2E test coverage completion
+- Object navigation integration
+- Production configuration
+- Health check integration
+- Advanced permission roles
+- Performance optimization
+
+### 🎯 **Next Steps**
+1. Complete object navigation integration
+2. Finalize E2E test suite
+3. Production deployment configuration
+4. Performance monitoring setup
+5. Advanced analytics implementation

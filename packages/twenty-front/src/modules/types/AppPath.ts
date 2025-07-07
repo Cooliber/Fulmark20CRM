@@ -21,8 +21,12 @@ export enum AppPath {
   TasksPage = '/objects/tasks',
   OpportunitiesPage = '/objects/opportunities',
 
-  // HVAC Service Planner
+  // HVAC Routes - Professional HVAC CRM Integration
+  HvacDashboard = '/hvac/dashboard',
   HvacServicePlanner = '/hvac/service-planner',
+  HvacAnalytics = '/hvac/analytics',
+  HvacDispatch = '/hvac/dispatch',
+  HvacMobile = '/hvac/mobile',
 
   RecordIndexPage = '/objects/:objectNamePlural',
   RecordShowPage = '/object/:objectNameSingular/:objectRecordId',
